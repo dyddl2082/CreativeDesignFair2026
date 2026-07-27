@@ -49,10 +49,12 @@ class AlignedDepthCandidateNode(Node):
             candidate_topic,
             candidate_qos,
         )
+        debug_qos = QoSProfile(depth=1)
+        debug_qos.reliability = ReliabilityPolicy.BEST_EFFORT
         self._debug_publisher = self.create_publisher(
             CompressedImage,
             debug_topic,
-            qos_profile_sensor_data,
+            debug_qos,
         )
 
         self._camera_info_subscription = self.create_subscription(
@@ -84,7 +86,8 @@ class AlignedDepthCandidateNode(Node):
             "depth_scale_m": 0.001,
             "publish_debug": True,
             "debug_hz": 2.0,
-            "debug_jpeg_quality": 72,
+            "debug_jpeg_quality": 50,
+            "debug_scale": 0.5,
             "min_depth_m": 0.18,
             "max_depth_m": 1.50,
             "enable_plane_removal": True,
@@ -273,6 +276,16 @@ class AlignedDepthCandidateNode(Node):
         self._last_debug_monotonic = now_monotonic
 
         preview = make_debug_image(depth_m, result, config)
+        requested_scale = float(self.get_parameter("debug_scale").value)
+        debug_scale = float(np.clip(requested_scale, 0.25, 1.0))
+        if debug_scale < 0.999:
+            preview = cv2.resize(
+                preview,
+                None,
+                fx=debug_scale,
+                fy=debug_scale,
+                interpolation=cv2.INTER_AREA,
+            )
         requested_quality = int(self.get_parameter("debug_jpeg_quality").value)
         quality = int(np.clip(requested_quality, 20, 95))
         success, encoded = cv2.imencode(

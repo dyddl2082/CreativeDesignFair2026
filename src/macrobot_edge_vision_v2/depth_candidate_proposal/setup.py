@@ -5,7 +5,7 @@ package_name = "depth_candidate_proposal"
 
 setup(
     name=package_name,
-    version="0.1.0",
+    version="0.2.0",
     packages=find_packages(exclude=("test",)),
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
@@ -27,6 +27,8 @@ setup(
         "console_scripts": [
             "aligned_depth_candidate_node = "
             "depth_candidate_proposal.aligned_depth_candidate_node:main",
+            "rgb_candidate_crop_node = "
+            "depth_candidate_proposal.rgb_candidate_crop_node:main",
         ],
     },
 )

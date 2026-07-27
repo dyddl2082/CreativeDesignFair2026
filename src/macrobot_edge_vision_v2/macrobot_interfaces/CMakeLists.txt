@@ -9,6 +9,7 @@ find_package(std_msgs REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/DepthCandidate.msg"
   "msg/DepthCandidateArray.msg"
+  "msg/RgbCandidateCrop.msg"
   DEPENDENCIES sensor_msgs std_msgs
 )
 
