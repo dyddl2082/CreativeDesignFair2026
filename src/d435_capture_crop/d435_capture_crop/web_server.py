@@ -150,16 +150,48 @@ class CaptureRequestHandler(BaseHTTPRequestHandler):
         return decoded
 
     def _serve_static(self, relative_path: str) -> None:
-        relative = Path(relative_path)
-        if relative.is_absolute() or ".." in relative.parts:
-            raise ApiError(HTTPStatus.BAD_REQUEST, "Invalid static path")
-        path = (self.server.static_root / relative).resolve()
-        if self.server.static_root not in path.parents and path != self.server.static_root:
-            raise ApiError(HTTPStatus.BAD_REQUEST, "Invalid static path")
+        allowed_files = {
+            "index.html",
+            "app.js",
+            "style.css",
+        }
+
+        decoded = urllib.parse.unquote(relative_path)
+        relative = Path(decoded)
+
+        # 현재 UI는 web/ 바로 아래의 세 파일만 사용한다.
+        # 허용 목록으로 제한하면 심볼릭 링크를 허용해도 임의 파일 노출을 막을 수 있다.
+        if (
+            relative.is_absolute()
+            or len(relative.parts) != 1
+            or relative.name not in allowed_files
+        ):
+            raise ApiError(
+                HTTPStatus.BAD_REQUEST,
+                "Invalid static path",
+            )
+
+        # 중요: resolve()하지 않는다.
+        # colcon --symlink-install이 만든 정상 심볼릭 링크를 그대로 읽어야 한다.
+        path = self.server.static_root / relative.name
+
         if not path.is_file():
-            raise ApiError(HTTPStatus.NOT_FOUND, "Static file not found")
-        mime_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
-        self._send_bytes(HTTPStatus.OK, path.read_bytes(), mime_type, cache=False)
+            raise ApiError(
+                HTTPStatus.NOT_FOUND,
+                "Static file not found",
+            )
+
+        mime_type = (
+            mimetypes.guess_type(path.name)[0]
+            or "application/octet-stream"
+        )
+
+        self._send_bytes(
+            HTTPStatus.OK,
+            path.read_bytes(),
+            mime_type,
+            cache=False,
+        )
 
     def _serve_mjpeg(self) -> None:
         boundary = "macrobot-frame"

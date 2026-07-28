@@ -348,15 +348,19 @@ async function saveCrop() {
   }
 }
 
-function setBusy(busy, label = "") {
+function setBusy(busy, label = "", activeButton = els.saveBtn) {
   els.captureBtn.disabled = busy;
   els.saveBtn.disabled = busy;
   els.discardBtn.disabled = busy;
-  if (busy && label) els.saveBtn.dataset.previous = els.saveBtn.textContent;
-  if (busy && label) els.saveBtn.textContent = label;
-  if (!busy && els.saveBtn.dataset.previous) {
-    els.saveBtn.textContent = els.saveBtn.dataset.previous;
-    delete els.saveBtn.dataset.previous;
+
+  if (busy && label) {
+    activeButton.dataset.previous = activeButton.textContent;
+    activeButton.textContent = label;
+  }
+
+  if (!busy && activeButton.dataset.previous) {
+    activeButton.textContent = activeButton.dataset.previous;
+    delete activeButton.dataset.previous;
   }
 }
 
