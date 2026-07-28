@@ -1,0 +1,389 @@
+{
+  "object_name": "USB",
+  "image_dir": "/home/dyddl2082/MacRobot/data/curated/objects/USB",
+  "negative_dir": "/home/dyddl2082/MacRobot/data/negative/backgrounds",
+  "feature_method": "SIFT",
+  "image_count": 5,
+  "usable_image_count": 5,
+  "view_count": 1,
+  "valid_view_count": 1,
+  "average_keypoints": 830.2,
+  "average_quality_score_100": 89.21,
+  "false_match_rate": 0.2,
+  "score_template_quality_35": 34.77,
+  "score_view_coverage_25": 6.25,
+  "score_view_redundancy_15": 15.0,
+  "score_distinctiveness_20": 1.68,
+  "score_internal_consistency_5": 3.5,
+  "total_score_100": 61.21,
+  "verdict": "일부 view 보강 필요",
+  "user_message": "판정: 일부 view 보강 필요\n멀티뷰 프로필 점수: 61.21/100\n\n점수 구성:\n- 템플릿 품질: 34.8/35\n- View coverage: 6.2/25\n- View redundancy: 15.0/15\n- 다른 물체/배경과의 구분성: 1.7/20\n- 같은 view 내부 일관성: 3.5/5\n\n요약:\n- 등록 사진 수: 5장\n- 사용 가능 사진 수: 5장\n- 전체 view cluster 수: 1개\n- 유효 view 수: 1개\n- 평균 특징점 수: 830.2개\n- 평균 이미지 품질 점수: 89.2/100\n- false match rate: 20.0%\n\n해석:\n이 평가는 사진들끼리 전부 비슷한지를 보지 않습니다.\n각 사진이 하나의 view template으로 쓸 만한지, 그리고 전체 사진 세트가 여러 시점을 충분히 커버하는지를 평가합니다.\n\n추천:\n- 멀티뷰 등록에는 최소 8장 이상을 권장합니다. USB처럼 작은 3D 물체는 12~20장이 더 안정적입니다.\n- 유효 view가 1개입니다. 목표 view 수 4개에 맞게 다른 각도 사진을 추가하세요.\n- 흐린 사진이 있습니다. 카메라 흔들림을 줄이고 더 밝은 환경에서 다시 촬영하세요.\n- 다른 물체/배경과 혼동될 가능성이 있습니다. crop으로 배경을 줄이고, 물체의 독특한 면이 보이는 사진을 추가하세요.",
+  "image_qualities": [
+    {
+      "path": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_01.jpg",
+      "width": 960,
+      "height": 700,
+      "blur_laplacian_var": 87.486,
+      "brightness_mean": 155.879,
+      "contrast_std": 51.363,
+      "under_exposed_ratio": 0.0,
+      "over_exposed_ratio": 0.0122,
+      "keypoint_count": 1500,
+      "quality_score_100": 91.54,
+      "template_score_100": 94.93,
+      "warnings": [
+        "이미지가 약간 흐릴 수 있습니다."
+      ]
+    },
+    {
+      "path": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_02.jpg",
+      "width": 960,
+      "height": 554,
+      "blur_laplacian_var": 92.588,
+      "brightness_mean": 109.002,
+      "contrast_std": 59.203,
+      "under_exposed_ratio": 0.0001,
+      "over_exposed_ratio": 0.0088,
+      "keypoint_count": 376,
+      "quality_score_100": 92.26,
+      "template_score_100": 95.35,
+      "warnings": [
+        "이미지가 약간 흐릴 수 있습니다."
+      ]
+    },
+    {
+      "path": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_03.jpg",
+      "width": 960,
+      "height": 1141,
+      "blur_laplacian_var": 57.432,
+      "brightness_mean": 107.606,
+      "contrast_std": 44.265,
+      "under_exposed_ratio": 0.0001,
+      "over_exposed_ratio": 0.003,
+      "keypoint_count": 1500,
+      "quality_score_100": 85.33,
+      "template_score_100": 91.2,
+      "warnings": [
+        "이미지가 약간 흐릴 수 있습니다."
+      ]
+    },
+    {
+      "path": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_04.jpg",
+      "width": 960,
+      "height": 356,
+      "blur_laplacian_var": 444.001,
+      "brightness_mean": 120.09,
+      "contrast_std": 47.536,
+      "under_exposed_ratio": 0.0001,
+      "over_exposed_ratio": 0.0096,
+      "keypoint_count": 592,
+      "quality_score_100": 98.92,
+      "template_score_100": 99.35,
+      "warnings": [
+        "해상도가 낮습니다. 최소 640x480 이상을 권장합니다."
+      ]
+    },
+    {
+      "path": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_05.jpg",
+      "width": 960,
+      "height": 331,
+      "blur_laplacian_var": 72.787,
+      "brightness_mean": 104.91,
+      "contrast_std": 55.656,
+      "under_exposed_ratio": 0.0,
+      "over_exposed_ratio": 0.0002,
+      "keypoint_count": 183,
+      "quality_score_100": 78.0,
+      "template_score_100": 71.2,
+      "warnings": [
+        "해상도가 낮습니다. 최소 640x480 이상을 권장합니다.",
+        "이미지가 약간 흐릴 수 있습니다."
+      ]
+    }
+  ],
+  "view_clusters": [
+    {
+      "view_id": 0,
+      "images": [
+        "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_01.jpg",
+        "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_02.jpg",
+        "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_03.jpg",
+        "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_04.jpg",
+        "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_05.jpg"
+      ],
+      "size": 5,
+      "representative_image": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_04.jpg",
+      "average_keypoints": 830.2,
+      "average_quality_score_100": 89.21,
+      "best_template_score_100": 99.35,
+      "redundancy_score_0_1": 1.0,
+      "internal_consistency_0_1": 0.7,
+      "negative_risk_score_0_1": 0.7195,
+      "false_positive_count": 3,
+      "valid_view": true,
+      "warnings": [
+        "이 view가 다른 물체/배경과 혼동될 가능성이 있습니다."
+      ]
+    }
+  ],
+  "pair_matches": [
+    {
+      "image_a": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_01.jpg",
+      "image_b": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_02.jpg",
+      "good_matches": 56,
+      "inliers": 18,
+      "inlier_ratio": 0.3214,
+      "homography_ok": true,
+      "match_score": 0.9607,
+      "same_view_edge": true
+    },
+    {
+      "image_a": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_01.jpg",
+      "image_b": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_03.jpg",
+      "good_matches": 30,
+      "inliers": 10,
+      "inlier_ratio": 0.3333,
+      "homography_ok": true,
+      "match_score": 0.6579,
+      "same_view_edge": true
+    },
+    {
+      "image_a": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_01.jpg",
+      "image_b": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_04.jpg",
+      "good_matches": 49,
+      "inliers": 15,
+      "inlier_ratio": 0.3061,
+      "homography_ok": true,
+      "match_score": 0.9179,
+      "same_view_edge": true
+    },
+    {
+      "image_a": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_01.jpg",
+      "image_b": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_05.jpg",
+      "good_matches": 83,
+      "inliers": 22,
+      "inlier_ratio": 0.2651,
+      "homography_ok": true,
+      "match_score": 0.9325,
+      "same_view_edge": true
+    },
+    {
+      "image_a": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_02.jpg",
+      "image_b": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_03.jpg",
+      "good_matches": 10,
+      "inliers": 4,
+      "inlier_ratio": 0.4,
+      "homography_ok": true,
+      "match_score": 0.3825,
+      "same_view_edge": false
+    },
+    {
+      "image_a": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_02.jpg",
+      "image_b": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_04.jpg",
+      "good_matches": 14,
+      "inliers": 6,
+      "inlier_ratio": 0.4286,
+      "homography_ok": true,
+      "match_score": 0.4668,
+      "same_view_edge": false
+    },
+    {
+      "image_a": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_02.jpg",
+      "image_b": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_05.jpg",
+      "good_matches": 29,
+      "inliers": 9,
+      "inlier_ratio": 0.3103,
+      "homography_ok": true,
+      "match_score": 0.6113,
+      "same_view_edge": true
+    },
+    {
+      "image_a": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_03.jpg",
+      "image_b": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_04.jpg",
+      "good_matches": 20,
+      "inliers": 7,
+      "inlier_ratio": 0.35,
+      "homography_ok": true,
+      "match_score": 0.5119,
+      "same_view_edge": false
+    },
+    {
+      "image_a": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_03.jpg",
+      "image_b": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_05.jpg",
+      "good_matches": 126,
+      "inliers": 53,
+      "inlier_ratio": 0.4206,
+      "homography_ok": true,
+      "match_score": 1.0,
+      "same_view_edge": true
+    },
+    {
+      "image_a": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_04.jpg",
+      "image_b": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_05.jpg",
+      "good_matches": 54,
+      "inliers": 19,
+      "inlier_ratio": 0.3519,
+      "homography_ok": true,
+      "match_score": 0.9759,
+      "same_view_edge": true
+    }
+  ],
+  "negative_matches": [
+    {
+      "target_image": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_01.jpg",
+      "negative_image": "/home/dyddl2082/MacRobot/data/negative/backgrounds/other_object_01.jpg",
+      "good_matches": 26,
+      "inliers": 12,
+      "inlier_ratio": 0.4615,
+      "homography_ok": true,
+      "match_score": 0.7195,
+      "false_positive": true
+    },
+    {
+      "target_image": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_01.jpg",
+      "negative_image": "/home/dyddl2082/MacRobot/data/negative/backgrounds/other_object_02.jpg",
+      "good_matches": 35,
+      "inliers": 11,
+      "inlier_ratio": 0.3143,
+      "homography_ok": true,
+      "match_score": 0.7115,
+      "false_positive": true
+    },
+    {
+      "target_image": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_01.jpg",
+      "negative_image": "/home/dyddl2082/MacRobot/data/negative/backgrounds/other_object_03.jpg",
+      "good_matches": 26,
+      "inliers": 7,
+      "inlier_ratio": 0.2692,
+      "homography_ok": true,
+      "match_score": 0.5135,
+      "false_positive": false
+    },
+    {
+      "target_image": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_02.jpg",
+      "negative_image": "/home/dyddl2082/MacRobot/data/negative/backgrounds/other_object_01.jpg",
+      "good_matches": 8,
+      "inliers": 0,
+      "inlier_ratio": 0.0,
+      "homography_ok": false,
+      "match_score": 0.0832,
+      "false_positive": false
+    },
+    {
+      "target_image": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_02.jpg",
+      "negative_image": "/home/dyddl2082/MacRobot/data/negative/backgrounds/other_object_02.jpg",
+      "good_matches": 11,
+      "inliers": 7,
+      "inlier_ratio": 0.6364,
+      "homography_ok": true,
+      "match_score": 0.4739,
+      "false_positive": false
+    },
+    {
+      "target_image": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_02.jpg",
+      "negative_image": "/home/dyddl2082/MacRobot/data/negative/backgrounds/other_object_03.jpg",
+      "good_matches": 11,
+      "inliers": 4,
+      "inlier_ratio": 0.3636,
+      "homography_ok": true,
+      "match_score": 0.3713,
+      "false_positive": false
+    },
+    {
+      "target_image": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_03.jpg",
+      "negative_image": "/home/dyddl2082/MacRobot/data/negative/backgrounds/other_object_01.jpg",
+      "good_matches": 23,
+      "inliers": 6,
+      "inlier_ratio": 0.2609,
+      "homography_ok": true,
+      "match_score": 0.4602,
+      "false_positive": false
+    },
+    {
+      "target_image": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_03.jpg",
+      "negative_image": "/home/dyddl2082/MacRobot/data/negative/backgrounds/other_object_02.jpg",
+      "good_matches": 11,
+      "inliers": 4,
+      "inlier_ratio": 0.3636,
+      "homography_ok": true,
+      "match_score": 0.3713,
+      "false_positive": false
+    },
+    {
+      "target_image": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_03.jpg",
+      "negative_image": "/home/dyddl2082/MacRobot/data/negative/backgrounds/other_object_03.jpg",
+      "good_matches": 84,
+      "inliers": 4,
+      "inlier_ratio": 0.0476,
+      "homography_ok": true,
+      "match_score": 0.65,
+      "false_positive": true
+    },
+    {
+      "target_image": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_04.jpg",
+      "negative_image": "/home/dyddl2082/MacRobot/data/negative/backgrounds/other_object_01.jpg",
+      "good_matches": 10,
+      "inliers": 5,
+      "inlier_ratio": 0.5,
+      "homography_ok": true,
+      "match_score": 0.4106,
+      "false_positive": false
+    },
+    {
+      "target_image": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_04.jpg",
+      "negative_image": "/home/dyddl2082/MacRobot/data/negative/backgrounds/other_object_02.jpg",
+      "good_matches": 9,
+      "inliers": 4,
+      "inlier_ratio": 0.4444,
+      "homography_ok": true,
+      "match_score": 0.3755,
+      "false_positive": false
+    },
+    {
+      "target_image": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_04.jpg",
+      "negative_image": "/home/dyddl2082/MacRobot/data/negative/backgrounds/other_object_03.jpg",
+      "good_matches": 3,
+      "inliers": 0,
+      "inlier_ratio": 0.0,
+      "homography_ok": false,
+      "match_score": 0.0312,
+      "false_positive": false
+    },
+    {
+      "target_image": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_05.jpg",
+      "negative_image": "/home/dyddl2082/MacRobot/data/negative/backgrounds/other_object_01.jpg",
+      "good_matches": 3,
+      "inliers": 0,
+      "inlier_ratio": 0.0,
+      "homography_ok": false,
+      "match_score": 0.0312,
+      "false_positive": false
+    },
+    {
+      "target_image": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_05.jpg",
+      "negative_image": "/home/dyddl2082/MacRobot/data/negative/backgrounds/other_object_02.jpg",
+      "good_matches": 2,
+      "inliers": 0,
+      "inlier_ratio": 0.0,
+      "homography_ok": false,
+      "match_score": 0.0208,
+      "false_positive": false
+    },
+    {
+      "target_image": "/home/dyddl2082/MacRobot/data/curated/objects/USB/img_05.jpg",
+      "negative_image": "/home/dyddl2082/MacRobot/data/negative/backgrounds/other_object_03.jpg",
+      "good_matches": 1,
+      "inliers": 0,
+      "inlier_ratio": 0.0,
+      "homography_ok": false,
+      "match_score": 0.0104,
+      "false_positive": false
+    }
+  ],
+  "recommendations": [
+    "멀티뷰 등록에는 최소 8장 이상을 권장합니다. USB처럼 작은 3D 물체는 12~20장이 더 안정적입니다.",
+    "유효 view가 1개입니다. 목표 view 수 4개에 맞게 다른 각도 사진을 추가하세요.",
+    "흐린 사진이 있습니다. 카메라 흔들림을 줄이고 더 밝은 환경에서 다시 촬영하세요.",
+    "다른 물체/배경과 혼동될 가능성이 있습니다. crop으로 배경을 줄이고, 물체의 독특한 면이 보이는 사진을 추가하세요."
+  ]
+}

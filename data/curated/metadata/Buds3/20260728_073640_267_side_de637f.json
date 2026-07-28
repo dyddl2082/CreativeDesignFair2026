@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "object_name": "Buds3",
+  "view_label": "side",
+  "notes": "",
+  "session_id": "de637ff8fef1494f",
+  "captured_local_iso": "2026-07-28T07:36:40.267-04:00",
+  "saved_local_iso": "2026-07-28T07:36:55.752-04:00",
+  "source": {
+    "camera_family": "Intel RealSense D435/D435f",
+    "color_topic": "/camera/camera/color/image_raw",
+    "depth_topic": "/camera/camera/aligned_depth_to_color/image_raw",
+    "color_stamp_ns": 1785238600169960693,
+    "color_frame_id": "camera_color_optical_frame",
+    "color_encoding": "rgb8",
+    "depth_stamp_ns": 1785238600169960693,
+    "depth_frame_id": "camera_color_optical_frame",
+    "depth_encoding": "16UC1",
+    "depth_sync_offset_sec": 0.0
+  },
+  "image": {
+    "original_width": 640,
+    "original_height": 480,
+    "crop_width": 145,
+    "crop_height": 242,
+    "crop_roi": {
+      "x": 314,
+      "y": 91,
+      "width": 145,
+      "height": 242
+    },
+    "jpeg_quality": 95
+  },
+  "depth": {
+    "available": true,
+    "valid_ratio": 0.24519806212596182,
+    "valid_count": 8604,
+    "median_m": 0.4880000352859497,
+    "near_m": 0.30400002002716064,
+    "far_m": 0.6740000247955322,
+    "min_m": 0.20600001513957977,
+    "max_m": 0.6880000233650208,
+    "saved": true,
+    "saved_unit": "millimeter_uint16_png",
+    "depth_roi": {
+      "x": 314,
+      "y": 91,
+      "width": 145,
+      "height": 242
+    }
+  },
+  "camera_info": {
+    "header": {
+      "stamp_ns": 1785238600169960693,
+      "frame_id": "camera_color_optical_frame"
+    },
+    "height": 480,
+    "width": 640,
+    "distortion_model": "plumb_bob",
+    "d": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "k": [
+      608.4835815429688,
+      0.0,
+      330.42254638671875,
+      0.0,
+      607.3209838867188,
+      248.2657012939453,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "r": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "p": [
+      608.4835815429688,
+      0.0,
+      330.42254638671875,
+      0.0,
+      0.0,
+      607.3209838867188,
+      248.2657012939453,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    "binning_x": 0,
+    "binning_y": 0,
+    "roi": {
+      "x_offset": 0,
+      "y_offset": 0,
+      "height": 0,
+      "width": 0,
+      "do_rectify": false
+    }
+  },
+  "files": {
+    "original": "/home/dyddl2082/MacRobot/data/objects/Buds3/20260728_073640_267_side_de637f_original.jpg",
+    "crop": "/home/dyddl2082/MacRobot/data/curated/objects/Buds3/20260728_073640_267_side_de637f.jpg",
+    "depth_crop": "/home/dyddl2082/MacRobot/data/curated/depth/Buds3/20260728_073640_267_side_de637f_depth.png",
+    "metadata": "/home/dyddl2082/MacRobot/data/curated/metadata/Buds3/20260728_073640_267_side_de637f.json"
+  }
+}
