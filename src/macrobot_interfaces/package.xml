@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>macrobot_interfaces</name>
-  <version>0.2.0</version>
+  <version>0.3.0</version>
   <description>Custom messages shared by MacRobot edge and PC nodes.</description>
   <maintainer email="macrobot@example.com">MacRobot</maintainer>
   <license>Apache-2.0</license>
