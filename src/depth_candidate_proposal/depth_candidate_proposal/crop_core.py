@@ -131,6 +131,158 @@ def extract_crop(image_bgr: np.ndarray, roi: PixelRoi) -> np.ndarray:
     ].copy()
 
 
+def decode_binary_mask(data: bytes | bytearray) -> np.ndarray:
+    encoded = np.frombuffer(bytes(data), dtype=np.uint8)
+
+    if encoded.size == 0:
+        raise ValueError("Foreground mask data is empty")
+
+    mask = cv2.imdecode(encoded, cv2.IMREAD_GRAYSCALE)
+
+    if mask is None or mask.size == 0:
+        raise ValueError("Foreground mask PNG decoding failed")
+
+    return np.where(mask > 0, 255, 0).astype(np.uint8)
+
+
+def isolate_component_near_point(
+    mask_u8: np.ndarray,
+    point_x: float,
+    point_y: float,
+) -> np.ndarray:
+    if mask_u8.ndim != 2:
+        raise ValueError("Expected a single-channel binary mask")
+
+    binary = np.where(mask_u8 > 0, 255, 0).astype(np.uint8)
+
+    count, labels, stats, centroids = cv2.connectedComponentsWithStats(
+        binary,
+        connectivity=8,
+    )
+
+    if count <= 1:
+        return np.zeros_like(binary)
+
+    height, width = binary.shape
+    px = int(np.clip(round(point_x), 0, width - 1))
+    py = int(np.clip(round(point_y), 0, height - 1))
+
+    selected_label = int(labels[py, px])
+
+    if selected_label == 0:
+        candidate_labels = range(1, count)
+
+        selected_label = min(
+            candidate_labels,
+            key=lambda label: (
+                float(centroids[label, 0]) - float(point_x)
+            ) ** 2
+            + (
+                float(centroids[label, 1]) - float(point_y)
+            ) ** 2,
+        )
+
+    return np.where(
+        labels == selected_label,
+        255,
+        0,
+    ).astype(np.uint8)
+
+
+def create_candidate_crop_mask(
+    frame_mask: np.ndarray,
+    roi: PixelRoi,
+    proposal_width: int,
+    proposal_height: int,
+    color_width: int,
+    color_height: int,
+    candidate_center_x: float,
+    candidate_center_y: float,
+) -> np.ndarray:
+    if frame_mask.ndim != 2:
+        raise ValueError("Frame mask must be single-channel")
+
+    if frame_mask.shape != (proposal_height, proposal_width):
+        frame_mask = cv2.resize(
+            frame_mask,
+            (proposal_width, proposal_height),
+            interpolation=cv2.INTER_NEAREST,
+        )
+
+    if (
+        proposal_width != color_width
+        or proposal_height != color_height
+    ):
+        color_mask = cv2.resize(
+            frame_mask,
+            (color_width, color_height),
+            interpolation=cv2.INTER_NEAREST,
+        )
+    else:
+        color_mask = frame_mask
+
+    mask_crop = color_mask[
+        roi.y : roi.y + roi.height,
+        roi.x : roi.x + roi.width,
+    ].copy()
+
+    center_color_x = (
+        float(candidate_center_x)
+        * float(color_width)
+        / float(proposal_width)
+    )
+    center_color_y = (
+        float(candidate_center_y)
+        * float(color_height)
+        / float(proposal_height)
+    )
+
+    local_center_x = center_color_x - float(roi.x)
+    local_center_y = center_color_y - float(roi.y)
+
+    return isolate_component_near_point(
+        mask_crop,
+        local_center_x,
+        local_center_y,
+    )
+
+
+def encode_crop_mask_png(
+    mask_u8: np.ndarray,
+    target_width: int,
+    target_height: int,
+    compression: int = 3,
+) -> tuple[bytes, float]:
+    if target_width <= 0 or target_height <= 0:
+        raise ValueError("Invalid target mask dimensions")
+
+    resized = cv2.resize(
+        mask_u8,
+        (target_width, target_height),
+        interpolation=cv2.INTER_NEAREST,
+    )
+
+    binary = np.where(resized > 0, 255, 0).astype(np.uint8)
+
+    fill_ratio = float(
+        np.count_nonzero(binary)
+    ) / float(max(binary.size, 1))
+
+    success, encoded = cv2.imencode(
+        ".png",
+        binary,
+        [
+            int(cv2.IMWRITE_PNG_COMPRESSION),
+            int(np.clip(compression, 0, 9)),
+        ],
+    )
+
+    if not success:
+        raise RuntimeError("OpenCV failed to encode candidate mask")
+
+    return encoded.tobytes(), fill_ratio
+
+
 def _resize_to_max_side(image_bgr: np.ndarray, max_side_px: int) -> np.ndarray:
     height, width = image_bgr.shape[:2]
     longest = max(width, height)

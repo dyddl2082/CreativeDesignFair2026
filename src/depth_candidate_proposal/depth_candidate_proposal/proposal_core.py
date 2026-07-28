@@ -141,6 +141,7 @@ class DepthCandidateData:
     fill_ratio: float
     area_ratio: float
     foreground_height_m: float
+    foreground_height_valid: bool
     proposal_score: float
     touches_border: bool
 
@@ -414,15 +415,21 @@ def _extract_candidates(
         median_abs_deviation = float(np.median(np.abs(values - median_depth)))
         robust_std = 1.4826 * median_abs_deviation
 
+        foreground_height = 0.0
+        foreground_height_valid = False
+
         if plane_found:
-            height_local = foreground_height_map_m[y : y + box_height, x : x + box_width]
+            height_local = foreground_height_map_m[
+                y : y + box_height,
+                x : x + box_width,
+            ]
             valid_height = valid_local & np.isfinite(height_local)
+
             if np.any(valid_height):
-                foreground_height = float(np.median(height_local[valid_height]))
-            else:
-                foreground_height = 0.0
-        else:
-            foreground_height = 0.0
+                foreground_height = float(
+                    np.median(height_local[valid_height])
+                )
+                foreground_height_valid = True
 
         touches_border = (
             x <= cfg.border_margin_px
@@ -468,6 +475,7 @@ def _extract_candidates(
                 fill_ratio=fill_ratio,
                 area_ratio=float(area) / float(image_area),
                 foreground_height_m=foreground_height,
+                foreground_height_valid=foreground_height_valid,
                 proposal_score=score,
                 touches_border=touches_border,
             )

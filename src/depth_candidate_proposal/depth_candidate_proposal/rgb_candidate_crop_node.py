@@ -19,6 +19,9 @@ from sensor_msgs.msg import CompressedImage, Image, RegionOfInterest
 
 from .crop_core import (
     CropEncodingConfig,
+    create_candidate_crop_mask,
+    decode_binary_mask,
+    encode_crop_mask_png,
     encode_jpeg_bounded,
     extract_crop,
     map_and_pad_roi,
@@ -128,6 +131,8 @@ class RgbCandidateCropNode(Node):
             "jpeg_resize_factor": 0.80,
             "jpeg_max_resize_iterations": 6,
             "reliable_crop_output": False,
+            "publish_foreground_mask": True,
+            "mask_png_compression": 3,
             "publish_top_crop_preview": True,
             "top_crop_preview_hz": 1.0,
             "status_log_period_sec": 5.0,
@@ -246,6 +251,22 @@ class RgbCandidateCropNode(Node):
         except (CvBridgeError, ValueError) as error:
             self.get_logger().error(f"RGB crop preparation failed: {error}")
             return
+        
+        frame_mask = None
+
+        if (
+            bool(self.get_parameter("publish_foreground_mask").value)
+            and message.foreground_mask_available
+            and message.foreground_mask.data
+        ):
+            try:
+                frame_mask = decode_binary_mask(
+                    message.foreground_mask.data
+                )
+            except ValueError as error:
+                self.get_logger().warning(
+                    f"Foreground mask decode failed: {error}"
+                )
 
         source_count = len(message.candidates)
         selected = self._select_candidates(message.candidates)
@@ -281,16 +302,60 @@ class RgbCandidateCropNode(Node):
                 )
                 crop_bgr = extract_crop(color_bgr, roi)
                 encoded = encode_jpeg_bounded(crop_bgr, encoding_config)
+                mask_data = b""
+                mask_fill_ratio = 0.0
+                mask_available = False
+
+                if frame_mask is not None:
+                    candidate_mask = create_candidate_crop_mask(
+                        frame_mask=frame_mask,
+                        roi=roi,
+                        proposal_width=proposal_width,
+                        proposal_height=proposal_height,
+                        color_width=color_width,
+                        color_height=color_height,
+                        candidate_center_x=float(candidate.center_x),
+                        candidate_center_y=float(candidate.center_y),
+                    )
+
+                    mask_data, mask_fill_ratio = encode_crop_mask_png(
+                        candidate_mask,
+                        target_width=encoded.width,
+                        target_height=encoded.height,
+                        compression=int(
+                            self.get_parameter(
+                                "mask_png_compression"
+                            ).value
+                        ),
+                    )
+
+                    mask_available = bool(mask_data)
             except (ValueError, RuntimeError) as error:
                 self.get_logger().warning(
                     f"Skipping candidate {candidate.id}: {error}"
                 )
                 continue
 
-            prepared.append((candidate, roi, encoded))
+            prepared.append(
+                (
+                    candidate,
+                    roi,
+                    encoded,
+                    mask_available,
+                    mask_fill_ratio,
+                    mask_data,
+                )
+            )
 
         published_count = len(prepared)
-        for crop_index, (candidate, roi, encoded) in enumerate(prepared):
+        for crop_index, (
+            candidate,
+            roi,
+            encoded,
+            mask_available,
+            mask_fill_ratio,
+            mask_data,
+        ) in enumerate(prepared):
             crop_message = RgbCandidateCrop()
             crop_message.proposal_header = message.header
             crop_message.proposal_image_width = proposal_width
@@ -309,6 +374,21 @@ class RgbCandidateCropNode(Node):
                 do_rectify=False,
             )
             crop_message.color_time_offset_sec = float(sync_delta_sec)
+            crop_message.plane_found = bool(message.plane_found)
+
+            crop_message.foreground_mask_available = bool(
+                mask_available
+            )
+            crop_message.mask_fill_ratio = float(mask_fill_ratio)
+
+            if mask_available:
+                crop_message.foreground_mask.header = (
+                    color_message.header
+                )
+                crop_message.foreground_mask.format = (
+                    "mono8; png compressed"
+                )
+                crop_message.foreground_mask.data = mask_data
             crop_message.encoded_width = encoded.width
             crop_message.encoded_height = encoded.height
             crop_message.jpeg_size_bytes = len(encoded.data)

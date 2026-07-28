@@ -23,6 +23,10 @@ float32 area_ratio
 # Zero when plane removal was unavailable and fallback mode was used.
 float32 foreground_height_m
 
+# True only when foreground_height_m was measured from a valid fitted plane.
+# False means the height is unavailable, not that the measured height is zero.
+bool foreground_height_valid
+
 # Heuristic proposal score in the range [0, 1].
 float32 proposal_score
 

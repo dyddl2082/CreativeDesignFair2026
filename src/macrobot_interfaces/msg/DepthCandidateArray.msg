@@ -9,4 +9,9 @@ bool plane_found
 float32 plane_inlier_ratio
 float32[4] plane_coefficients
 
+# Full-frame binary foreground mask in proposal/depth coordinates.
+# Pixel values are 0 for background and 255 for foreground.
+bool foreground_mask_available
+sensor_msgs/CompressedImage foreground_mask
+
 DepthCandidate[] candidates

@@ -24,6 +24,14 @@ sensor_msgs/RegionOfInterest crop_roi
 # Matched RGB timestamp minus proposal timestamp. Near zero is ideal.
 float32 color_time_offset_sec
 
+# Whether the source proposal frame had a valid fitted background plane.
+bool plane_found
+
+# Candidate-local mask transformed to the encoded RGB crop dimensions.
+bool foreground_mask_available
+float32 mask_fill_ratio
+sensor_msgs/CompressedImage foreground_mask
+
 # Encoded crop diagnostics.
 uint32 encoded_width
 uint32 encoded_height

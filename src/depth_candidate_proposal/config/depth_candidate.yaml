@@ -87,6 +87,9 @@ rgb_candidate_crop:
     # Best effort favors current crops over retransmitting stale frames.
     reliable_crop_output: false
 
+    publish_foreground_mask: true
+    mask_png_compression: 3
+
     # Low-rate standard CompressedImage stream for image_view testing.
     publish_top_crop_preview: true
     top_crop_preview_hz: 1.0

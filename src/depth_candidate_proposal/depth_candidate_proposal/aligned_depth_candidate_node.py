@@ -220,6 +220,20 @@ class AlignedDepthCandidateNode(Node):
             output.plane_inlier_ratio = 0.0
             output.plane_coefficients = [0.0, 0.0, 0.0, 0.0]
 
+        mask_success, encoded_mask = cv2.imencode(
+            ".png",
+            result.mask,
+            [int(cv2.IMWRITE_PNG_COMPRESSION), 3],
+        )
+
+        if mask_success:
+            output.foreground_mask_available = True
+            output.foreground_mask.header = message.header
+            output.foreground_mask.format = "mono8; png compressed"
+            output.foreground_mask.data = encoded_mask.tobytes()
+        else:
+            output.foreground_mask_available = False
+
         for candidate_id, data in enumerate(result.candidates):
             candidate = DepthCandidate()
             candidate.id = candidate_id
@@ -240,6 +254,9 @@ class AlignedDepthCandidateNode(Node):
             candidate.fill_ratio = float(data.fill_ratio)
             candidate.area_ratio = float(data.area_ratio)
             candidate.foreground_height_m = float(data.foreground_height_m)
+            candidate.foreground_height_valid = bool(
+                data.foreground_height_valid
+            )
             candidate.proposal_score = float(data.proposal_score)
             candidate.touches_border = bool(data.touches_border)
             output.candidates.append(candidate)

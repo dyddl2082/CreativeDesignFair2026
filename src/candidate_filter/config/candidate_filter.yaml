@@ -35,7 +35,7 @@ candidate_filter:
     valid_depth_good_ratio: 0.85
     max_depth_std_m: 0.20
     depth_std_good_m: 0.035
-    min_foreground_height_m: 0.0
+    min_foreground_height_m: 0.010
     max_foreground_height_m: 0.50
     preferred_foreground_min_m: 0.012
     preferred_foreground_max_m: 0.18
@@ -43,6 +43,17 @@ candidate_filter:
     sync_good_sec: 0.020
     reject_border_candidates: false
     reject_oversize_jpeg: false
+
+    # Background/objectness requirements.
+    require_plane_for_objectness: true
+    require_foreground_mask: true
+
+    min_mask_pixels: 120
+    min_mask_fill_ratio: 0.08
+    max_mask_fill_ratio: 0.98
+
+    solidity_bad: 0.25
+    solidity_good: 0.85
 
     # RGB quality.
     min_sharpness: 2.0
@@ -76,18 +87,17 @@ candidate_filter:
     physical_long_side_preferred_min_m: 0.035
     physical_long_side_preferred_max_m: 0.15
 
-    # Safe initial mode: hard filters run, while target-aware scores are only
-    # observed. Enable after collecting score distributions for true/false crops.
-    enable_color_hard_reject: false
-    min_color_score: 0.18
-    enforce_soft_score: false
-    min_filter_score: 0.45
+    # Objectness is generic. Keep enforcement disabled until retesting.
+    enforce_objectness_score: false
+    min_objectness_score: 0.45
 
-    depth_weight: 0.30
-    quality_weight: 0.20
-    color_weight: 0.25
-    shape_weight: 0.20
-    physical_size_weight: 0.05
+    objectness_depth_weight: 0.40
+    objectness_quality_weight: 0.25
+    objectness_shape_weight: 0.35
+
+    # Target hint is diagnostic only and is not used for ACCEPT/REJECT.
+    target_color_weight: 0.80
+    target_physical_size_weight: 0.20
 
     # Accepted crops stay latency-oriented for the next PC-side inference node.
     reliable_accepted_output: false
