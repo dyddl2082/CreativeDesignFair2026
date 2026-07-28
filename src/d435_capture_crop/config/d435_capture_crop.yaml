@@ -1,0 +1,47 @@
+d435_capture_crop:
+  ros__parameters:
+    # Intel RealSense ROS 2 topics on the Raspberry Pi.
+    color_topic: /camera/camera/color/image_raw
+    depth_topic: /camera/camera/aligned_depth_to_color/image_raw
+    camera_info_topic: /camera/camera/color/camera_info
+
+    # Compatibility command: publishing an object name freezes a frame, but
+    # cropping and final saving still happen in the browser.
+    capture_command_topic: /capture_object_name
+    status_topic: /object_camera_capture/status
+    result_topic: /object_camera_capture/result
+
+    # Existing MacRobot dataset layout.
+    base_dir: ~/MacRobot/data
+    original_subdir: objects
+    curated_subdir: curated/objects
+    depth_subdir: curated/depth
+    metadata_subdir: curated/metadata
+
+    # Browser UI. Open http://<PI_IP>:8090 from the Windows PC.
+    host: 0.0.0.0
+    port: 8090
+    default_object_name: Buds3
+
+    # The preview is intentionally throttled. The saved capture still uses the
+    # full-resolution ROS color frame.
+    preview_hz: 5.0
+    preview_max_width: 640
+    preview_jpeg_quality: 70
+    capture_jpeg_quality: 90
+    save_jpeg_quality: 95
+
+    # D435 aligned-depth matching and conversion.
+    depth_buffer_size: 30
+    depth_sync_tolerance_sec: 0.120
+    depth_scale_m: 0.001
+    depth_min_m: 0.05
+    depth_max_m: 10.0
+
+    # Browser editing session and crop validation.
+    session_timeout_sec: 600.0
+    min_crop_width_px: 24
+    min_crop_height_px: 24
+    save_original_default: true
+    save_depth_default: true
+    clear_session_after_save: true
