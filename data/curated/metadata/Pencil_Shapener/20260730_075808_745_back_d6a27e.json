@@ -1,0 +1,128 @@
+{
+  "schema_version": 2,
+  "dataset": {
+    "role": "positive",
+    "label": "Pencil_Shapener",
+    "target_object": "Pencil_Shapener",
+    "reusable_for_all_targets": false,
+    "auto_negative_for_other_targets": true,
+    "requires_negative_sync": true
+  },
+  "object_name": "Pencil_Shapener",
+  "target_object": "Pencil_Shapener",
+  "view_label": "back",
+  "notes": "",
+  "session_id": "d6a27ee271d74551",
+  "captured_local_iso": "2026-07-30T07:58:08.745-04:00",
+  "saved_local_iso": "2026-07-30T07:58:16.807-04:00",
+  "source": {
+    "camera_family": "Intel RealSense D435/D435f",
+    "color_topic": "/camera/camera/color/image_raw",
+    "depth_topic": "/camera/camera/aligned_depth_to_color/image_raw",
+    "color_stamp_ns": 1785412688628815430,
+    "color_frame_id": "camera_color_optical_frame",
+    "color_encoding": "rgb8",
+    "depth_stamp_ns": 1785412688628815430,
+    "depth_frame_id": "camera_color_optical_frame",
+    "depth_encoding": "16UC1",
+    "depth_sync_offset_sec": 0.0
+  },
+  "image": {
+    "original_width": 640,
+    "original_height": 480,
+    "crop_width": 245,
+    "crop_height": 325,
+    "crop_roi": {
+      "x": 224,
+      "y": 123,
+      "width": 245,
+      "height": 325
+    },
+    "jpeg_quality": 95
+  },
+  "depth": {
+    "available": true,
+    "valid_ratio": 0.6606970172684459,
+    "valid_count": 52608,
+    "median_m": 0.2600000202655792,
+    "near_m": 0.2410000115633011,
+    "far_m": 0.4610000252723694,
+    "min_m": 0.23100000619888306,
+    "max_m": 0.4780000150203705,
+    "saved": true,
+    "saved_unit": "millimeter_uint16_png",
+    "depth_roi": {
+      "x": 224,
+      "y": 123,
+      "width": 245,
+      "height": 325
+    }
+  },
+  "camera_info": {
+    "header": {
+      "stamp_ns": 1785412688628815430,
+      "frame_id": "camera_color_optical_frame"
+    },
+    "height": 480,
+    "width": 640,
+    "distortion_model": "plumb_bob",
+    "d": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "k": [
+      608.4835815429688,
+      0.0,
+      330.42254638671875,
+      0.0,
+      607.3209838867188,
+      248.2657012939453,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "r": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "p": [
+      608.4835815429688,
+      0.0,
+      330.42254638671875,
+      0.0,
+      0.0,
+      607.3209838867188,
+      248.2657012939453,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    "binning_x": 0,
+    "binning_y": 0,
+    "roi": {
+      "x_offset": 0,
+      "y_offset": 0,
+      "height": 0,
+      "width": 0,
+      "do_rectify": false
+    }
+  },
+  "files": {
+    "original": "/home/dyddl2082/MacRobot/data/objects/Pencil_Shapener/20260730_075808_745_back_d6a27e_original.jpg",
+    "crop": "/home/dyddl2082/MacRobot/data/curated/objects/Pencil_Shapener/20260730_075808_745_back_d6a27e.jpg",
+    "depth_crop": "/home/dyddl2082/MacRobot/data/curated/depth/Pencil_Shapener/20260730_075808_745_back_d6a27e_depth.png",
+    "metadata": "/home/dyddl2082/MacRobot/data/curated/metadata/Pencil_Shapener/20260730_075808_745_back_d6a27e.json"
+  }
+}

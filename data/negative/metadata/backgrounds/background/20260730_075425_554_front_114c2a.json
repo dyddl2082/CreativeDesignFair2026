@@ -1,0 +1,128 @@
+{
+  "schema_version": 2,
+  "dataset": {
+    "role": "background",
+    "label": "background",
+    "target_object": null,
+    "reusable_for_all_targets": true,
+    "auto_negative_for_other_targets": false,
+    "requires_negative_sync": false
+  },
+  "object_name": "background",
+  "target_object": null,
+  "view_label": "front",
+  "notes": "",
+  "session_id": "114c2a03cd854a8e",
+  "captured_local_iso": "2026-07-30T07:54:25.554-04:00",
+  "saved_local_iso": "2026-07-30T07:54:39.778-04:00",
+  "source": {
+    "camera_family": "Intel RealSense D435/D435f",
+    "color_topic": "/camera/camera/color/image_raw",
+    "depth_topic": "/camera/camera/aligned_depth_to_color/image_raw",
+    "color_stamp_ns": 1785412465425331543,
+    "color_frame_id": "camera_color_optical_frame",
+    "color_encoding": "rgb8",
+    "depth_stamp_ns": 1785412465425331543,
+    "depth_frame_id": "camera_color_optical_frame",
+    "depth_encoding": "16UC1",
+    "depth_sync_offset_sec": 0.0
+  },
+  "image": {
+    "original_width": 640,
+    "original_height": 480,
+    "crop_width": 640,
+    "crop_height": 480,
+    "crop_roi": {
+      "x": 0,
+      "y": 0,
+      "width": 640,
+      "height": 480
+    },
+    "jpeg_quality": 95
+  },
+  "depth": {
+    "available": true,
+    "valid_ratio": 0.9464713541666666,
+    "valid_count": 290756,
+    "median_m": 0.6470000147819519,
+    "near_m": 0.5490000247955322,
+    "far_m": 0.7620000243186951,
+    "min_m": 0.4570000171661377,
+    "max_m": 0.8790000677108765,
+    "saved": true,
+    "saved_unit": "millimeter_uint16_png",
+    "depth_roi": {
+      "x": 0,
+      "y": 0,
+      "width": 640,
+      "height": 480
+    }
+  },
+  "camera_info": {
+    "header": {
+      "stamp_ns": 1785412465425331543,
+      "frame_id": "camera_color_optical_frame"
+    },
+    "height": 480,
+    "width": 640,
+    "distortion_model": "plumb_bob",
+    "d": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "k": [
+      608.4835815429688,
+      0.0,
+      330.42254638671875,
+      0.0,
+      607.3209838867188,
+      248.2657012939453,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "r": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "p": [
+      608.4835815429688,
+      0.0,
+      330.42254638671875,
+      0.0,
+      0.0,
+      607.3209838867188,
+      248.2657012939453,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    "binning_x": 0,
+    "binning_y": 0,
+    "roi": {
+      "x_offset": 0,
+      "y_offset": 0,
+      "height": 0,
+      "width": 0,
+      "do_rectify": false
+    }
+  },
+  "files": {
+    "original": "/home/dyddl2082/MacRobot/data/negative/originals/backgrounds/background/20260730_075425_554_front_114c2a_original.jpg",
+    "crop": "/home/dyddl2082/MacRobot/data/negative/backgrounds/background/20260730_075425_554_front_114c2a.jpg",
+    "depth_crop": "/home/dyddl2082/MacRobot/data/negative/depth/backgrounds/background/20260730_075425_554_front_114c2a_depth.png",
+    "metadata": "/home/dyddl2082/MacRobot/data/negative/metadata/backgrounds/background/20260730_075425_554_front_114c2a.json"
+  }
+}
