@@ -8,15 +8,66 @@ const state = {
   dragStart: null,
   statsRequestSerial: 0,
   toastTimer: null,
+  busy: false,
+  cameraFresh: false,
+  initialized: false,
+  activeRole: "positive",
+  roleValues: {},
+  defaults: {
+    positive: "Buds3",
+    shared_negative: "other_object",
+    background: "background",
+    hard_negative: "other_object",
+  },
+};
+
+const ROLE_INFO = {
+  positive: {
+    title: "등록 물체",
+    inputLabel: "물체 이름",
+    help: "목표 물체의 positive view로 저장합니다. 이 물체는 다른 모든 등록 목표를 찾을 때 자동으로 negative로 재사용됩니다.",
+    saveLabel: "등록 이미지 저장",
+    destination: (label) => `curated/objects/${label || "<물체>"}`,
+  },
+  shared_negative: {
+    title: "공용 방해물",
+    inputLabel: "방해물 이름",
+    help: "컵·마우스·충전기처럼 목표로 등록하지 않을 물체를 한 번만 촬영합니다. 모든 목표의 negative에 자동 연결됩니다.",
+    saveLabel: "공용 negative 저장",
+    destination: (label) => `negative/library/${label || "<방해물>"}`,
+  },
+  background: {
+    title: "배경·환경",
+    inputLabel: "장면 이름",
+    help: "빈 책상, 손, 케이블, 그림자 같은 공통 배경을 저장합니다. 모든 목표가 같은 background bank를 공유합니다.",
+    saveLabel: "배경 negative 저장",
+    destination: (label) => `negative/backgrounds/${label || "<장면>"}`,
+  },
+  hard_negative: {
+    title: "목표 전용 hard negative",
+    inputLabel: "혼동 물체 이름",
+    help: "공용 negative와 임베딩 margin으로도 특정 목표에서 오검출이 남을 때만 사용합니다. 선택한 목표에만 적용됩니다.",
+    saveLabel: "목표 전용 negative 저장",
+    destination: (label, target) => `negative/confusers/${target || "<목표>"}/manual/${label || "<방해물>"}`,
+  },
 };
 
 const $ = (id) => document.getElementById(id);
 const els = {
   connectionBadge: $("connectionBadge"),
+  syncNegativesBtn: $("syncNegativesBtn"),
   liveImage: $("liveImage"),
   livePlaceholder: $("livePlaceholder"),
+  roleInputs: Array.from(document.querySelectorAll('input[name="datasetRole"]')),
+  roleHelp: $("roleHelp"),
+  objectNameGroup: $("objectNameGroup"),
+  objectNameLabel: $("objectNameLabel"),
   objectName: $("objectName"),
+  targetObjectGroup: $("targetObjectGroup"),
+  targetObject: $("targetObject"),
+  registeredObjects: $("registeredObjects"),
   viewLabel: $("viewLabel"),
+  destinationHint: $("destinationHint"),
   captureBtn: $("captureBtn"),
   refreshStreamBtn: $("refreshStreamBtn"),
   editorPanel: $("editorPanel"),
@@ -52,7 +103,7 @@ function showToast(message, kind = "") {
   window.clearTimeout(state.toastTimer);
   els.toast.textContent = message;
   els.toast.className = `toast ${kind}`.trim();
-  state.toastTimer = window.setTimeout(() => els.toast.classList.add("hidden"), 4200);
+  state.toastTimer = window.setTimeout(() => els.toast.classList.add("hidden"), 5200);
 }
 
 async function api(path, options = {}) {
@@ -75,6 +126,65 @@ async function api(path, options = {}) {
   return payload;
 }
 
+function selectedRole() {
+  return els.roleInputs.find((input) => input.checked)?.value || "positive";
+}
+
+function populateRegisteredObjects(names) {
+  const unique = Array.from(new Set((names || []).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+  els.registeredObjects.replaceChildren(
+    ...unique.map((name) => {
+      const option = document.createElement("option");
+      option.value = name;
+      return option;
+    }),
+  );
+}
+
+function updateDestinationHint() {
+  const role = selectedRole();
+  const info = ROLE_INFO[role];
+  const label = els.objectName.value.trim();
+  const target = els.targetObject.value.trim();
+  els.destinationHint.textContent = `저장 위치: ~/MacRobot/data/${info.destination(label, target)}`;
+}
+
+function applyRole(role, { rememberCurrent = true, setDefault = true } = {}) {
+  if (!ROLE_INFO[role]) role = "positive";
+  if (rememberCurrent && state.activeRole) {
+    state.roleValues[state.activeRole] = els.objectName.value.trim();
+  }
+  state.activeRole = role;
+  for (const input of els.roleInputs) input.checked = input.value === role;
+
+  const info = ROLE_INFO[role];
+  els.objectNameLabel.textContent = info.inputLabel;
+  els.roleHelp.innerHTML = `<strong>${info.title}</strong><span>${info.help}</span>`;
+  els.targetObjectGroup.classList.toggle("hidden", role !== "hard_negative");
+  els.saveBtn.textContent = info.saveLabel;
+
+  if (setDefault) {
+    els.objectName.value = state.roleValues[role] || state.defaults[role] || "";
+  }
+  updateDestinationHint();
+}
+
+function validateIdentity() {
+  const role = selectedRole();
+  const label = els.objectName.value.trim();
+  if (!label) {
+    showToast(`${ROLE_INFO[role].inputLabel}을 입력하세요.`, "error");
+    els.objectName.focus();
+    return false;
+  }
+  if (role === "hard_negative" && !els.targetObject.value.trim()) {
+    showToast("이 hard negative가 적용될 목표 물체를 입력하세요.", "error");
+    els.targetObject.focus();
+    return false;
+  }
+  return true;
+}
+
 async function refreshStatus() {
   try {
     const status = await api("/api/status");
@@ -84,19 +194,30 @@ async function refreshStatus() {
       ? `D435 연결됨 · Depth ${status.depth_available ? "있음" : "대기"}`
       : "D435 color 토픽 대기 중";
     els.connectionBadge.className = `badge ${fresh ? "badge-ok" : "badge-warn"}`;
-    els.captureBtn.disabled = !fresh;
+    state.cameraFresh = fresh;
+    els.captureBtn.disabled = state.busy || !fresh;
     els.livePlaceholder.classList.toggle("hidden", fresh && status.preview_available);
+    populateRegisteredObjects(status.registered_objects);
+
+    if (!state.initialized) {
+      state.defaults.positive = status.default_object_name || "Buds3";
+      state.defaults.shared_negative = status.default_shared_negative_label || "other_object";
+      state.defaults.background = status.default_background_label || "background";
+      state.defaults.hard_negative = status.default_shared_negative_label || "other_object";
+      els.saveOriginal.checked = Boolean(status.save_original_default);
+      els.saveDepth.checked = Boolean(status.save_depth_default);
+      applyRole(status.default_dataset_role || "positive", {
+        rememberCurrent: false,
+        setDefault: true,
+      });
+      state.initialized = true;
+    }
 
     if (!state.session && status.active_session) {
       await restoreSession(status.active_session);
     }
-    if (!els.objectName.dataset.initialized && status.default_object_name) {
-      els.objectName.value = status.default_object_name;
-      els.saveOriginal.checked = Boolean(status.save_original_default);
-      els.saveDepth.checked = Boolean(status.save_depth_default);
-      els.objectName.dataset.initialized = "true";
-    }
   } catch (error) {
+    state.cameraFresh = false;
     els.connectionBadge.textContent = "노드 연결 실패";
     els.connectionBadge.className = "badge badge-error";
     els.captureBtn.disabled = true;
@@ -108,27 +229,25 @@ function refreshLiveStream() {
 }
 
 async function captureFrame() {
-  const objectName = els.objectName.value.trim();
-  if (!objectName) {
-    showToast("물체 이름을 입력하세요.", "error");
-    els.objectName.focus();
-    return;
-  }
-  setBusy(true, "촬영 중...");
+  if (!validateIdentity()) return;
+  const role = selectedRole();
+  setBusy(true, "촬영 중...", els.captureBtn);
   try {
     const payload = await api("/api/capture", {
       method: "POST",
       body: {
-        object_name: objectName,
+        dataset_role: role,
+        object_name: els.objectName.value.trim(),
+        target_object: els.targetObject.value.trim(),
         view_label: els.viewLabel.value.trim() || "view",
       },
     });
     await loadSession(payload);
-    showToast("프레임을 고정했습니다. 저장할 영역을 드래그하세요.", "success");
+    showToast("프레임을 고정했습니다. 저장할 영역을 조정하세요.", "success");
   } catch (error) {
     showToast(error.message, "error");
   } finally {
-    setBusy(false);
+    setBusy(false, "", els.captureBtn);
   }
 }
 
@@ -149,10 +268,16 @@ async function loadSession(payload) {
   state.session = payload;
   state.image = image;
   state.selection = { x: 0, y: 0, width: image.naturalWidth, height: image.naturalHeight };
+  applyRole(payload.dataset_role || "positive", {
+    rememberCurrent: true,
+    setDefault: false,
+  });
   els.objectName.value = payload.object_name || els.objectName.value;
+  els.targetObject.value = payload.target_object || "";
   els.viewLabel.value = payload.view_label || els.viewLabel.value;
+  updateDestinationHint();
   els.editorPanel.classList.remove("hidden");
-  els.sessionBadge.textContent = `세션 ${payload.session_id.slice(0, 8)}`;
+  els.sessionBadge.textContent = `${ROLE_INFO[selectedRole()].title} · ${payload.session_id.slice(0, 8)}`;
   els.depthSync.textContent = formatMillis(payload.depth_sync_offset_sec);
   resizeEditorCanvas();
   updateSelectionDisplay();
@@ -297,17 +422,19 @@ function clearCrop() {
 
 async function discardSession() {
   if (!state.session) return;
+  setBusy(true, "버리는 중...", els.discardBtn);
   try {
     await api("/api/discard", {
       method: "POST",
       body: { session_id: state.session.session_id },
     });
+    clearSessionUi();
+    showToast("촬영 프레임을 버렸습니다.");
   } catch (error) {
     showToast(error.message, "error");
-    return;
+  } finally {
+    setBusy(false, "", els.discardBtn);
   }
-  clearSessionUi();
-  showToast("촬영 프레임을 버렸습니다.");
 }
 
 function clearSessionUi() {
@@ -324,13 +451,18 @@ async function saveCrop() {
     showToast("저장할 크롭 영역을 선택하세요.", "error");
     return;
   }
-  setBusy(true, "저장 중...");
+  if (!validateIdentity()) return;
+
+  const role = selectedRole();
+  setBusy(true, "저장 중...", els.saveBtn);
   try {
     const payload = await api("/api/save", {
       method: "POST",
       body: {
         session_id: state.session.session_id,
+        dataset_role: role,
         object_name: els.objectName.value.trim(),
+        target_object: els.targetObject.value.trim(),
         view_label: els.viewLabel.value.trim() || "view",
         roi: state.selection,
         save_original: els.saveOriginal.checked,
@@ -338,27 +470,64 @@ async function saveCrop() {
         notes: els.notes.value,
       },
     });
-    els.resultBox.textContent = JSON.stringify(payload.paths, null, 2);
-    showToast("크롭 이미지와 메타데이터를 저장했습니다.", "success");
+    const display = {
+      dataset_role: payload.dataset_role,
+      reusable_for_all_targets: payload.reusable_for_all_targets,
+      auto_negative_for_other_targets: payload.auto_negative_for_other_targets,
+      paths: payload.paths,
+      negative_sync: payload.negative_sync,
+      next_step_wsl: "ros2 service call /embedding_retrieval/reload_banks std_srvs/srv/Trigger '{}'",
+    };
+    els.resultBox.textContent = JSON.stringify(display, null, 2);
+
+    const successMessage = role === "positive"
+      ? "등록 이미지를 저장했고 다른 목표의 negative 연결도 갱신했습니다."
+      : role === "shared_negative"
+        ? "공용 negative를 한 번 저장하고 모든 목표에 연결했습니다."
+        : role === "background"
+          ? "공용 background negative를 저장했습니다."
+          : "목표 전용 hard negative를 저장했습니다.";
+    showToast(successMessage, payload.negative_sync_error ? "error" : "success");
     if (payload.session_cleared) clearSessionUi();
   } catch (error) {
     showToast(error.message, "error");
   } finally {
-    setBusy(false);
+    setBusy(false, "", els.saveBtn);
+    applyRole(role, { rememberCurrent: false, setDefault: false });
   }
 }
 
-function setBusy(busy, label = "", activeButton = els.saveBtn) {
-  els.captureBtn.disabled = busy;
+async function syncNegatives() {
+  setBusy(true, "동기화 중...", els.syncNegativesBtn);
+  try {
+    const payload = await api("/api/sync_negatives", {
+      method: "POST",
+      body: {},
+    });
+    els.resultBox.textContent = JSON.stringify({
+      negative_sync: payload.negative_sync,
+      next_step_wsl: "ros2 service call /embedding_retrieval/reload_banks std_srvs/srv/Trigger '{}'",
+    }, null, 2);
+    showToast("등록 물체와 공용 negative의 자동 연결을 갱신했습니다.", "success");
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    setBusy(false, "", els.syncNegativesBtn);
+  }
+}
+
+function setBusy(busy, label = "", activeButton = null) {
+  state.busy = busy;
+  els.captureBtn.disabled = busy || !state.cameraFresh;
   els.saveBtn.disabled = busy;
   els.discardBtn.disabled = busy;
+  els.syncNegativesBtn.disabled = busy;
 
-  if (busy && label) {
+  if (activeButton && busy && label) {
     activeButton.dataset.previous = activeButton.textContent;
     activeButton.textContent = label;
   }
-
-  if (!busy && activeButton.dataset.previous) {
+  if (activeButton && !busy && activeButton.dataset.previous) {
     activeButton.textContent = activeButton.dataset.previous;
     delete activeButton.dataset.previous;
   }
@@ -394,7 +563,13 @@ function finishDrag(event) {
 
 els.editorCanvas.addEventListener("pointerup", finishDrag);
 els.editorCanvas.addEventListener("pointercancel", finishDrag);
+for (const input of els.roleInputs) {
+  input.addEventListener("change", () => applyRole(input.value));
+}
+els.objectName.addEventListener("input", updateDestinationHint);
+els.targetObject.addEventListener("input", updateDestinationHint);
 els.captureBtn.addEventListener("click", captureFrame);
+els.syncNegativesBtn.addEventListener("click", syncNegatives);
 els.refreshStreamBtn.addEventListener("click", refreshLiveStream);
 els.fullFrameBtn.addEventListener("click", setFullFrame);
 els.centerSquareBtn.addEventListener("click", setCenterSquare);
@@ -405,5 +580,6 @@ window.addEventListener("resize", drawEditor);
 els.liveImage.addEventListener("load", () => els.livePlaceholder.classList.add("hidden"));
 els.liveImage.addEventListener("error", () => els.livePlaceholder.classList.remove("hidden"));
 
+applyRole("positive", { rememberCurrent: false, setDefault: false });
 refreshStatus();
 window.setInterval(refreshStatus, 1200);

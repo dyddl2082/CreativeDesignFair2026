@@ -33,15 +33,18 @@ from .capture_core import (
     Roi,
     atomic_write_bytes,
     atomic_write_json,
+    build_dataset_paths,
     compute_depth_stats,
     crop_array,
     depth_to_meters,
     encode_image,
     ensure_under_root,
     map_roi_between_sizes,
+    normalize_dataset_role,
     normalize_roi,
     sanitize_component,
 )
+from .negative_library import NegativeSyncSummary, sync_negative_views
 from .web_server import ApiError, guess_access_url, start_http_server
 
 
@@ -54,7 +57,9 @@ class BufferedDepth:
 @dataclass(frozen=True)
 class CaptureSession:
     session_id: str
+    dataset_role: str
     object_name: str
+    target_object: str
     view_label: str
     created_monotonic: float
     created_local_iso: str
@@ -95,7 +100,14 @@ class D435CaptureCropNode(Node):
         self._latest_camera_info: CameraInfo | None = None
         self._active_session: CaptureSession | None = None
         self._saved_count = 0
+        self._saved_by_role = {
+            "positive": 0,
+            "shared_negative": 0,
+            "background": 0,
+            "hard_negative": 0,
+        }
         self._last_error = ""
+        self._last_negative_sync: dict[str, Any] = {}
         self._preview_jpeg: bytes | None = None
         self._preview_sequence = 0
         self._preview_stamp_ns = 0
@@ -181,13 +193,21 @@ class D435CaptureCropNode(Node):
         )
         self._preview_thread.start()
 
+        if bool(self.get_parameter("auto_sync_negative_views").value):
+            try:
+                self._sync_negative_views(log_result=False)
+            except (OSError, ValueError) as exc:
+                self._last_error = f"Initial negative sync failed: {exc}"
+                self.get_logger().warning(self._last_error)
+
         self.get_logger().info(
             "D435 capture/crop node ready: "
             f"color='{color_topic}', depth='{depth_topic}', "
             f"web='{guess_access_url(host, port)}'"
         )
         self.get_logger().info(
-            "Workflow: open the web UI, capture a frame, drag a crop, inspect depth, then save."
+            "Workflow: choose a dataset role, capture, crop, inspect depth, then save. "
+            "Registered objects and shared negatives are automatically reused."
         )
 
     def _declare_parameters(self) -> None:
@@ -203,9 +223,22 @@ class D435CaptureCropNode(Node):
             "curated_subdir": "curated/objects",
             "depth_subdir": "curated/depth",
             "metadata_subdir": "curated/metadata",
+            # Canonical negatives are stored once. Per-target _auto views are
+            # lightweight links generated under negative/confusers/<target>.
+            "negative_library_subdir": "negative/library",
+            "negative_backgrounds_subdir": "negative/backgrounds",
+            "negative_confusers_subdir": "negative/confusers",
+            "negative_originals_subdir": "negative/originals",
+            "negative_depth_subdir": "negative/depth",
+            "negative_metadata_subdir": "negative/metadata",
+            "auto_negative_directory_name": "_auto",
+            "auto_sync_negative_views": True,
             "host": "0.0.0.0",
             "port": 8090,
+            "default_dataset_role": "positive",
             "default_object_name": "Buds3",
+            "default_shared_negative_label": "other_object",
+            "default_background_label": "background",
             "preview_hz": 5.0,
             "preview_max_width": 640,
             "preview_jpeg_quality": 70,
@@ -248,23 +281,27 @@ class D435CaptureCropNode(Node):
 
     def _on_capture_command(self, message: String) -> None:
         text = str(message.data or "").strip()
-        object_name = text
-        view_label = ""
+        payload: dict[str, Any] = {
+            "dataset_role": "positive",
+            "object_name": text,
+            "target_object": "",
+            "view_label": "",
+            "source": "ros_topic",
+        }
         if text.startswith("{"):
             try:
-                payload = json.loads(text)
-                object_name = str(payload.get("object_name", ""))
-                view_label = str(payload.get("view_label", ""))
-            except json.JSONDecodeError as exc:
+                decoded = json.loads(text)
+                if not isinstance(decoded, dict):
+                    raise ValueError("capture JSON must be an object")
+                payload.update(decoded)
+            except (json.JSONDecodeError, ValueError) as exc:
                 self.get_logger().warning(f"Ignoring invalid capture JSON: {exc}")
                 return
         try:
-            result = self.api_capture(
-                {"object_name": object_name, "view_label": view_label, "source": "ros_topic"}
-            )
+            result = self.api_capture(payload)
             self.get_logger().info(
                 "Frame frozen from capture topic. Complete cropping in the browser: "
-                f"session={result['session_id']}"
+                f"session={result['session_id']}, role={result['dataset_role']}"
             )
         except ApiError as exc:
             self.get_logger().warning(f"Capture command failed: {exc.message}")
@@ -382,7 +419,13 @@ class D435CaptureCropNode(Node):
             return None
         return nearest
 
-    def _make_session(self, object_name: str, view_label: str) -> CaptureSession:
+    def _make_session(
+        self,
+        dataset_role: str,
+        object_name: str,
+        target_object: str,
+        view_label: str,
+    ) -> CaptureSession:
         with self._frame_lock:
             color_message = self._latest_color_msg
             camera_info = self._latest_camera_info
@@ -440,9 +483,26 @@ class D435CaptureCropNode(Node):
         session_id = uuid.uuid4().hex[:16]
         quality = int(np.clip(self.get_parameter("capture_jpeg_quality").value, 40, 100))
         color_jpeg = encode_image(color_bgr, ".jpg", quality=quality)
+        role = normalize_dataset_role(dataset_role)
+        safe_object_name = sanitize_component(object_name, fallback="object")
+        safe_target_object = (
+            sanitize_component(target_object, fallback="")
+            if str(target_object or "").strip()
+            else ""
+        )
+        if role == "positive":
+            safe_target_object = safe_object_name
+        if role == "hard_negative" and not safe_target_object:
+            raise ApiError(
+                400,
+                "target_object is required for a target-specific hard negative",
+            )
+
         return CaptureSession(
             session_id=session_id,
-            object_name=sanitize_component(object_name, fallback="object"),
+            dataset_role=role,
+            object_name=safe_object_name,
+            target_object=safe_target_object,
             view_label=sanitize_component(view_label, fallback="view"),
             created_monotonic=time.monotonic(),
             created_local_iso=now.isoformat(timespec="milliseconds"),
@@ -506,6 +566,56 @@ class D435CaptureCropNode(Node):
                 self._preview_condition.wait(timeout=max(0.05, timeout_sec))
             return self._preview_sequence, self._preview_jpeg
 
+    def _registered_objects(self) -> list[str]:
+        try:
+            curated_root = self._storage_roots()["curated"]
+            return sorted(
+                (path.name for path in curated_root.iterdir() if path.is_dir()),
+                key=str.casefold,
+            )
+        except (OSError, ValueError):
+            return []
+
+    def _sync_negative_views(self, *, log_result: bool = True) -> dict[str, Any]:
+        roots = self._storage_roots()
+        summary: NegativeSyncSummary = sync_negative_views(
+            curated_root=roots["curated"],
+            library_root=roots["negative_library"],
+            confusers_root=roots["negative_confusers"],
+            auto_directory_name=str(
+                self.get_parameter("auto_negative_directory_name").value
+            ),
+        )
+        payload: dict[str, Any] = {
+            **summary.as_dict(),
+            "synced_local_iso": datetime.now().astimezone().isoformat(
+                timespec="milliseconds"
+            ),
+        }
+        self._last_negative_sync = payload
+        if log_result:
+            self.get_logger().info(
+                "Automatic negative views synchronized: "
+                f"targets={summary.target_count}, managed={summary.total_managed_files}, "
+                f"links={summary.created_symlinks}"
+            )
+        return payload
+
+    def api_sync_negatives(self, payload: dict[str, Any]) -> dict[str, Any]:
+        del payload
+        try:
+            summary = self._sync_negative_views(log_result=True)
+        except (OSError, ValueError) as exc:
+            self._last_error = f"Negative sync failed: {exc}"
+            raise ApiError(500, "Failed to synchronize shared negatives", str(exc)) from exc
+        return {
+            "negative_sync": summary,
+            "reload_hint": (
+                "After copying the dataset to WSL2, call "
+                "/embedding_retrieval/reload_banks."
+            ),
+        }
+
     def api_status(self) -> dict[str, Any]:
         with self._frame_lock:
             color_available = self._latest_color_msg is not None
@@ -532,7 +642,9 @@ class D435CaptureCropNode(Node):
             "active_session": (
                 {
                     "session_id": session.session_id,
+                    "dataset_role": session.dataset_role,
                     "object_name": session.object_name,
+                    "target_object": session.target_object,
                     "view_label": session.view_label,
                     "created_local_iso": session.created_local_iso,
                     "width": int(session.color_bgr.shape[1]),
@@ -543,33 +655,89 @@ class D435CaptureCropNode(Node):
                 if session
                 else None
             ),
-            "default_object_name": str(self.get_parameter("default_object_name").value),
-            "save_original_default": bool(self.get_parameter("save_original_default").value),
-            "save_depth_default": bool(self.get_parameter("save_depth_default").value),
+            "dataset_roles": [
+                "positive",
+                "shared_negative",
+                "background",
+                "hard_negative",
+            ],
+            "default_dataset_role": str(
+                self.get_parameter("default_dataset_role").value
+            ),
+            "default_object_name": str(
+                self.get_parameter("default_object_name").value
+            ),
+            "default_shared_negative_label": str(
+                self.get_parameter("default_shared_negative_label").value
+            ),
+            "default_background_label": str(
+                self.get_parameter("default_background_label").value
+            ),
+            "registered_objects": self._registered_objects(),
+            "save_original_default": bool(
+                self.get_parameter("save_original_default").value
+            ),
+            "save_depth_default": bool(
+                self.get_parameter("save_depth_default").value
+            ),
+            "auto_sync_negative_views": bool(
+                self.get_parameter("auto_sync_negative_views").value
+            ),
             "saved_count": self._saved_count,
+            "saved_by_role": dict(self._saved_by_role),
+            "last_negative_sync": dict(self._last_negative_sync),
             "last_error": self._last_error,
         }
 
     def api_capture(self, payload: dict[str, Any]) -> dict[str, Any]:
-        object_name = str(
-            payload.get("object_name")
-            or self.get_parameter("default_object_name").value
-            or "object"
+        try:
+            dataset_role = normalize_dataset_role(
+                str(
+                    payload.get("dataset_role")
+                    or self.get_parameter("default_dataset_role").value
+                    or "positive"
+                )
+            )
+        except ValueError as exc:
+            raise ApiError(400, str(exc)) from exc
+
+        default_label = str(
+            self.get_parameter("default_object_name").value or "object"
         )
+        if dataset_role == "shared_negative":
+            default_label = str(
+                self.get_parameter("default_shared_negative_label").value
+                or "other_object"
+            )
+        elif dataset_role == "background":
+            default_label = str(
+                self.get_parameter("default_background_label").value
+                or "background"
+            )
+
+        object_name = str(payload.get("object_name") or default_label)
+        target_object = str(payload.get("target_object") or "")
         view_label = str(payload.get("view_label") or "view")
-        session = self._make_session(object_name, view_label)
+        session = self._make_session(
+            dataset_role,
+            object_name,
+            target_object,
+            view_label,
+        )
         with self._session_lock:
             self._active_session = session
         full_roi = Roi(0, 0, session.color_bgr.shape[1], session.color_bgr.shape[0])
         stats = self._depth_stats_for_roi(session, full_roi)
         self.get_logger().info(
-            f"Captured frame for '{session.object_name}' "
+            f"Captured role='{session.dataset_role}' label='{session.object_name}' "
             f"({session.color_bgr.shape[1]}x{session.color_bgr.shape[0]}, "
             f"depth={'yes' if session.depth_m is not None else 'no'})"
         )
         return {
             "session_id": session.session_id,
+            "dataset_role": session.dataset_role,
             "object_name": session.object_name,
+            "target_object": session.target_object,
             "view_label": session.view_label,
             "width": int(session.color_bgr.shape[1]),
             "height": int(session.color_bgr.shape[0]),
@@ -623,6 +791,38 @@ class D435CaptureCropNode(Node):
                 base,
                 base / str(self.get_parameter("metadata_subdir").value),
             ),
+            "negative_library": ensure_under_root(
+                base,
+                base / str(self.get_parameter("negative_library_subdir").value),
+            ),
+            "negative_backgrounds": ensure_under_root(
+                base,
+                base / str(
+                    self.get_parameter("negative_backgrounds_subdir").value
+                ),
+            ),
+            "negative_confusers": ensure_under_root(
+                base,
+                base / str(
+                    self.get_parameter("negative_confusers_subdir").value
+                ),
+            ),
+            "negative_originals": ensure_under_root(
+                base,
+                base / str(
+                    self.get_parameter("negative_originals_subdir").value
+                ),
+            ),
+            "negative_depth": ensure_under_root(
+                base,
+                base / str(self.get_parameter("negative_depth_subdir").value),
+            ),
+            "negative_metadata": ensure_under_root(
+                base,
+                base / str(
+                    self.get_parameter("negative_metadata_subdir").value
+                ),
+            ),
         }
         return roots
 
@@ -637,6 +837,9 @@ class D435CaptureCropNode(Node):
                 min_width=int(self.get_parameter("min_crop_width_px").value),
                 min_height=int(self.get_parameter("min_crop_height_px").value),
             )
+            dataset_role = normalize_dataset_role(
+                str(payload.get("dataset_role") or session.dataset_role)
+            )
         except ValueError as exc:
             raise ApiError(400, str(exc)) from exc
 
@@ -644,6 +847,20 @@ class D435CaptureCropNode(Node):
             str(payload.get("object_name") or session.object_name),
             fallback=session.object_name,
         )
+        target_raw = str(payload.get("target_object") or session.target_object or "")
+        target_object = (
+            sanitize_component(target_raw, fallback="")
+            if target_raw.strip()
+            else ""
+        )
+        if dataset_role == "positive":
+            target_object = object_name
+        if dataset_role == "hard_negative" and not target_object:
+            raise ApiError(
+                400,
+                "target_object is required for a target-specific hard negative",
+            )
+
         view_label = sanitize_component(
             str(payload.get("view_label") or session.view_label),
             fallback="view",
@@ -666,10 +883,16 @@ class D435CaptureCropNode(Node):
         quality = int(np.clip(self.get_parameter("save_jpeg_quality").value, 50, 100))
         roots = self._storage_roots()
         suffix = f"{session.filename_timestamp}_{view_label}_{session.session_id[:6]}"
-        original_path = roots["original"] / object_name / f"{suffix}_original.jpg"
-        crop_path = roots["curated"] / object_name / f"{suffix}.jpg"
-        depth_path = roots["depth"] / object_name / f"{suffix}_depth.png"
-        metadata_path = roots["metadata"] / object_name / f"{suffix}.json"
+        try:
+            paths = build_dataset_paths(
+                roots,
+                dataset_role=dataset_role,
+                label=object_name,
+                target_object=target_object,
+                suffix=suffix,
+            )
+        except ValueError as exc:
+            raise ApiError(400, str(exc)) from exc
 
         depth_roi = self._depth_roi_for_color_roi(session, roi)
         depth_stats = self._depth_stats_for_roi(session, roi)
@@ -678,27 +901,44 @@ class D435CaptureCropNode(Node):
         try:
             if save_original:
                 atomic_write_bytes(
-                    original_path,
+                    paths.original,
                     encode_image(session.color_bgr, ".jpg", quality=quality),
                 )
-            atomic_write_bytes(crop_path, encode_image(crop, ".jpg", quality=quality))
+            atomic_write_bytes(
+                paths.crop,
+                encode_image(crop, ".jpg", quality=quality),
+            )
             if (
                 save_depth
                 and session.depth_raw_for_png is not None
                 and depth_roi is not None
             ):
                 depth_crop = crop_array(session.depth_raw_for_png, depth_roi)
-                atomic_write_bytes(depth_path, encode_image(depth_crop, ".png"))
+                atomic_write_bytes(paths.depth_crop, encode_image(depth_crop, ".png"))
                 depth_saved = True
 
             metadata: dict[str, Any] = {
-                "schema_version": 1,
-                "object_name": object_name,
+                "schema_version": 2,
+                "dataset": {
+                    "role": paths.dataset_role,
+                    "label": paths.label,
+                    "target_object": paths.target_object,
+                    "reusable_for_all_targets": paths.reusable_for_all_targets,
+                    "auto_negative_for_other_targets": (
+                        paths.auto_negative_for_other_targets
+                    ),
+                    "requires_negative_sync": paths.requires_negative_sync,
+                },
+                # Compatibility fields retained for older dataset utilities.
+                "object_name": paths.label,
+                "target_object": paths.target_object,
                 "view_label": view_label,
                 "notes": notes,
                 "session_id": session.session_id,
                 "captured_local_iso": session.created_local_iso,
-                "saved_local_iso": datetime.now().astimezone().isoformat(timespec="milliseconds"),
+                "saved_local_iso": datetime.now().astimezone().isoformat(
+                    timespec="milliseconds"
+                ),
                 "source": {
                     "camera_family": "Intel RealSense D435/D435f",
                     "color_topic": str(self.get_parameter("color_topic").value),
@@ -727,41 +967,66 @@ class D435CaptureCropNode(Node):
                 },
                 "camera_info": session.camera_info,
                 "files": {
-                    "original": str(original_path) if save_original else None,
-                    "crop": str(crop_path),
-                    "depth_crop": str(depth_path) if depth_saved else None,
-                    "metadata": str(metadata_path),
+                    "original": str(paths.original) if save_original else None,
+                    "crop": str(paths.crop),
+                    "depth_crop": str(paths.depth_crop) if depth_saved else None,
+                    "metadata": str(paths.metadata),
                 },
             }
-            atomic_write_json(metadata_path, metadata)
+            atomic_write_json(paths.metadata, metadata)
         except (OSError, ValueError, RuntimeError, cv2.error) as exc:
             self._last_error = f"Save failed: {exc}"
             raise ApiError(500, "Failed to save capture files", str(exc)) from exc
 
+        sync_summary: dict[str, Any] | None = None
+        sync_error = ""
+        if (
+            paths.requires_negative_sync
+            and bool(self.get_parameter("auto_sync_negative_views").value)
+        ):
+            try:
+                sync_summary = self._sync_negative_views(log_result=True)
+            except (OSError, ValueError) as exc:
+                sync_error = str(exc)
+                self._last_error = f"Saved image, but negative sync failed: {exc}"
+                self.get_logger().warning(self._last_error)
+
         self._saved_count += 1
+        self._saved_by_role[paths.dataset_role] += 1
         result = {
-            "event": "capture_saved",
-            "object_name": object_name,
+            "event": "dataset_capture_saved",
+            "dataset_role": paths.dataset_role,
+            "object_name": paths.label,
+            "target_object": paths.target_object,
             "view_label": view_label,
             "session_id": session.session_id,
             "crop_roi": roi.as_dict(),
             "depth": depth_stats.as_dict(),
+            "reusable_for_all_targets": paths.reusable_for_all_targets,
+            "auto_negative_for_other_targets": paths.auto_negative_for_other_targets,
+            "negative_sync": sync_summary,
+            "negative_sync_error": sync_error or None,
+            "embedding_reload_required": True,
             "paths": {
-                "original": str(original_path) if save_original else None,
-                "crop": str(crop_path),
-                "depth_crop": str(depth_path) if depth_saved else None,
-                "metadata": str(metadata_path),
+                "original": str(paths.original) if save_original else None,
+                "crop": str(paths.crop),
+                "depth_crop": str(paths.depth_crop) if depth_saved else None,
+                "metadata": str(paths.metadata),
             },
         }
         self._event_queue.put(result)
         self.get_logger().info(
-            f"Saved '{object_name}' crop {crop.shape[1]}x{crop.shape[0]} to {crop_path}"
+            f"Saved role='{paths.dataset_role}' label='{paths.label}' "
+            f"crop={crop.shape[1]}x{crop.shape[0]} to {paths.crop}"
         )
 
         clear_after = bool(self.get_parameter("clear_session_after_save").value)
         if clear_after:
             with self._session_lock:
-                if self._active_session and self._active_session.session_id == session.session_id:
+                if (
+                    self._active_session
+                    and self._active_session.session_id == session.session_id
+                ):
                     self._active_session = None
         return {
             "session_cleared": clear_after,

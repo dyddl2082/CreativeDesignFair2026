@@ -66,3 +66,111 @@ def test_crop_and_atomic_jpeg_write(tmp_path: Path):
     decoded = cv2.imread(str(destination), cv2.IMREAD_COLOR)
     assert decoded is not None
     assert decoded.shape[:2] == (40, 40)
+
+
+def _dataset_roots(tmp_path: Path) -> dict[str, Path]:
+    return {
+        "original": tmp_path / "objects",
+        "curated": tmp_path / "curated" / "objects",
+        "depth": tmp_path / "curated" / "depth",
+        "metadata": tmp_path / "curated" / "metadata",
+        "negative_library": tmp_path / "negative" / "library",
+        "negative_backgrounds": tmp_path / "negative" / "backgrounds",
+        "negative_confusers": tmp_path / "negative" / "confusers",
+        "negative_originals": tmp_path / "negative" / "originals",
+        "negative_depth": tmp_path / "negative" / "depth",
+        "negative_metadata": tmp_path / "negative" / "metadata",
+    }
+
+
+def test_dataset_role_paths_keep_shared_negative_single_copy(tmp_path: Path):
+    from d435_capture_crop.capture_core import build_dataset_paths
+
+    roots = _dataset_roots(tmp_path)
+    positive = build_dataset_paths(
+        roots,
+        dataset_role="positive",
+        label="Buds3",
+        target_object="",
+        suffix="front_001",
+    )
+    assert positive.crop == tmp_path / "curated/objects/Buds3/front_001.jpg"
+    assert positive.auto_negative_for_other_targets
+    assert positive.requires_negative_sync
+
+    shared = build_dataset_paths(
+        roots,
+        dataset_role="shared_negative",
+        label="white_cup",
+        target_object="",
+        suffix="side_001",
+    )
+    assert shared.crop == tmp_path / "negative/library/white_cup/side_001.jpg"
+    assert shared.reusable_for_all_targets
+    assert shared.requires_negative_sync
+
+    hard = build_dataset_paths(
+        roots,
+        dataset_role="hard_negative",
+        label="white_cup",
+        target_object="Buds3",
+        suffix="close_001",
+    )
+    assert hard.crop == (
+        tmp_path
+        / "negative/confusers/Buds3/manual/white_cup/close_001.jpg"
+    )
+    assert not hard.reusable_for_all_targets
+
+
+def test_hard_negative_requires_target(tmp_path: Path):
+    from d435_capture_crop.capture_core import build_dataset_paths
+
+    with pytest.raises(ValueError):
+        build_dataset_paths(
+            _dataset_roots(tmp_path),
+            dataset_role="hard_negative",
+            label="cup",
+            target_object="",
+            suffix="001",
+        )
+
+
+def test_negative_sync_reuses_other_objects_and_library(tmp_path: Path):
+    from d435_capture_crop.negative_library import sync_negative_views
+
+    curated = tmp_path / "curated" / "objects"
+    library = tmp_path / "negative" / "library"
+    confusers = tmp_path / "negative" / "confusers"
+
+    (curated / "Buds3").mkdir(parents=True)
+    (curated / "Cup").mkdir(parents=True)
+    (library / "Mouse").mkdir(parents=True)
+    (library / "Buds3").mkdir(parents=True)
+    (confusers / "Buds3" / "manual" / "Cup").mkdir(parents=True)
+
+    for path, value in [
+        (curated / "Buds3" / "front.jpg", 30),
+        (curated / "Cup" / "front.jpg", 80),
+        (library / "Mouse" / "side.jpg", 120),
+        (library / "Buds3" / "wrong.jpg", 160),
+        (confusers / "Buds3" / "manual" / "Cup" / "manual.jpg", 200),
+    ]:
+        image = np.full((12, 12, 3), value, dtype=np.uint8)
+        assert cv2.imwrite(str(path), image)
+
+    summary = sync_negative_views(
+        curated_root=curated,
+        library_root=library,
+        confusers_root=confusers,
+    )
+
+    buds_auto = confusers / "Buds3" / "_auto"
+    cup_auto = confusers / "Cup" / "_auto"
+    assert (buds_auto / "registered" / "Cup" / "front.jpg").exists()
+    assert (buds_auto / "library" / "Mouse" / "side.jpg").exists()
+    assert not (buds_auto / "library" / "Buds3" / "wrong.jpg").exists()
+    assert (cup_auto / "registered" / "Buds3" / "front.jpg").exists()
+    assert (confusers / "Buds3" / "manual" / "Cup" / "manual.jpg").exists()
+    assert summary.target_count == 2
+    assert summary.total_managed_files >= 4

@@ -67,6 +67,189 @@ class DepthStats:
         }
 
 
+
+DATASET_ROLE_ALIASES = {
+    "positive": "positive",
+    "object": "positive",
+    "target": "positive",
+    "shared_negative": "shared_negative",
+    "shared": "shared_negative",
+    "negative": "shared_negative",
+    "distractor": "shared_negative",
+    "background": "background",
+    "backgrounds": "background",
+    "hard_negative": "hard_negative",
+    "confuser": "hard_negative",
+    "target_negative": "hard_negative",
+}
+
+
+@dataclass(frozen=True)
+class DatasetPaths:
+    """Resolved output paths and reuse policy for one saved crop."""
+
+    dataset_role: str
+    label: str
+    target_object: str | None
+    original: Path
+    crop: Path
+    depth_crop: Path
+    metadata: Path
+    reusable_for_all_targets: bool
+    auto_negative_for_other_targets: bool
+    requires_negative_sync: bool
+
+
+def normalize_dataset_role(value: str) -> str:
+    """Normalize UI/CLI aliases to one of the supported dataset roles."""
+
+    normalized = str(value or "positive").strip().lower().replace("-", "_")
+    role = DATASET_ROLE_ALIASES.get(normalized)
+    if role is None:
+        supported = ", ".join(sorted(set(DATASET_ROLE_ALIASES.values())))
+        raise ValueError(
+            f"Unsupported dataset_role '{value}'. Expected one of: {supported}"
+        )
+    return role
+
+
+def build_dataset_paths(
+    roots: Mapping[str, Path],
+    *,
+    dataset_role: str,
+    label: str,
+    target_object: str,
+    suffix: str,
+) -> DatasetPaths:
+    """Build role-aware paths while keeping canonical images single-copy."""
+
+    role = normalize_dataset_role(dataset_role)
+    safe_label = sanitize_component(label, fallback="item")
+    safe_target = sanitize_component(target_object, fallback="target")
+    safe_suffix = sanitize_component(suffix, fallback="capture", max_length=160)
+
+    required = {
+        "original",
+        "curated",
+        "depth",
+        "metadata",
+        "negative_library",
+        "negative_backgrounds",
+        "negative_confusers",
+        "negative_originals",
+        "negative_depth",
+        "negative_metadata",
+    }
+    missing = sorted(required.difference(roots))
+    if missing:
+        raise ValueError(f"Missing storage roots: {', '.join(missing)}")
+
+    if role == "positive":
+        original = roots["original"] / safe_label / f"{safe_suffix}_original.jpg"
+        crop = roots["curated"] / safe_label / f"{safe_suffix}.jpg"
+        depth_crop = roots["depth"] / safe_label / f"{safe_suffix}_depth.png"
+        metadata = roots["metadata"] / safe_label / f"{safe_suffix}.json"
+        target = safe_label
+        reusable = False
+        auto_other = True
+        sync_required = True
+    elif role == "shared_negative":
+        original = (
+            roots["negative_originals"]
+            / "library"
+            / safe_label
+            / f"{safe_suffix}_original.jpg"
+        )
+        crop = roots["negative_library"] / safe_label / f"{safe_suffix}.jpg"
+        depth_crop = (
+            roots["negative_depth"]
+            / "library"
+            / safe_label
+            / f"{safe_suffix}_depth.png"
+        )
+        metadata = (
+            roots["negative_metadata"]
+            / "library"
+            / safe_label
+            / f"{safe_suffix}.json"
+        )
+        target = None
+        reusable = True
+        auto_other = False
+        sync_required = True
+    elif role == "background":
+        original = (
+            roots["negative_originals"]
+            / "backgrounds"
+            / safe_label
+            / f"{safe_suffix}_original.jpg"
+        )
+        crop = roots["negative_backgrounds"] / safe_label / f"{safe_suffix}.jpg"
+        depth_crop = (
+            roots["negative_depth"]
+            / "backgrounds"
+            / safe_label
+            / f"{safe_suffix}_depth.png"
+        )
+        metadata = (
+            roots["negative_metadata"]
+            / "backgrounds"
+            / safe_label
+            / f"{safe_suffix}.json"
+        )
+        target = None
+        reusable = True
+        auto_other = False
+        sync_required = False
+    else:
+        if not str(target_object or "").strip():
+            raise ValueError("target_object is required for hard_negative captures")
+        original = (
+            roots["negative_originals"]
+            / "confusers"
+            / safe_target
+            / safe_label
+            / f"{safe_suffix}_original.jpg"
+        )
+        crop = (
+            roots["negative_confusers"]
+            / safe_target
+            / "manual"
+            / safe_label
+            / f"{safe_suffix}.jpg"
+        )
+        depth_crop = (
+            roots["negative_depth"]
+            / "confusers"
+            / safe_target
+            / safe_label
+            / f"{safe_suffix}_depth.png"
+        )
+        metadata = (
+            roots["negative_metadata"]
+            / "confusers"
+            / safe_target
+            / safe_label
+            / f"{safe_suffix}.json"
+        )
+        target = safe_target
+        reusable = False
+        auto_other = False
+        sync_required = False
+
+    return DatasetPaths(
+        dataset_role=role,
+        label=safe_label,
+        target_object=target,
+        original=Path(original),
+        crop=Path(crop),
+        depth_crop=Path(depth_crop),
+        metadata=Path(metadata),
+        reusable_for_all_targets=reusable,
+        auto_negative_for_other_targets=auto_other,
+        requires_negative_sync=sync_required,
+    )
+
 def sanitize_component(value: str, fallback: str = "unnamed", max_length: int = 80) -> str:
     """Return a path-safe Unicode component while preserving Korean names."""
 

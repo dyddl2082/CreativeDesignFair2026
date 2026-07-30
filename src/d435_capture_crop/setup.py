@@ -5,7 +5,7 @@ package_name = "d435_capture_crop"
 
 setup(
     name=package_name,
-    version="1.0.0",
+    version="2.0.0",
     packages=find_packages(exclude=("test",)),
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
@@ -20,7 +20,7 @@ setup(
     maintainer_email="macrobot@example.com",
     description=(
         "Capture Intel RealSense D435 color/depth frames, crop them in a "
-        "browser before saving, and write MacRobot dataset metadata."
+        "browser before saving, maintain reusable negative libraries, and write MacRobot dataset metadata."
     ),
     license="Apache-2.0",
     tests_require=["pytest"],
