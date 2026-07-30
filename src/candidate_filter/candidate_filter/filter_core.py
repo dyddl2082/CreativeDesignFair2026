@@ -125,14 +125,14 @@ class FilterConfig:
             raise ValueError("hard_aspect_ratio_min must be positive")
         if self.hard_aspect_ratio_min >= self.hard_aspect_ratio_max:
             raise ValueError("hard aspect ratio range is invalid")
-        if not 0.0 <= self.min_filter_score <= 1.0:
-            raise ValueError("min_filter_score must be in [0, 1]")
+        if not 0.0 <= self.min_objectness_score <= 1.0:
+            raise ValueError("min_objectness_score must be in [0, 1]")
         weights = (
-            self.depth_weight,
-            self.quality_weight,
-            self.color_weight,
-            self.shape_weight,
-            self.physical_size_weight,
+            self.objectness_depth_weight,
+            self.objectness_quality_weight,
+            self.objectness_shape_weight,
+            self.target_color_weight,
+            self.target_physical_size_weight,
         )
         if any(weight < 0.0 for weight in weights) or sum(weights) <= 0.0:
             raise ValueError("score weights are invalid")

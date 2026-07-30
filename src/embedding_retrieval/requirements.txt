@@ -1,0 +1,4 @@
+# Install PyTorch using the command appropriate for your CPU/CUDA environment first.
+transformers>=4.36,<6
+safetensors>=0.4
+Pillow>=10

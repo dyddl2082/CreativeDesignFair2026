@@ -130,7 +130,7 @@ class CandidateFilterNode(Node):
             f"input='{input_topic}', results='{result_topic}', "
             f"accepted='{accepted_topic}' ({accepted_reliability}), "
             f"target='{self._target_object}', "
-            f"soft_enforcement={initial_config.enforce_soft_score}"
+            f"soft_enforcement={initial_config.enforce_objectness_score}"
         )
 
     def _declare_parameters(self) -> None:
@@ -300,10 +300,6 @@ class CandidateFilterNode(Node):
             ),
             solidity_bad=float(value("solidity_bad")),
             solidity_good=float(value("solidity_good")),
-            enable_color_hard_reject=bool(value("enable_color_hard_reject")),
-            min_color_score=float(value("min_color_score")),
-            enforce_soft_score=bool(value("enforce_soft_score")),
-            min_filter_score=float(value("min_filter_score")),
             enforce_objectness_score=bool(
                 value("enforce_objectness_score")
             ),

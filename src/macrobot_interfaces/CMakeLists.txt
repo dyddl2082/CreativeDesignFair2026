@@ -12,6 +12,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/RgbCandidateCrop.msg"
   "msg/CandidateFilterResult.msg"
   "msg/FilteredCandidateCrop.msg"
+  "msg/EmbeddingRetrievalResult.msg"
+  "msg/EmbeddingMatchedCandidate.msg"
   DEPENDENCIES sensor_msgs std_msgs
 )
 
