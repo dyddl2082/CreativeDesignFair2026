@@ -157,10 +157,18 @@ class EmbeddingRetrievalNode(Node):
 
         self.get_logger().info(
             "Embedding retrieval ready: "
-            f"input='{input_topic}', results='{result_topic}', matched='{matched_topic}', "
-            f"target='{self._target_object}', device='{self._encoder.device}', "
-            f"positive={self._positive_bank.count}, negative={self._negative_bank.count}, "
-            f"thresholds_enforced={bool(self.get_parameter('enforce_thresholds').value)}"
+            f"input='{input_topic}', "
+            f"results='{result_topic}', "
+            f"matched='{matched_topic}', "
+            f"target='{self._target_object}', "
+            f"device='{self._encoder.device}', "
+            f"device_name='{self._encoder.device_name}', "
+            f"amp={self._encoder.use_amp}, "
+            f"amp_dtype='{self._encoder.amp_dtype_name}', "
+            f"positive={self._positive_bank.count}, "
+            f"negative={self._negative_bank.count}, "
+            f"thresholds_enforced="
+            f"{bool(self.get_parameter('enforce_thresholds').value)}"
         )
 
     def _declare_parameters(self) -> None:
@@ -251,8 +259,17 @@ class EmbeddingRetrievalNode(Node):
         return "|".join(
             [
                 PREPROCESSING_VERSION,
-                f"square_ratio={float(self.get_parameter('square_padding_ratio').value):.5f}",
-                f"square_mode={str(self.get_parameter('square_padding_mode').value)}",
+                (
+                    "square_ratio="
+                    f"{float(self.get_parameter('square_padding_ratio').value):.5f}"
+                ),
+                (
+                    "square_mode="
+                    f"{str(self.get_parameter('square_padding_mode').value)}"
+                ),
+                f"device_type={self._encoder.device.type}",
+                f"amp={int(self._encoder.use_amp)}",
+                f"amp_dtype={self._encoder.amp_dtype_name}",
             ]
         )
 
@@ -876,7 +893,14 @@ class EmbeddingRetrievalNode(Node):
                 "model_id": self._encoder.model_id,
                 "pooling": self._encoder.pooling,
                 "device": str(self._encoder.device),
-                "embedding_dim": int(self._encoder.embedding_dim),
+                "device_name": self._encoder.device_name,
+                "amp_enabled": bool(
+                    self._encoder.use_amp
+                ),
+                "amp_dtype": self._encoder.amp_dtype_name,
+                "embedding_dim": int(
+                    self._encoder.embedding_dim
+                ),
                 "positive_reference_count": positive.count,
                 "positive_cache_hit": positive.cache_hit,
                 "negative_reference_count": negative.count,

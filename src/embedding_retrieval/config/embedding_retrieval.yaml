@@ -14,7 +14,7 @@ embedding_retrieval:
 
     # DINOv2 ViT-S/14. The first run downloads model files unless already cached.
     model_id: facebook/dinov2-small
-    device: auto          # auto, cpu, cuda, cuda:0, ...
+    device: xpu          # auto, cpu, cuda, cuda:0, ...
     pooling: cls          # cls, mean_patch, cls_mean
     use_amp: true         # used only on CUDA
     model_cache_dir: ~/.cache/huggingface

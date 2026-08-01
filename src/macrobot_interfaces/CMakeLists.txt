@@ -14,6 +14,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/FilteredCandidateCrop.msg"
   "msg/EmbeddingRetrievalResult.msg"
   "msg/EmbeddingMatchedCandidate.msg"
+  "msg/TemporalConfirmationResult.msg"
   DEPENDENCIES sensor_msgs std_msgs
 )
 

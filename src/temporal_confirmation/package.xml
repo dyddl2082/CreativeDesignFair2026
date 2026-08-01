@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>temporal_confirmation</name>
+  <version>0.1.0</version>
+  <description>Multi-frame spatial tracking and K-of-N confirmation for MacRobot.</description>
+  <maintainer email="macrobot@example.com">MacRobot</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>macrobot_interfaces</depend>
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>candidate_filter</exec_depend>
+  <exec_depend>embedding_retrieval</exec_depend>
+
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

@@ -1,4 +1,8 @@
-# Install PyTorch using the command appropriate for your CPU/CUDA environment first.
+# Install native PyTorch XPU wheels separately for Intel Arc:
+# python -m pip install torch torchvision \
+#   --index-url https://download.pytorch.org/whl/xpu
+#
+# Do not install intel-extension-for-pytorch for this project.
 transformers>=4.36,<6
 safetensors>=0.4
 Pillow>=10

@@ -50,17 +50,80 @@ class Dinov2Encoder:
             raise ValueError("pooling must be one of: cls, mean_patch, cls_mean")
 
         requested_device = device.strip().lower()
+
+        xpu_available = bool(
+            hasattr(torch, "xpu")
+            and torch.xpu.is_available()
+        )
+        cuda_available = bool(torch.cuda.is_available())
+
         if requested_device == "auto":
-            if torch.cuda.is_available():
+            # MacRobot PC는 Intel Arc가 기본 가속기이므로 XPU를 우선한다.
+            if xpu_available:
+                requested_device = "xpu"
+            elif cuda_available:
                 requested_device = "cuda"
             else:
                 requested_device = "cpu"
-        if requested_device.startswith("cuda") and not torch.cuda.is_available():
+
+        if requested_device.startswith("xpu") and not xpu_available:
             raise RuntimeError(
-                f"CUDA device '{requested_device}' was requested but torch.cuda.is_available() is false"
+                f"Intel XPU device '{requested_device}' was requested, "
+                "but torch.xpu.is_available() is false. "
+                "Install the PyTorch XPU wheel and verify the Intel GPU driver."
             )
+
+        if requested_device.startswith("cuda") and not cuda_available:
+            raise RuntimeError(
+                f"CUDA device '{requested_device}' was requested, "
+                "but torch.cuda.is_available() is false."
+            )
+
+        if not (
+            requested_device == "cpu"
+            or requested_device.startswith("xpu")
+            or requested_device.startswith("cuda")
+        ):
+            raise ValueError(
+                "device must be one of: auto, cpu, xpu, xpu:0, "
+                "cuda, cuda:0, ..."
+            )
+
         self.device = torch.device(requested_device)
-        self.use_amp = bool(use_amp and self.device.type == "cuda")
+
+        # Intel XPU와 CUDA 모두 AMP를 지원한다.
+        self.use_amp = bool(
+            use_amp
+            and self.device.type in {"xpu", "cuda"}
+        )
+
+        self.amp_dtype = torch.float16
+        self.amp_dtype_name = (
+            "float16"
+            if self.use_amp
+            else "float32"
+        )
+
+        if self.device.type == "xpu":
+            device_index = (
+                self.device.index
+                if self.device.index is not None
+                else torch.xpu.current_device()
+            )
+            self.device_name = torch.xpu.get_device_name(
+                device_index
+            )
+        elif self.device.type == "cuda":
+            device_index = (
+                self.device.index
+                if self.device.index is not None
+                else torch.cuda.current_device()
+            )
+            self.device_name = torch.cuda.get_device_name(
+                device_index
+            )
+        else:
+            self.device_name = "CPU"
 
         cache_dir = str(Path(model_cache_dir).expanduser()) if model_cache_dir else None
         self.processor = AutoImageProcessor.from_pretrained(
@@ -107,7 +170,10 @@ class Dinov2Encoder:
             }
 
             autocast_context = (
-                self._torch.autocast(device_type="cuda", dtype=self._torch.float16)
+                self._torch.autocast(
+                    device_type=self.device.type,
+                    dtype=self.amp_dtype,
+                )
                 if self.use_amp
                 else nullcontext()
             )
