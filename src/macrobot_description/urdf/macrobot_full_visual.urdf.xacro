@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="macrobot_full_visual">
+  <material name="material">
+    <color rgba="0.965 0.965 0.953 1.0"/>
+  </material>
+
+  <xacro:include filename="$(find macrobot_description)/urdf/assemblies/macrobot_full_visual.urdf.xacro"/>
+  <xacro:macrobot_full_visual prefix=""/>
+</robot>

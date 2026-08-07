@@ -1,0 +1,30 @@
+macrobot_ik_validator:
+  ros__parameters:
+    # Empty means analytic/actuator validation only. Replace with the generated
+    # safe_connected_samples.csv for collision-aware operation.
+    safe_region_csv: ""
+    require_safe_region: false
+    safe_region_mode: cell
+    path_step_rad: 0.01745329252  # 1 degree
+    max_goal_delta_rad: 3.2
+
+macrobot_arm_servo_bridge:
+  ros__parameters:
+    safe_region_csv: ""
+    require_safe_region: false
+    safe_region_mode: cell
+
+    # Conservative initial trajectory limits for first real-arm tests.
+    update_rate_hz: 10.0
+    q1_max_velocity: 0.35
+    q2_max_velocity: 0.35
+    q3_max_velocity: 0.50
+    minimum_duration_sec: 0.20
+    preempt_active_goal: true
+
+    # SERVO_US uses the calibrated pulse envelope instead of Pico's generic
+    # 500..2500 us angle conversion.
+    command_mode: pulse_us
+    dry_run: true
+    command_home_on_start: false
+    minimum_command_delta: 1.0

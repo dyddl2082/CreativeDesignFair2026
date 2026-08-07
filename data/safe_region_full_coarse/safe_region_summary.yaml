@@ -1,0 +1,46 @@
+generator: macrobot_safe_region
+robot_model: macrobot_full_collision
+robot_model_mode: full_mapped
+output_directory: /home/dyddl2082/MacRobot/data/safe_region_full_coarse
+counts:
+  total: 11904
+  safe: 1367
+  connected_to_home: 1367
+  safe_fraction: 0.1148353495
+scan:
+  q1: {min: -1, max: 1, step: 0.0872664626}
+  q2: {min: -1.3, max: 1.3, step: 0.0872664626}
+  q3: {min: -1.25, max: 0, step: 0.0872664626}
+initial_servo_commands_deg:
+  lift_mg996r: 90
+  tilt_mg996r: 90
+  gripper_mg90s_open: 161.619724
+  gripper_mg90s_closed: 18.38027522
+actuator_implied_logical_ranges_rad:
+  q1_from_lift_servo: [-0.6981317008, 0.6981317008]
+  tool_pitch_from_tilt_servo: [-0.6981317008, 0.6981317008]
+  q3_from_gripper_servo: [-1.323131697, 0.07313170421]
+connected_component_bounds_rad:
+  q1: [-0.6509341496, 0.6580627894]
+  q2: [-0.9509341496, 0.881661565]
+  q3: [-0.7264012244, -0.2028024488]
+reject_reason_counts:
+  collision: 2729
+  lift_servo_limit: 3648
+  safe: 1367
+  tilt_servo_limit: 3840
+  tool_pitch_limit: 320
+top_collision_pairs:
+  - {pair: "gripper_left_addition|gripper_left_gear", count: 2048}
+  - {pair: "gripper_right_addition|gripper_right_gear", count: 2048}
+  - {pair: "gripper_right_gear|gripper_servo_gear", count: 768}
+  - {pair: "back_link|base_link", count: 736}
+  - {pair: "base_link|gripper_link", count: 208}
+  - {pair: "floor|gripper_clamp_left", count: 68}
+  - {pair: "floor|gripper_clamp_right", count: 68}
+  - {pair: "base_link|gripper_servo_gear", count: 64}
+  - {pair: "base_link|gripper_left_gear", count: 59}
+  - {pair: "base_link|gripper_right_gear", count: 48}
+  - {pair: "gripper_link|ratio_right_gear", count: 48}
+  - {pair: "base_link|gripper_clamp_left", count: 12}
+  - {pair: "base_link|gripper_clamp_right", count: 3}

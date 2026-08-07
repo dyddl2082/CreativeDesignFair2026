@@ -1,0 +1,11 @@
+planner_configs:
+  RRTConnectkConfigDefault:
+    type: geometric::RRTConnect
+    range: 0.0
+
+arm:
+  planner_configs:
+    - RRTConnectkConfigDefault
+arm_with_gripper:
+  planner_configs:
+    - RRTConnectkConfigDefault
