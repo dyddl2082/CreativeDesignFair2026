@@ -248,68 +248,30 @@ class ArmServoBridgeNode(Node):
                 self._send_servo_set(candidate, force=False)
         self._publish_commanded_state()
 
-    def _publish_pico_command(self, command: str) -> None:
-        """Publish one complete Pico command and mirror it to the preview topic."""
-        preview = String()
-        preview.data = command
-        self.preview_pub.publish(preview)
-
-        if not self.dry_run:
-            message = String()
-            message.data = command
-            self.command_pub.publish(message)
-
     def _send_servo_set(self, q: Q, force: bool = False) -> None:
         commands_deg = self.mapping.servo_commands_deg(*q)
         pulses = self.mapping.servo_pulses_us(*q)
-        keys = ("lift", "tilt", "gripper")
-
-        if self.command_mode == "pulse_us":
-            # Send all three channels in a single serial command.  Pico still
-            # writes the PCA9685 channels sequentially, but no other command can
-            # be interleaved and all three values belong to the same trajectory
-            # sample.
-            values = tuple(float(pulses[key]) for key in keys)
-
-            if not force and all(key in self.last_commands for key in keys):
-                largest_delta = max(
-                    abs(values[index] - self.last_commands[key])
-                    for index, key in enumerate(keys)
-                )
-                if largest_delta < self.minimum_command_delta:
-                    return
-
-            command = (
-                f"ARM_US {values[0]:.1f} "
-                f"{values[1]:.1f} "
-                f"{values[2]:.1f}"
-            )
-            self._publish_pico_command(command)
-
-            for key, value in zip(keys, values):
-                self.last_commands[key] = value
-            return
-
-        # Legacy angle mode is retained for bench debugging only.  Normal arm
-        # operation should use pulse_us/ARM_US so that calibrated pulse limits
-        # are preserved.
         axes = (
             ("lift", self.mapping.lift),
             ("tilt", self.mapping.tilt),
             ("gripper", self.mapping.gripper),
         )
         for key, axis in axes:
-            value = float(commands_deg[key])
+            value = pulses[key] if self.command_mode == "pulse_us" else commands_deg[key]
             previous = self.last_commands.get(key)
-            if (
-                not force
-                and previous is not None
-                and abs(value - previous) < self.minimum_command_delta
-            ):
+            if not force and previous is not None and abs(value - previous) < self.minimum_command_delta:
                 continue
-            self._publish_pico_command(
-                f"SERVO {axis.channel} {value:.3f}"
-            )
+            if self.command_mode == "pulse_us":
+                command = f"SERVO_US {axis.channel} {value:.1f}"
+            else:
+                command = f"SERVO {axis.channel} {value:.3f}"
+            preview = String()
+            preview.data = command
+            self.preview_pub.publish(preview)
+            if not self.dry_run:
+                message = String()
+                message.data = command
+                self.command_pub.publish(message)
             self.last_commands[key] = value
 
     def _publish_commanded_state(self) -> None:
@@ -326,10 +288,15 @@ class ArmServoBridgeNode(Node):
 
     def _disable_callback(self, _: Empty) -> None:
         self.active = False
-        self._publish_pico_command("ARM_OFF")
-        # After FULL OFF, the next trajectory sample must be transmitted even
-        # if it numerically matches the last command before disabling.
-        self.last_commands.clear()
+        for axis in (self.mapping.lift, self.mapping.tilt, self.mapping.gripper):
+            command = f"SERVO_OFF {axis.channel}"
+            preview = String()
+            preview.data = command
+            self.preview_pub.publish(preview)
+            if not self.dry_run:
+                message = String()
+                message.data = command
+                self.command_pub.publish(message)
         self._publish_status(True, "servos_disabled")
 
     def _pico_response_callback(self, msg: String) -> None:
