@@ -102,17 +102,24 @@ SERVO_NAMES = {
     2: "mg90s_gripper",
 }
 
-# Per-channel pulse calibration:
-# (minimum_us, center_us, maximum_us)
-#
-# Commissioning 후 실측값으로 수정한다.
-SERVO_PULSE_US = {
-    0: (1000.0, 1500.0, 2000.0),
-    1: (1000.0, 1500.0, 2000.0),
-    2: (1000.0, 1500.0, 2000.0),
+SERVO_ANGLE_CAL = {
+    0: (0.0, 500.0, 90.0, 1500.0, 180.0, 2500.0),  # left MG996R
+    1: (0.0, 500.0, 90.0, 1500.0, 180.0, 2500.0),  # right MG996R
+    2: (0.0, 500.0, 90.0, 1500.0, 180.0, 2500.0),  # MG90S
 }
 
-# None이면 해당 PCA9685 채널이 FULL OFF 상태다.
+SERVO_PULSE_US = {
+    0: (500.0, 1500.0, 2500.0),  # left MG996R
+    1: (500.0, 1500.0, 2500.0),  # right MG996R
+    2: (500.0, 1500.0, 2500.0),  # MG90S gripper
+}
+
+SERVO_LIMITS_US = {
+    0: (1000.0, 2000.0),
+    1: (1000.0, 2000.0),
+    2: (1000.0, 2000.0),
+}
+
 last_servo_us = {
     0: None,
     1: None,
@@ -152,6 +159,62 @@ def send(ok=True, event="response", **kwargs):
     except Exception:
         # Fallback for unexpected JSON issue
         sys.stdout.write('{"ok":false,"event":"json_error"}\n')
+
+def lerp(x, x0, y0, x1, y1):
+    if abs(x1 - x0) < 1e-9:
+        return y0
+
+    t = (x - x0) / (x1 - x0)
+
+    return y0 + t * (y1 - y0)
+
+
+def servo_deg_to_us(channel, angle_deg):
+    channel = int(channel)
+
+    if channel not in SERVO_ANGLE_CAL:
+        raise ValueError(
+            "Servo angle calibration missing for channel {}".format(channel)
+        )
+
+    (
+        deg_min,
+        us_min,
+        deg_center,
+        us_center,
+        deg_max,
+        us_max,
+    ) = SERVO_ANGLE_CAL[channel]
+
+    angle_deg = float(angle_deg)
+
+    # 보정표 범위 밖의 각도는 보정표 범위로 먼저 제한한다.
+    if angle_deg < deg_min:
+        angle_deg = deg_min
+
+    if angle_deg > deg_max:
+        angle_deg = deg_max
+
+    # center 기준으로 좌우를 따로 선형 보간한다.
+    # 서보가 완벽히 선형이 아니더라도 이 방식이 단일 직선보다 낫다.
+    if angle_deg <= deg_center:
+        pulse_us = lerp(
+            angle_deg,
+            deg_min,
+            us_min,
+            deg_center,
+            us_center,
+        )
+    else:
+        pulse_us = lerp(
+            angle_deg,
+            deg_center,
+            us_center,
+            deg_max,
+            us_max,
+        )
+
+    return pulse_us
 
 
 # ============================================================
@@ -283,8 +346,23 @@ class PCA9685:
         return SERVO_PULSE_US[channel]
 
     def _clamp_servo_us(self, channel, pulse_us):
-        minimum, _, maximum = self._calibration(channel)
-        return clamp(float(pulse_us), minimum, maximum)
+        channel = int(channel)
+
+        if channel not in SERVO_PULSE_US:
+            raise ValueError(
+                "Servo channel is not configured: {}".format(channel)
+            )
+
+        values = SERVO_PULSE_US[channel]
+
+        # (min, center, max) 또는 (min, max) 둘 다 허용
+        minimum = float(values[0])
+        maximum = float(values[-1])
+
+        return max(
+            minimum,
+            min(maximum, float(pulse_us)),
+        )
 
     def _write_servo_us_unchecked(self, channel, pulse_us):
         # 50 Hz period is 20,000 us.
@@ -306,6 +384,57 @@ class PCA9685:
         )
         last_servo_us[channel] = applied_us
         return applied_us
+
+    def set_servo_deg(self, channel, angle_deg):
+        channel = int(channel)
+        angle_deg = float(angle_deg)
+
+        requested_us = servo_deg_to_us(
+            channel,
+            angle_deg,
+        )
+
+        applied_us = self.set_servo_us(
+            channel,
+            requested_us,
+        )
+
+        return requested_us, applied_us
+
+    def set_arm_deg(self, lift_deg, tilt_deg, gripper_deg):
+        requested_deg = {
+            0: float(lift_deg),
+            1: float(tilt_deg),
+            2: float(gripper_deg),
+        }
+
+        requested_us = {
+            channel: servo_deg_to_us(
+                channel,
+                requested_deg[channel],
+            )
+            for channel in ARM_SERVO_CHANNELS
+        }
+
+        applied = self.set_arm_us(
+            requested_us[0],
+            requested_us[1],
+            requested_us[2],
+        )
+
+        return (
+            [
+                requested_deg[0],
+                requested_deg[1],
+                requested_deg[2],
+            ],
+            [
+                requested_us[0],
+                requested_us[1],
+                requested_us[2],
+            ],
+            applied,
+        )
 
     def set_arm_us(self, lift_us, tilt_us, gripper_us):
         requested = {
@@ -768,6 +897,9 @@ def handle_command(line):
                     "MOVE_TICKS <left_ticks> <right_ticks> [speed] [timeout_sec]",
                     "SERVO <channel> <angle_deg>",
                     "SERVO_US <channel> <pulse_us>",
+                    "SERVO_DEG <channel> <angle_deg>",
+                    "ARM_DEG <lift_deg> <tilt_deg> <gripper_deg>",
+                    "SERVO_CAL?",
                     "ARM_US <lift_us> <tilt_us> <gripper_us>",
                     "SERVO_OFF <channel>",
                     "ARM_OFF",
@@ -872,20 +1004,22 @@ def handle_command(line):
 
             channel = int(parts[1])
             angle_deg = float(parts[2])
-            applied_us = pca.set_servo_angle(
+
+            requested_us, applied_us = pca.set_servo_deg(
                 channel,
                 angle_deg,
             )
 
             send(
                 ok=True,
-                event="servo_angle_set",
+                event="servo_deg_set",
+                command_alias="SERVO",
                 channel=channel,
                 servo_name=SERVO_NAMES[channel],
                 angle_deg=angle_deg,
+                requested_us=requested_us,
                 applied_us=applied_us,
             )
-
 
         elif cmd == "SERVO_US":
             if pca is None:
@@ -915,6 +1049,94 @@ def handle_command(line):
                 servo_name=SERVO_NAMES[channel],
                 requested_us=requested_us,
                 applied_us=applied_us,
+            )
+
+        elif cmd == "SERVO_DEG":
+            if pca is None:
+                send(
+                    ok=False,
+                    event="servo_error",
+                    message="PCA9685 not available",
+                )
+                return
+
+            if len(parts) != 3:
+                raise ValueError(
+                    "Usage: SERVO_DEG <channel> <angle_deg>"
+                )
+
+            channel = int(parts[1])
+            angle_deg = float(parts[2])
+
+            requested_us, applied_us = pca.set_servo_deg(
+                channel,
+                angle_deg,
+            )
+
+            send(
+                ok=True,
+                event="servo_deg_set",
+                channel=channel,
+                servo_name=SERVO_NAMES[channel],
+                angle_deg=angle_deg,
+                requested_us=requested_us,
+                applied_us=applied_us,
+            )
+
+
+        elif cmd == "ARM_DEG":
+            if pca is None:
+                send(
+                    ok=False,
+                    event="servo_error",
+                    message="PCA9685 not available",
+                )
+                return
+
+            if len(parts) != 4:
+                raise ValueError(
+                    "Usage: ARM_DEG <lift_deg> <tilt_deg> <gripper_deg>"
+                )
+
+            lift_deg = float(parts[1])
+            tilt_deg = float(parts[2])
+            gripper_deg = float(parts[3])
+
+            requested_deg, requested_us, applied_us = pca.set_arm_deg(
+                lift_deg,
+                tilt_deg,
+                gripper_deg,
+            )
+
+            send(
+                ok=True,
+                event="arm_deg_set",
+                requested_deg=requested_deg,
+                requested_us=requested_us,
+                applied_us=applied_us,
+                channels=[0, 1, 2],
+            )
+
+
+        elif cmd == "SERVO_CAL?":
+            calibration = {}
+
+            for channel in ARM_SERVO_CHANNELS:
+                calibration[str(channel)] = {
+                    "name": SERVO_NAMES[channel],
+                    "pulse_calibration_us": SERVO_PULSE_US[channel],
+                    "pulse_limit_us": (
+                        SERVO_PULSE_US[channel][0],
+                        SERVO_PULSE_US[channel][-1],
+                    ),
+                    "angle_calibration": SERVO_ANGLE_CAL[channel],
+                    "last_servo_us": last_servo_us[channel],
+                }
+
+            send(
+                ok=True,
+                event="servo_calibration",
+                calibration=calibration,
             )
 
 

@@ -1,0 +1,388 @@
+schema_version: 1
+robot_name: MacRobot
+report_id: e5abee99-4378-48b4-9946-ae1da769e7ce
+created_at: '2026-08-08T02:33:07+00:00'
+updated_at: '2026-08-08T05:31:29+00:00'
+sections:
+  pulse_zero_calibration:
+    servos:
+      lift:
+        servo_model: MG996R left/lift
+        channel: 0
+        zero_deg: 90.0
+        sign: 1.0
+        model_multiplier: -2.0
+        pulse_min_us: 500.0
+        pulse_center_us: 1500.0
+        pulse_max_us: 2500.0
+        command_min_deg: 0.0
+        command_max_deg: 180.0
+        raw_pulse_jog:
+          marks: {}
+          history: []
+          last_pulse_us: 1500.0
+        affects_safe_region: true
+        operator_confirmed: true
+        notes: ''
+      tilt:
+        servo_model: MG996R right/tilt
+        channel: 1
+        zero_deg: 90.0
+        sign: -1.0
+        model_multiplier: 2.0
+        pulse_min_us: 500.0
+        pulse_center_us: 1500.0
+        pulse_max_us: 2500.0
+        command_min_deg: 0.0
+        command_max_deg: 180.0
+        raw_pulse_jog: {}
+        affects_safe_region: true
+        operator_confirmed: true
+        notes: ''
+      gripper:
+        servo_model: MG90S gripper
+        channel: 2
+        zero_deg: 0.0
+        sign: -1.0
+        model_multiplier: 2.0
+        pulse_min_us: 500.0
+        pulse_center_us: 1500.0
+        pulse_max_us: 2400.0
+        command_min_deg: 0.0
+        command_max_deg: 160.0
+        raw_pulse_jog: {}
+        affects_safe_region: true
+        operator_confirmed: true
+        notes: ''
+    suggested_actuator_parameters:
+      lift_zero_deg: 90.0
+      lift_sign: 1.0
+      lift_pulse_min_us: 500.0
+      lift_pulse_center_us: 1500.0
+      lift_pulse_max_us: 2500.0
+      lift_command_min_deg: 0.0
+      lift_command_max_deg: 180.0
+      tilt_zero_deg: 90.0
+      tilt_sign: -1.0
+      tilt_pulse_min_us: 500.0
+      tilt_pulse_center_us: 1500.0
+      tilt_pulse_max_us: 2500.0
+      tilt_command_min_deg: 0.0
+      tilt_command_max_deg: 180.0
+      gripper_zero_deg: 0.0
+      gripper_sign: -1.0
+      gripper_pulse_min_us: 500.0
+      gripper_pulse_center_us: 1500.0
+      gripper_pulse_max_us: 2400.0
+      gripper_command_min_deg: 0.0
+      gripper_command_max_deg: 160.0
+    requires_pipeline_restart_after_apply: true
+    requires_safe_region_regeneration: true
+    apply_command_example: ros2 run macrobot_arm_commissioning apply_report_recommendations
+      --report /home/dyddl2082/MacRobot/data/commissioning/arm_commissioning_report.yaml
+    status: completed
+    completed_at: '2026-08-08T05:21:49+00:00'
+    started_at: '2026-08-08T05:17:53+00:00'
+  direction_and_mechanism:
+    home_q:
+    - 0.0
+    - 0.0
+    - 0.0
+    tests:
+    - name: q1_positive
+      target_q:
+      - 0.05
+      - 0.0
+      - 0.0
+      automatic:
+        ok: true
+        event: trajectory_completed
+        goal:
+        - 0.05
+        - 0.0
+        - 0.0
+        duration_sec: 0.9508902610000405
+        validation:
+          ok: true
+          event: goal_validated
+          source: direct_joint_goal
+          current:
+          - 0.0
+          - 0.0
+          - 0.0
+          goal:
+          - 0.05
+          - 0.0
+          - 0.0
+          path_samples: 7
+          start:
+          - 0.0
+          - 0.0
+          - 0.0
+          safe_region_loaded: true
+        bridge:
+          ok: true
+          event: trajectory_completed
+          commanded_state:
+          - 0.05
+          - 0.0
+          - 0.0
+          dry_run: false
+          goal:
+          - 0.05
+          - 0.0
+          - 0.0
+          servo_deg:
+            lift: 84.27042204869177
+            tilt: 95.72957795130823
+            gripper: 161.619724
+          servo_pulse_us:
+            lift: 1468.169011381621
+            tilt: 1531.830988618379
+            gripper: 1897.8873555555556
+        commanded_state:
+        - 0.05
+        - 0.0
+        - 0.0
+        tool_pose:
+          frame_id: base_link
+          x: -0.15887706119808864
+          y: 0.0645
+          z: 0.16771147587490026
+          qx: 0.0
+          qy: 0.024997395914712332
+          qz: 0.0
+          qw: 0.9996875162757026
+        gripper_gap_m: 0.06999999999999999
+        servo_command_preview:
+        - ARM_US 1497.4 1502.6 1897.9
+        - ARM_US 1494.8 1505.2 1897.9
+        - ARM_US 1491.7 1508.3 1897.9
+        - ARM_US 1488.1 1511.9 1897.9
+        - ARM_US 1484.4 1515.6 1897.9
+        - ARM_US 1480.6 1519.4 1897.9
+        - ARM_US 1477.0 1523.0 1897.9
+        - ARM_US 1473.7 1526.3 1897.9
+        - ARM_US 1471.1 1528.9 1897.9
+        - ARM_US 1469.2 1530.8 1897.9
+        - ARM_US 1468.2 1531.8 1897.9
+      operator_checks:
+        model_and_physical_direction_match: true
+        four_bar_parallelogram_maintained: true
+        gripper_clamps_parallel: null
+        no_binding_or_abnormal_noise: true
+      notes: ''
+    - name: q2_positive
+      target_q:
+      - 0.0
+      - 0.05
+      - 0.0
+      automatic:
+        ok: true
+        event: trajectory_completed
+        goal:
+        - 0.0
+        - 0.05
+        - 0.0
+        duration_sec: 0.9461253730000863
+        validation:
+          ok: true
+          event: goal_validated
+          source: direct_joint_goal
+          current:
+          - 0.0
+          - 0.0
+          - 0.0
+          goal:
+          - 0.0
+          - 0.05
+          - 0.0
+          path_samples: 7
+          start:
+          - 0.0
+          - 0.0
+          - 0.0
+          safe_region_loaded: true
+        bridge:
+          ok: true
+          event: trajectory_completed
+          commanded_state:
+          - 0.0
+          - 0.05
+          - 0.0
+          dry_run: false
+          goal:
+          - 0.0
+          - 0.05
+          - 0.0
+          servo_deg:
+            lift: 90.0
+            tilt: 95.72957795130823
+            gripper: 161.619724
+          servo_pulse_us:
+            lift: 1500.0
+            tilt: 1531.830988618379
+            gripper: 1897.8873555555556
+        commanded_state:
+        - 0.0
+        - 0.05
+        - 0.0
+        tool_pose:
+          frame_id: base_link
+          x: -0.16387497812515647
+          y: 0.0645
+          z: 0.16783644983540363
+          qx: 0.0
+          qy: 0.024997395914712332
+          qz: 0.0
+          qw: 0.9996875162757026
+        gripper_gap_m: 0.06999999999999999
+        servo_command_preview:
+        - ARM_US 1500.0 1502.9 1897.9
+        - ARM_US 1500.0 1505.5 1897.9
+        - ARM_US 1500.0 1508.8 1897.9
+        - ARM_US 1500.0 1512.4 1897.9
+        - ARM_US 1500.0 1516.2 1897.9
+        - ARM_US 1500.0 1519.9 1897.9
+        - ARM_US 1500.0 1523.5 1897.9
+        - ARM_US 1500.0 1526.7 1897.9
+        - ARM_US 1500.0 1529.2 1897.9
+        - ARM_US 1500.0 1531.0 1897.9
+        - ARM_US 1500.0 1531.8 1897.9
+      operator_checks:
+        model_and_physical_direction_match: true
+        four_bar_parallelogram_maintained: true
+        gripper_clamps_parallel: null
+        no_binding_or_abnormal_noise: true
+      notes: ''
+    - name: q3_negative
+      target_q:
+      - 0.0
+      - 0.0
+      - -0.05
+      automatic:
+        ok: true
+        event: trajectory_completed
+        goal:
+        - 0.0
+        - 0.0
+        - -0.05
+        duration_sec: 0.7960640679998505
+        validation:
+          ok: true
+          event: goal_validated
+          source: direct_joint_goal
+          current:
+          - 0.0
+          - 0.0
+          - 0.0
+          goal:
+          - 0.0
+          - 0.0
+          - -0.05
+          path_samples: 7
+          start:
+          - 0.0
+          - 0.0
+          - 0.0
+          safe_region_loaded: true
+        bridge:
+          ok: true
+          event: trajectory_completed
+          commanded_state:
+          - 0.0
+          - 0.0
+          - -0.05
+          dry_run: false
+          goal:
+          - 0.0
+          - 0.0
+          - -0.05
+          servo_deg:
+            lift: 90.0
+            tilt: 90.0
+            gripper: 155.89014604869175
+          servo_pulse_us:
+            lift: 1500.0
+            tilt: 1500.0
+            gripper: 1866.0563669371763
+        commanded_state:
+        - 0.0
+        - 0.0
+        - -0.05
+        tool_pose:
+          frame_id: base_link
+          x: -0.16230662492187967
+          y: 0.0645
+          z: 0.15859499999999999
+          qx: 0.0
+          qy: 0.0
+          qz: 0.0
+          qw: 1.0
+        gripper_gap_m: 0.06992501562369798
+        servo_command_preview:
+        - ARM_US 1500.0 1500.0 1895.9
+        - ARM_US 1500.0 1500.0 1892.9
+        - ARM_US 1500.0 1500.0 1888.9
+        - ARM_US 1500.0 1500.0 1884.3
+        - ARM_US 1500.0 1500.0 1879.6
+        - ARM_US 1500.0 1500.0 1875.1
+        - ARM_US 1500.0 1500.0 1871.0
+        - ARM_US 1500.0 1500.0 1868.0
+        - ARM_US 1500.0 1500.0 1866.3
+        - ARM_US 1500.0 1500.0 1866.1
+      operator_checks:
+        model_and_physical_direction_match: true
+        four_bar_parallelogram_maintained: true
+        gripper_clamps_parallel: true
+        no_binding_or_abnormal_noise: true
+      notes: ''
+    passed: true
+    status: completed
+    completed_at: '2026-08-08T05:25:02+00:00'
+    started_at: '2026-08-08T05:23:42+00:00'
+source:
+  actuator_limits_file: /home/dyddl2082/MacRobot/install/macrobot_safe_region/share/macrobot_safe_region/config/actuator_limits.yaml
+  safe_region:
+    connected_csv: /home/dyddl2082/MacRobot/data/safe_region_exact_gripper_fine_calibrated/safe_connected_samples.csv
+    all_samples_csv: /home/dyddl2082/MacRobot/data/safe_region_exact_gripper_fine_calibrated/safe_samples.csv
+    connected_sample_count: 36805
+    all_sample_count: 134520
+    bounds_rad:
+      q1:
+      - -0.685840735
+      - 0.67551608
+      q2:
+      - -1.02074732
+      - 0.86420827
+      q3:
+      - -1.25
+      - 0.0
+    grid_step_rad:
+      q1: 0.03490658499999999
+      q2: 0.03490658499999999
+      q3: 0.043633231299999964
+  commissioning_started_at: '2026-08-08T05:23:39+00:00'
+  commissioning_finished_at: '2026-08-08T05:21:55+00:00'
+system_snapshot:
+  current_q:
+  - 0.0
+  - 0.0
+  - 0.0
+  tool_pose:
+    frame_id: base_link
+    x: -0.163806
+    y: 0.0645
+    z: 0.15859499999999999
+    qx: 0.0
+    qy: 0.0
+    qz: 0.0
+    qw: 1.0
+  gripper_gap_m: 0.06999999999999999
+  allow_motion_commands: true
+  allow_raw_pulse_commands: true
+  actuator_limits_file: /home/dyddl2082/MacRobot/install/macrobot_safe_region/share/macrobot_safe_region/config/actuator_limits.yaml
+  safe_region_csv: null
+  all_samples_csv: null
+  joint_goal_subscribers: 1
+  pico_command_subscribers: 1
