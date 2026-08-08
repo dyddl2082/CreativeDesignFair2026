@@ -485,6 +485,11 @@ class CommissioningWizard:
     def safe_region_test(self) -> None:
         if not self._require_motion():
             return
+        if self.node.allow_raw_pulse_commands:
+            print(
+                "안전상 메뉴 3은 allow_raw_pulse_commands:=false에서만 실행할 수 있습니다."
+            )
+            return
         if self.safe_region is None:
             print("safe_region_csv가 없어 대표 경계 시험을 생성할 수 없습니다.")
             return

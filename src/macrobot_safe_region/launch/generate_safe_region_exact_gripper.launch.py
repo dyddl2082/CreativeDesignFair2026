@@ -52,6 +52,7 @@ def generate_launch_description():
                 scan_config,
                 {
                     'robot_model_mode': 'full_mapped',
+                    'model_revision': 'macrobot-collision-dae-v2-20260808',
                     'output_directory': output_directory,
                 },
             ],

@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>macrobot_description</name>
-  <version>0.4.0</version>
-  <description>Reviewed full-visual and reduced kinematic descriptions for MacRobot with D435F and gripper.</description>
+  <version>0.5.0</version>
+  <description>MacRobot descriptions with corrected detailed Fusion collision geometry, physical servo directions, D435F frame, and gripper.</description>
   <maintainer email="dyddl2082@snu.ac.kr">Kim Jinhyeong</maintainer>
   <license>MIT</license>
 

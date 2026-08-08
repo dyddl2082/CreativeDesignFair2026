@@ -26,11 +26,11 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument("dry_run", default_value="true"),
-        DeclareLaunchArgument("require_safe_region", default_value="false"),
+        DeclareLaunchArgument("require_safe_region", default_value="true"),
         DeclareLaunchArgument("safe_region_csv", default_value=""),
         DeclareLaunchArgument("command_home_on_start", default_value="false"),
         DeclareLaunchArgument("use_sim_time", default_value="false"),
-        DeclareLaunchArgument("start_rviz", default_value="true"),
+        DeclareLaunchArgument("start_rviz", default_value="false"),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(

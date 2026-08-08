@@ -134,6 +134,7 @@ private:
   {
     declare_parameter<std::string>("output_directory", "~/MacRobot/data/safe_region");
     declare_parameter<std::string>("robot_model_mode", "reduced");
+    declare_parameter<std::string>("model_revision", "unknown");
     declare_parameter<double>("q1_min", -1.0);
     declare_parameter<double>("q1_max", 1.0);
     declare_parameter<double>("q2_min", -1.30);
@@ -284,6 +285,7 @@ private:
   {
     output_directory_ = fs::path(expandUser(p<std::string>("output_directory")));
     robot_model_mode_ = p<std::string>("robot_model_mode");
+    model_revision_ = p<std::string>("model_revision");
     if (robot_model_mode_ != "reduced" && robot_model_mode_ != "full_mapped")
       throw std::invalid_argument("robot_model_mode must be reduced or full_mapped");
     q1_min_ = p<double>("q1_min"); q1_max_ = p<double>("q1_max");
@@ -639,6 +641,7 @@ private:
     file << "generator: macrobot_safe_region\n";
     file << "robot_model: " << robot_model_->getName() << "\n";
     file << "robot_model_mode: " << robot_model_mode_ << "\n";
+    file << "model_revision: " << model_revision_ << "\n";
     file << "output_directory: " << output_directory_.string() << "\n";
     file << "counts:\n";
     file << "  total: " << total << "\n";
@@ -709,6 +712,7 @@ private:
 
   fs::path output_directory_;
   std::string robot_model_mode_{ "reduced" };
+  std::string model_revision_{ "unknown" };
   double q1_min_, q1_max_, q2_min_, q2_max_, q3_min_, q3_max_;
   double q1_step_, q2_step_, q3_step_;
   double tool_pitch_min_, tool_pitch_max_, four_bar_margin_;

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="macrobot_full_exact_gripper">
-  <!-- Full Fusion tree; detailed visual meshes are reused for gripper collision. -->
+  <!-- Full reviewed Fusion tree; corrected detailed DAE collision geometry is used for every physical link. -->
   <material name="material"><color rgba="0.965 0.965 0.953 1.0"/></material>
   <xacro:include filename="$(find macrobot_description)/urdf/assemblies/macrobot_full_exact_gripper.urdf.xacro"/>
   <xacro:macrobot_full_exact_gripper prefix=""/>

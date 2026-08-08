@@ -10,6 +10,8 @@ import math
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
+import yaml
+
 from .servo_mapping import ServoMapping
 
 
@@ -110,6 +112,14 @@ class SafeRegionGrid:
             self._median_step(self.q2_values),
             self._median_step(self.q3_values),
         )
+        self.summary_path = self.path.parent / "safe_region_summary.yaml"
+        self.model_revision: Optional[str] = None
+        if self.summary_path.exists():
+            with self.summary_path.open("r", encoding="utf-8") as stream:
+                summary = yaml.safe_load(stream) or {}
+            value = summary.get("model_revision")
+            if value is not None:
+                self.model_revision = str(value)
 
     @staticmethod
     def _key(q: Sequence[float]) -> Tuple[float, float, float]:

@@ -44,6 +44,7 @@ class IKValidatorNode(Node):
         self.declare_parameter("safe_region_csv", "")
         self.declare_parameter("require_safe_region", False)
         self.declare_parameter("safe_region_mode", "cell")
+        self.declare_parameter("required_safe_region_revision", "macrobot-collision-dae-v2-20260808")
         self.declare_parameter("path_step_rad", math.radians(1.0))
         self.declare_parameter("max_goal_delta_rad", 3.2)
 
@@ -59,6 +60,15 @@ class IKValidatorNode(Node):
                     f"Loaded connected safe-region grid: {grid.path} "
                     f"({len(grid.samples)} samples)"
                 )
+                required_revision = str(
+                    self.get_parameter("required_safe_region_revision").value
+                ).strip()
+                if required_revision and grid.model_revision != required_revision:
+                    raise RuntimeError(
+                        "Safe-region model revision mismatch: "
+                        f"required={required_revision!r}, found={grid.model_revision!r}, "
+                        f"summary={grid.summary_path}"
+                    )
             except Exception as exc:
                 if self.require_safe_region:
                     raise RuntimeError(f"Safe-region loading failed: {exc}") from exc

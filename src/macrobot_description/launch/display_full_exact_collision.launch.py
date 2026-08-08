@@ -12,7 +12,7 @@ from launch_ros.parameter_descriptions import ParameterValue
 def generate_launch_description():
     pkg = Path(get_package_share_directory('macrobot_description'))
     xacro_file = pkg / 'urdf' / 'macrobot_full_exact_gripper.urdf.xacro'
-    rviz_file = pkg / 'rviz' / 'display.rviz'
+    rviz_file = pkg / 'rviz' / 'collision_only.rviz'
     kinematics_config = pkg / 'config' / 'kinematics.yaml'
 
     start_rviz = LaunchConfiguration('start_rviz')

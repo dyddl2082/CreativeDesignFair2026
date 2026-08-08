@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="macrobot_macro">
   <xacro:macro name="macrobot_full_visual" params="prefix">
-    <!-- Reviewed Fusion export: ros2_control removed, camera TF corrected, nested gripper origins made parent-relative. -->
+    <!-- Corrected Fusion collision export: detailed DAE collisions, physical axis conventions, parent-relative gripper joints, and no generated ros2_control block. -->
     <!-- Links -->
     <link name="${prefix}base_link">
       <inertial>
@@ -19,7 +19,7 @@
       <collision>
         <origin xyz="0.000000 0.000000 0.000000" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/base_link_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/base_link.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>
@@ -39,7 +39,7 @@
       <collision>
         <origin xyz="-0.020950 -0.041100 -0.039000" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/servo_left_gear_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/servo_left_gear.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>
@@ -59,7 +59,7 @@
       <collision>
         <origin xyz="-0.020950 -0.088900 -0.039000" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/servo_right_gear_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/servo_right_gear.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>
@@ -79,7 +79,7 @@
       <collision>
         <origin xyz="-0.020950 -0.057900 -0.064595" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/ratio_left_gear_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/ratio_left_gear.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>
@@ -99,7 +99,7 @@
       <collision>
         <origin xyz="-0.020950 -0.072300 -0.064595" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/ratio_right_gear_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/ratio_right_gear.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>
@@ -119,7 +119,7 @@
       <collision>
         <origin xyz="-0.037000 -0.148700 -0.019300" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/front_right_wheel_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/front_right_wheel.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>
@@ -139,7 +139,7 @@
       <collision>
         <origin xyz="-0.123500 -0.148700 -0.019300" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/back_right_wheel_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/back_right_wheel.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>
@@ -159,7 +159,7 @@
       <collision>
         <origin xyz="-0.037000 0.018700 -0.019300" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/front_left_wheel_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/front_left_wheel.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>
@@ -179,25 +179,34 @@
       <collision>
         <origin xyz="-0.123500 0.018700 -0.019300" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/back_left_wheel_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/back_left_wheel.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>
     <link name="${prefix}camera_link">
+      <!-- camera_link is the D435F depth reference point.  The exported marker
+           mesh is base-relative, so its local origin is shifted by the negative
+           base_link -> camera_link translation. -->
       <inertial>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <mass value="0.001"/>
         <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6"/>
       </inertial>
       <visual>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <origin xyz="0.030850 0.000413 -0.017858" rpy="0 0 0"/>
         <geometry>
-          <sphere radius="0.0035"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/camera_link.dae" scale="1 1 1"/>
         </geometry>
         <material name="camera_marker">
           <color rgba="0.1 0.9 0.2 1.0"/>
         </material>
       </visual>
+      <collision>
+        <origin xyz="0.030850 0.000413 -0.017858" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/camera_link.dae" scale="1 1 1"/>
+        </geometry>
+      </collision>
     </link>
     <link name="${prefix}back_link">
       <inertial>
@@ -215,7 +224,7 @@
       <collision>
         <origin xyz="-0.048950 -0.076600 -0.064595" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/back_link_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/back_link.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>
@@ -235,7 +244,7 @@
       <collision>
         <origin xyz="-0.048950 -0.073200 -0.164595" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_link_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_link.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>
@@ -255,7 +264,7 @@
       <collision>
         <origin xyz="-0.217623 -0.105919 -0.108635" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_servo_gear_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_servo_gear.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>
@@ -275,7 +284,7 @@
       <collision>
         <origin xyz="-0.211064 -0.122690 -0.169095" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_left_gear_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_left_gear.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>
@@ -295,7 +304,7 @@
       <collision>
         <origin xyz="-0.235064 -0.122690 -0.169095" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_right_gear_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_right_gear.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>
@@ -315,7 +324,7 @@
       <collision>
         <origin xyz="-0.218064 -0.137690 -0.169095" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_left_addition_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_left_addition.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>
@@ -335,7 +344,7 @@
       <collision>
         <origin xyz="-0.228064 -0.137690 -0.169095" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_right_addition_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_right_addition.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>
@@ -355,7 +364,7 @@
       <collision>
         <origin xyz="-0.188064 -0.137690 -0.168595" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_clamp_left_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_clamp_left.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>
@@ -375,7 +384,7 @@
       <collision>
         <origin xyz="-0.258064 -0.137690 -0.168595" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_clamp_right_collision.stl" scale="0.01 0.01 0.01"/>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_clamp_right.dae" scale="1 1 1"/>
         </geometry>
       </collision>
     </link>

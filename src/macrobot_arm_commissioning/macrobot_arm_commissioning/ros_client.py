@@ -120,9 +120,11 @@ class ArmCommissioningNode(Node):
         self.disable_pub = self.create_publisher(
             Empty, str(self.get_parameter("disable_topic").value), 10
         )
-        self.pico_cmd_pub = self.create_publisher(
-            String, str(self.get_parameter("pico_command_topic").value), 20
-        )
+        self.pico_cmd_pub = None
+        if self.allow_raw_pulse_commands:
+            self.pico_cmd_pub = self.create_publisher(
+                String, str(self.get_parameter("pico_command_topic").value), 20
+            )
 
         self.create_subscription(
             String,
@@ -269,7 +271,10 @@ class ArmCommissioningNode(Node):
             "safe_region_csv": self.safe_region_csv or None,
             "all_samples_csv": self.all_samples_csv or None,
             "joint_goal_subscribers": self.joint_goal_pub.get_subscription_count(),
-            "pico_command_subscribers": self.pico_cmd_pub.get_subscription_count(),
+            "pico_command_subscribers": (
+                self.pico_cmd_pub.get_subscription_count()
+                if self.pico_cmd_pub is not None else 0
+            ),
         }
 
     def execute_joint_goal(self, q: Q, timeout: Optional[float] = None) -> Dict[str, object]:
@@ -364,6 +369,8 @@ class ArmCommissioningNode(Node):
         self.disable_pub.publish(Empty())
 
     def raw_servo_off(self, axis_name: str) -> None:
+        if not self.allow_raw_pulse_commands or self.pico_cmd_pub is None:
+            raise RuntimeError("Raw Pico commands are disabled")
         axis = getattr(self.mapping, axis_name)
         message = String()
         message.data = f"SERVO_OFF {axis.channel}"
@@ -372,6 +379,8 @@ class ArmCommissioningNode(Node):
     def raw_pulse(self, axis_name: str, pulse_us: float, previous_us: Optional[float] = None) -> Dict[str, object]:
         if not self.allow_raw_pulse_commands:
             return {"ok": False, "event": "raw_pulse_commands_disabled"}
+        if self.pico_cmd_pub is None:
+            return {"ok": False, "event": "raw_pico_publisher_unavailable"}
         axis = getattr(self.mapping, axis_name)
         target = min(self.raw_max, max(self.raw_min, float(pulse_us)))
         start = (

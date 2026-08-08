@@ -34,7 +34,7 @@ def generate_launch_description():
             "actuator_limits_file",
             default_value=str(default_actuator_file),
         ),
-        DeclareLaunchArgument("start_rviz", default_value="true"),
+        DeclareLaunchArgument("start_rviz", default_value="false"),
         DeclareLaunchArgument("start_pico_debug", default_value="false"),
         DeclareLaunchArgument("serial_port", default_value="/dev/ttyACM0"),
 

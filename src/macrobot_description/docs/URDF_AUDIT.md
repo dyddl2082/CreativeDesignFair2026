@@ -111,7 +111,7 @@ xyz = -0.030850 -0.000413 0.017858
 rpy = 0 0 0
 ```
 
-The camera marker is represented as a small sphere at the link origin. RealSense internal optical frames remain the driver's responsibility.
+The corrected Fusion export now supplies a small camera reference mesh and collision marker.  Its vertices are base-relative, so the reviewed description counter-shifts that mesh while keeping `camera_link` itself at the depth reference origin. RealSense internal optical frames remain the driver's responsibility.
 
 ## Grasp-frame geometry
 
@@ -136,3 +136,27 @@ As q3 closes, the symmetric four-bar shifts the jaw center by approximately `0.0
 ## Robot height
 
 No base-height or `base_footprint` correction is applied. The user stated that the new Fusion model already has the intended robot height.
+
+
+## Collision geometry refresh (2026-08-08)
+
+The previous runtime descriptions referenced exporter-generated simplified
+`*_collision.stl` files.  The user regenerated the Fusion package with the
+intended collision settings.  The reviewed runtime descriptions now use the
+new per-link DAE geometry for both visual and collision geometry on every
+physical link.
+
+Preserved review changes include the corrected physical servo directions, the
+`ratio_left_gear_joint` semantic axis, parent-relative nested gripper joint
+origins, the D435F depth frame, `tool0`, and removal of the generic generated
+`ros2_control` block.
+
+Runtime collision revision:
+
+```text
+macrobot-collision-dae-v2-20260808
+```
+
+Every safe-region result generated from this model records that revision in
+`safe_region_summary.yaml`; the validator and servo bridge refuse older CSV
+results when safe-region enforcement is enabled.
