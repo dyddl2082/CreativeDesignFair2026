@@ -333,17 +333,40 @@ class ArmServoBridgeNode(Node):
         self._publish_status(True, "servos_disabled")
 
     def _pico_response_callback(self, msg: String) -> None:
-        try:
-            payload = json.loads(msg.data)
-        except Exception:
+        text = msg.data.strip()
+
+        if not text:
             return
+
+        try:
+            payload = json.loads(text)
+        except Exception:
+            # Pico가 일반 텍스트를 출력한 경우는 servo bridge에서 무시한다.
+            return
+
+        if not isinstance(payload, dict):
+            # 예: [64, 112] 같은 I2C scan 디버그 출력.
+            # servo bridge는 {"ok": ..., "event": ...} 형태의 응답만 처리한다.
+            self.get_logger().debug(
+                f"Ignoring non-dict Pico response: {payload!r}"
+            )
+            return
+
         if payload.get("ok") is False or payload.get("event") in {
             "command_error",
             "main_loop_error",
             "servo_error",
+            "serial_write_failed",
+            "serial_read_failed",
+            "estop_latched",
         }:
-            self.active = False
-            self._publish_status(False, "pico_error", {"pico_response": payload})
+            self._publish_status(
+                False,
+                "pico_error",
+                {
+                    "pico_response": payload,
+                },
+            )
 
     def _publish_status(
         self, ok: bool, event: str, details: Optional[Dict[str, object]] = None

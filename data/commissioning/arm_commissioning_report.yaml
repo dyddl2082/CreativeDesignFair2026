@@ -2,87 +2,11 @@ schema_version: 1
 robot_name: MacRobot
 report_id: e5abee99-4378-48b4-9946-ae1da769e7ce
 created_at: '2026-08-08T02:33:07+00:00'
-updated_at: '2026-08-08T05:31:29+00:00'
+updated_at: '2026-08-08T07:49:30+00:00'
 sections:
   pulse_zero_calibration:
-    servos:
-      lift:
-        servo_model: MG996R left/lift
-        channel: 0
-        zero_deg: 90.0
-        sign: 1.0
-        model_multiplier: -2.0
-        pulse_min_us: 500.0
-        pulse_center_us: 1500.0
-        pulse_max_us: 2500.0
-        command_min_deg: 0.0
-        command_max_deg: 180.0
-        raw_pulse_jog:
-          marks: {}
-          history: []
-          last_pulse_us: 1500.0
-        affects_safe_region: true
-        operator_confirmed: true
-        notes: ''
-      tilt:
-        servo_model: MG996R right/tilt
-        channel: 1
-        zero_deg: 90.0
-        sign: -1.0
-        model_multiplier: 2.0
-        pulse_min_us: 500.0
-        pulse_center_us: 1500.0
-        pulse_max_us: 2500.0
-        command_min_deg: 0.0
-        command_max_deg: 180.0
-        raw_pulse_jog: {}
-        affects_safe_region: true
-        operator_confirmed: true
-        notes: ''
-      gripper:
-        servo_model: MG90S gripper
-        channel: 2
-        zero_deg: 0.0
-        sign: -1.0
-        model_multiplier: 2.0
-        pulse_min_us: 500.0
-        pulse_center_us: 1500.0
-        pulse_max_us: 2400.0
-        command_min_deg: 0.0
-        command_max_deg: 160.0
-        raw_pulse_jog: {}
-        affects_safe_region: true
-        operator_confirmed: true
-        notes: ''
-    suggested_actuator_parameters:
-      lift_zero_deg: 90.0
-      lift_sign: 1.0
-      lift_pulse_min_us: 500.0
-      lift_pulse_center_us: 1500.0
-      lift_pulse_max_us: 2500.0
-      lift_command_min_deg: 0.0
-      lift_command_max_deg: 180.0
-      tilt_zero_deg: 90.0
-      tilt_sign: -1.0
-      tilt_pulse_min_us: 500.0
-      tilt_pulse_center_us: 1500.0
-      tilt_pulse_max_us: 2500.0
-      tilt_command_min_deg: 0.0
-      tilt_command_max_deg: 180.0
-      gripper_zero_deg: 0.0
-      gripper_sign: -1.0
-      gripper_pulse_min_us: 500.0
-      gripper_pulse_center_us: 1500.0
-      gripper_pulse_max_us: 2400.0
-      gripper_command_min_deg: 0.0
-      gripper_command_max_deg: 160.0
-    requires_pipeline_restart_after_apply: true
-    requires_safe_region_regeneration: true
-    apply_command_example: ros2 run macrobot_arm_commissioning apply_report_recommendations
-      --report /home/dyddl2082/MacRobot/data/commissioning/arm_commissioning_report.yaml
-    status: completed
-    completed_at: '2026-08-08T05:21:49+00:00'
-    started_at: '2026-08-08T05:17:53+00:00'
+    status: in_progress
+    started_at: '2026-08-08T07:02:10+00:00'
   direction_and_mechanism:
     home_q:
     - 0.0
@@ -91,17 +15,17 @@ sections:
     tests:
     - name: q1_positive
       target_q:
-      - 0.05
+      - 0.15
       - 0.0
       - 0.0
       automatic:
         ok: true
         event: trajectory_completed
         goal:
-        - 0.05
+        - 0.15
         - 0.0
         - 0.0
-        duration_sec: 0.9508902610000405
+        duration_sec: 2.3992399769995245
         validation:
           ok: true
           event: goal_validated
@@ -111,61 +35,86 @@ sections:
           - 0.0
           - 0.0
           goal:
-          - 0.05
+          - 0.15
           - 0.0
           - 0.0
-          path_samples: 7
+          path_samples: 19
           start:
           - 0.0
           - 0.0
           - 0.0
-          safe_region_loaded: true
+          safe_region_loaded: false
         bridge:
           ok: true
           event: trajectory_completed
           commanded_state:
-          - 0.05
+          - 0.15
           - 0.0
           - 0.0
           dry_run: false
           goal:
-          - 0.05
+          - 0.15
           - 0.0
           - 0.0
           servo_deg:
-            lift: 84.27042204869177
-            tilt: 95.72957795130823
-            gripper: 161.619724
+            lift: 107.1887338539247
+            tilt: 72.8112661460753
+            gripper: 0.0
           servo_pulse_us:
-            lift: 1468.169011381621
-            tilt: 1531.830988618379
-            gripper: 1897.8873555555556
+            lift: 1690.9859317102746
+            tilt: 1309.0140682897254
+            gripper: 500.0
         commanded_state:
-        - 0.05
+        - 0.15
         - 0.0
         - 0.0
         tool_pose:
           frame_id: base_link
-          x: -0.15887706119808864
+          x: -0.17577857372766975
           y: 0.0645
-          z: 0.16771147587490026
+          z: 0.12992988972269567
           qx: 0.0
-          qy: 0.024997395914712332
+          qy: -0.07492970727274234
           qz: 0.0
-          qw: 0.9996875162757026
+          qw: 0.9971888181122075
         gripper_gap_m: 0.06999999999999999
         servo_command_preview:
-        - ARM_US 1497.4 1502.6 1897.9
-        - ARM_US 1494.8 1505.2 1897.9
-        - ARM_US 1491.7 1508.3 1897.9
-        - ARM_US 1488.1 1511.9 1897.9
-        - ARM_US 1484.4 1515.6 1897.9
-        - ARM_US 1480.6 1519.4 1897.9
-        - ARM_US 1477.0 1523.0 1897.9
-        - ARM_US 1473.7 1526.3 1897.9
-        - ARM_US 1471.1 1528.9 1897.9
-        - ARM_US 1469.2 1530.8 1897.9
-        - ARM_US 1468.2 1531.8 1897.9
+        - ARM_US 1502.1 1497.9 500.0
+        - ARM_US 1504.3 1495.7 500.0
+        - ARM_US 1507.1 1492.9 500.0
+        - ARM_US 1510.6 1489.4 500.0
+        - ARM_US 1514.5 1485.5 500.0
+        - ARM_US 1519.1 1480.9 500.0
+        - ARM_US 1524.1 1475.9 500.0
+        - ARM_US 1529.6 1470.4 500.0
+        - ARM_US 1535.5 1464.5 500.0
+        - ARM_US 1541.8 1458.2 500.0
+        - ARM_US 1548.4 1451.6 500.0
+        - ARM_US 1555.3 1444.7 500.0
+        - ARM_US 1562.4 1437.6 500.0
+        - ARM_US 1569.9 1430.1 500.0
+        - ARM_US 1577.2 1422.8 500.0
+        - ARM_US 1584.7 1415.3 500.0
+        - ARM_US 1592.3 1407.7 500.0
+        - ARM_US 1600.2 1399.8 500.0
+        - ARM_US 1607.6 1392.4 500.0
+        - ARM_US 1615.1 1384.9 500.0
+        - ARM_US 1622.6 1377.4 500.0
+        - ARM_US 1630.1 1369.9 500.0
+        - ARM_US 1636.9 1363.1 500.0
+        - ARM_US 1643.8 1356.2 500.0
+        - ARM_US 1650.3 1349.7 500.0
+        - ARM_US 1656.5 1343.5 500.0
+        - ARM_US 1662.4 1337.6 500.0
+        - ARM_US 1667.8 1332.2 500.0
+        - ARM_US 1672.8 1327.2 500.0
+        - ARM_US 1677.2 1322.8 500.0
+        - ARM_US 1681.1 1318.9 500.0
+        - ARM_US 1684.5 1315.5 500.0
+        - ARM_US 1687.1 1312.9 500.0
+        - ARM_US 1689.2 1310.8 500.0
+        - ARM_US 1690.4 1309.6 500.0
+        - ARM_US 1691.0 1309.0 500.0
       operator_checks:
         model_and_physical_direction_match: true
         four_bar_parallelogram_maintained: true
@@ -175,16 +124,16 @@ sections:
     - name: q2_positive
       target_q:
       - 0.0
-      - 0.05
+      - 0.15
       - 0.0
       automatic:
         ok: true
         event: trajectory_completed
         goal:
         - 0.0
-        - 0.05
+        - 0.15
         - 0.0
-        duration_sec: 0.9461253730000863
+        duration_sec: 2.2046792119999736
         validation:
           ok: true
           event: goal_validated
@@ -195,79 +144,93 @@ sections:
           - 0.0
           goal:
           - 0.0
-          - 0.05
+          - 0.15
           - 0.0
-          path_samples: 7
+          path_samples: 19
           start:
           - 0.0
           - 0.0
           - 0.0
-          safe_region_loaded: true
+          safe_region_loaded: false
         bridge:
           ok: true
           event: trajectory_completed
           commanded_state:
           - 0.0
-          - 0.05
+          - 0.15
           - 0.0
           dry_run: false
           goal:
           - 0.0
-          - 0.05
+          - 0.15
           - 0.0
           servo_deg:
             lift: 90.0
-            tilt: 95.72957795130823
-            gripper: 161.619724
+            tilt: 72.8112661460753
+            gripper: 0.0
           servo_pulse_us:
             lift: 1500.0
-            tilt: 1531.830988618379
-            gripper: 1897.8873555555556
+            tilt: 1309.0140682897254
+            gripper: 500.0
         commanded_state:
         - 0.0
-        - 0.05
+        - 0.15
         - 0.0
         tool_pose:
           frame_id: base_link
-          x: -0.16387497812515647
+          x: -0.16083476048030984
           y: 0.0645
-          z: 0.16783644983540363
+          z: 0.13105278192909145
           qx: 0.0
-          qy: 0.024997395914712332
+          qy: -0.07492970727274234
           qz: 0.0
-          qw: 0.9996875162757026
+          qw: 0.9971888181122075
         gripper_gap_m: 0.06999999999999999
         servo_command_preview:
-        - ARM_US 1500.0 1502.9 1897.9
-        - ARM_US 1500.0 1505.5 1897.9
-        - ARM_US 1500.0 1508.8 1897.9
-        - ARM_US 1500.0 1512.4 1897.9
-        - ARM_US 1500.0 1516.2 1897.9
-        - ARM_US 1500.0 1519.9 1897.9
-        - ARM_US 1500.0 1523.5 1897.9
-        - ARM_US 1500.0 1526.7 1897.9
-        - ARM_US 1500.0 1529.2 1897.9
-        - ARM_US 1500.0 1531.0 1897.9
-        - ARM_US 1500.0 1531.8 1897.9
+        - ARM_US 1500.0 1446.7 500.0
+        - ARM_US 1500.0 1439.7 500.0
+        - ARM_US 1500.0 1432.4 500.0
+        - ARM_US 1500.0 1425.0 500.0
+        - ARM_US 1500.0 1417.5 500.0
+        - ARM_US 1500.0 1409.9 500.0
+        - ARM_US 1500.0 1402.3 500.0
+        - ARM_US 1500.0 1394.6 500.0
+        - ARM_US 1500.0 1387.1 500.0
+        - ARM_US 1500.0 1379.6 500.0
+        - ARM_US 1500.0 1372.3 500.0
+        - ARM_US 1500.0 1365.1 500.0
+        - ARM_US 1500.0 1358.2 500.0
+        - ARM_US 1500.0 1351.6 500.0
+        - ARM_US 1500.0 1345.3 500.0
+        - ARM_US 1500.0 1339.3 500.0
+        - ARM_US 1500.0 1333.8 500.0
+        - ARM_US 1500.0 1328.6 500.0
+        - ARM_US 1500.0 1324.0 500.0
+        - ARM_US 1500.0 1319.9 500.0
+        - ARM_US 1500.0 1316.5 500.0
+        - ARM_US 1500.0 1313.6 500.0
+        - ARM_US 1500.0 1311.4 500.0
+        - ARM_US 1500.0 1309.8 500.0
+        - ARM_US 1500.0 1309.0 500.0
       operator_checks:
         model_and_physical_direction_match: true
         four_bar_parallelogram_maintained: true
         gripper_clamps_parallel: null
         no_binding_or_abnormal_noise: true
       notes: ''
-    - name: q3_negative
+    - name: q3_positive_close
       target_q:
       - 0.0
       - 0.0
-      - -0.05
+      - 0.15
       automatic:
         ok: true
         event: trajectory_completed
         goal:
         - 0.0
         - 0.0
-        - -0.05
-        duration_sec: 0.7960640679998505
+        - 0.15
+        duration_sec: 1.5826591300010477
         validation:
           ok: true
           event: goal_validated
@@ -279,58 +242,48 @@ sections:
           goal:
           - 0.0
           - 0.0
-          - -0.05
-          path_samples: 7
+          - 0.15
+          path_samples: 19
           start:
           - 0.0
           - 0.0
           - 0.0
-          safe_region_loaded: true
+          safe_region_loaded: false
         bridge:
           ok: true
           event: trajectory_completed
           commanded_state:
           - 0.0
           - 0.0
-          - -0.05
+          - 0.15
           dry_run: false
           goal:
           - 0.0
           - 0.0
-          - -0.05
+          - 0.15
           servo_deg:
             lift: 90.0
             tilt: 90.0
-            gripper: 155.89014604869175
+            gripper: 17.188733853924695
           servo_pulse_us:
             lift: 1500.0
             tilt: 1500.0
-            gripper: 1866.0563669371763
+            gripper: 690.9859317102744
         commanded_state:
         - 0.0
         - 0.0
-        - -0.05
+        - 0.15
         tool_pose:
           frame_id: base_link
-          x: -0.16230662492187967
+          x: -0.15932285602579202
           y: 0.0645
           z: 0.15859499999999999
           qx: 0.0
-          qy: 0.0
+          qy: -0.0
           qz: 0.0
           qw: 1.0
-        gripper_gap_m: 0.06992501562369798
-        servo_command_preview:
-        - ARM_US 1500.0 1500.0 1895.9
-        - ARM_US 1500.0 1500.0 1892.9
-        - ARM_US 1500.0 1500.0 1888.9
-        - ARM_US 1500.0 1500.0 1884.3
-        - ARM_US 1500.0 1500.0 1879.6
-        - ARM_US 1500.0 1500.0 1875.1
-        - ARM_US 1500.0 1500.0 1871.0
-        - ARM_US 1500.0 1500.0 1868.0
-        - ARM_US 1500.0 1500.0 1866.3
-        - ARM_US 1500.0 1500.0 1866.1
+        gripper_gap_m: 0.06932626467616253
+        servo_command_preview: []
       operator_checks:
         model_and_physical_direction_match: true
         four_bar_parallelogram_maintained: true
@@ -339,31 +292,2820 @@ sections:
       notes: ''
     passed: true
     status: completed
-    completed_at: '2026-08-08T05:25:02+00:00'
-    started_at: '2026-08-08T05:23:42+00:00'
+    completed_at: '2026-08-08T07:24:26+00:00'
+    started_at: '2026-08-08T07:22:53+00:00'
+  last_interrupted_operation:
+    status: interrupted
+    updated_at: '2026-08-08T07:07:30+00:00'
+    time: '2026-08-08T07:07:30+00:00'
+  moveit_representative_boundaries:
+    cases:
+    - name: home
+      category: home
+      q:
+      - 0.012290965
+      - -0.008456355
+      - 0.0
+      rear_lift_angle: 0.0038346099999999987
+      tool_pitch: 0.0038346099999999987
+      rationale: Connected sample nearest q=[0,0,0].
+      automatic:
+        ok: true
+        event: grid_path_completed
+        waypoint_count: 1
+        runs: []
+        final_q:
+        - 0.012290965
+        - -0.008456355
+        - 0.0
+      physical_pass: true
+      notes: ''
+    - name: q1_min_inside
+      category: joint_boundary
+      q:
+      - -0.72074732
+      - 0.65476876
+      - 0.0
+      rear_lift_angle: -0.06597856000000002
+      tool_pitch: -0.06597856000000002
+      rationale: One sampled grid level inside the q1 minimum.
+      automatic:
+        ok: true
+        event: grid_path_completed
+        waypoint_count: 41
+        runs:
+        - index: 1
+          q:
+          - -0.02261562
+          - -0.008456355
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.02261562
+            - -0.008456355
+            - 0.0
+            duration_sec: 0.8777102809999633
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - 0.0
+              - 0.0
+              - 0.0
+              goal:
+              - -0.02261562
+              - -0.008456355
+              - 0.0
+              path_samples: 4
+              start:
+              - 0.0
+              - 0.0
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.02261562
+              - -0.008456355
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.02261562
+              - -0.008456355
+              - 0.0
+              servo_deg:
+                lift: 87.40844084585669
+                tilt: 93.56058605727202
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 1471.2048982872966
+                tilt: 1539.5620673030223
+                gripper: 500.0
+            commanded_state:
+            - -0.02261562
+            - -0.008456355
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.1616418518396606
+              y: 0.0645
+              z: 0.16431213405535244
+              qx: 0.0
+              qy: 0.015535362528665853
+              qz: 0.0
+              qw: 0.9998793189735964
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview:
+            - ARM_US 1499.9 1500.2 500.0
+            - ARM_US 1498.5 1502.0 500.0
+            - ARM_US 1495.9 1505.6 500.0
+            - ARM_US 1492.4 1510.5 500.0
+            - ARM_US 1488.3 1516.1 500.0
+            - ARM_US 1484.0 1522.0 500.0
+            - ARM_US 1479.8 1527.8 500.0
+            - ARM_US 1476.1 1532.8 500.0
+            - ARM_US 1473.2 1536.8 500.0
+            - ARM_US 1471.5 1539.1 500.0
+            - ARM_US 1471.2 1539.6 500.0
+        - index: 2
+          q:
+          - -0.057522205
+          - -0.008456355
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.057522205
+            - -0.008456355
+            - 0.0
+            duration_sec: 0.8673161429996981
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.02261562
+              - -0.008456355
+              - 0.0
+              goal:
+              - -0.057522205
+              - -0.008456355
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.02261562
+              - -0.008456355
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.057522205
+              - -0.008456355
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.057522205
+              - -0.008456355
+              - 0.0
+              servo_deg:
+                lift: 83.40844085042735
+                tilt: 97.56058605270135
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 1426.7604538936373
+                tilt: 1584.0065116966816
+                gripper: 500.0
+            commanded_state:
+            - -0.057522205
+            - -0.008456355
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.15805054403006807
+              y: 0.0645
+              z: 0.17062375279559483
+              qx: 0.0
+              qy: 0.032983296660734525
+              qz: 0.0
+              qw: 0.9994559030499495
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview:
+            - ARM_US 1467.3 1543.4 500.0
+            - ARM_US 1462.6 1548.2 500.0
+            - ARM_US 1456.7 1554.0 500.0
+            - ARM_US 1450.2 1560.6 500.0
+            - ARM_US 1443.6 1567.2 500.0
+            - ARM_US 1437.4 1573.4 500.0
+            - ARM_US 1432.2 1578.6 500.0
+            - ARM_US 1428.5 1582.3 500.0
+            - ARM_US 1426.8 1584.0 500.0
+            - ARM_US 1426.8 1584.0 500.0
+        - index: 3
+          q:
+          - -0.09242879
+          - -0.008456355
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.09242879
+            - -0.008456355
+            - 0.0
+            duration_sec: 0.8191229370004294
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.057522205
+              - -0.008456355
+              - 0.0
+              goal:
+              - -0.09242879
+              - -0.008456355
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.057522205
+              - -0.008456355
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.09242879
+              - -0.008456355
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.09242879
+              - -0.008456355
+              - 0.0
+              servo_deg:
+                lift: 79.40844085499802
+                tilt: 101.56058604813067
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 1382.316009499978
+                tilt: 1628.4509560903407
+                gripper: 500.0
+            commanded_state:
+            - -0.09242879
+            - -0.008456355
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.15424115163099336
+              y: 0.0645
+              z: 0.1768061918333282
+              qx: 0.0
+              qy: 0.050421183761146925
+              qz: 0.0
+              qw: 0.9987280431769825
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview:
+            - ARM_US 1424.1 1586.7 500.0
+            - ARM_US 1419.7 1591.0 500.0
+            - ARM_US 1414.2 1596.6 500.0
+            - ARM_US 1407.8 1602.9 500.0
+            - ARM_US 1401.2 1609.6 500.0
+            - ARM_US 1394.8 1615.9 500.0
+            - ARM_US 1389.2 1621.5 500.0
+            - ARM_US 1385.0 1625.8 500.0
+            - ARM_US 1382.6 1628.1 500.0
+            - ARM_US 1382.3 1628.5 500.0
+        - index: 4
+          q:
+          - -0.127335375
+          - -0.008456355
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.127335375
+            - -0.008456355
+            - 0.0
+            duration_sec: 0.7969264439998369
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.09242879
+              - -0.008456355
+              - 0.0
+              goal:
+              - -0.127335375
+              - -0.008456355
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.09242879
+              - -0.008456355
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.127335375
+              - -0.008456355
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.127335375
+              - -0.008456355
+              - 0.0
+              servo_deg:
+                lift: 75.40844085956869
+                tilt: 105.56058604356001
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 1337.871565106319
+                tilt: 1672.8954004840002
+                gripper: 500.0
+            commanded_state:
+            - -0.127335375
+            - -0.008456355
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.15021831580027223
+              y: 0.0645
+              z: 0.18285191881893414
+              qx: 0.0
+              qy: 0.06784371208057981
+              qz: 0.0
+              qw: 0.9976959610678633
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview:
+            - ARM_US 1380.8 1630.0 500.0
+            - ARM_US 1377.2 1633.5 500.0
+            - ARM_US 1372.1 1638.7 500.0
+            - ARM_US 1366.0 1644.8 500.0
+            - ARM_US 1359.4 1651.4 500.0
+            - ARM_US 1352.8 1657.9 500.0
+            - ARM_US 1346.9 1663.9 500.0
+            - ARM_US 1342.1 1668.7 500.0
+            - ARM_US 1338.9 1671.9 500.0
+            - ARM_US 1337.9 1672.9 500.0
+        - index: 5
+          q:
+          - -0.16224196
+          - -0.008456355
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.16224196
+            - -0.008456355
+            - 0.0
+            duration_sec: 0.8002742570006376
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.127335375
+              - -0.008456355
+              - 0.0
+              goal:
+              - -0.16224196
+              - -0.008456355
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.127335375
+              - -0.008456355
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.16224196
+              - -0.008456355
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.16224196
+              - -0.008456355
+              - 0.0
+              servo_deg:
+                lift: 71.40844086413935
+                tilt: 109.56058603898934
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 1293.4271207126594
+                tilt: 1717.3398448776593
+                gripper: 500.0
+            commanded_state:
+            - -0.16224196
+            - -0.008456355
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.14598693774368274
+              y: 0.0645
+              z: 0.18875356796537035
+              qx: 0.0
+              qy: 0.08524557454814337
+              qz: 0.0
+              qw: 0.9963599711047996
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview:
+            - ARM_US 1336.2 1674.5 500.0
+            - ARM_US 1332.6 1678.2 500.0
+            - ARM_US 1327.4 1683.4 500.0
+            - ARM_US 1321.3 1689.5 500.0
+            - ARM_US 1314.6 1696.1 500.0
+            - ARM_US 1308.1 1702.7 500.0
+            - ARM_US 1302.2 1708.6 500.0
+            - ARM_US 1297.4 1713.4 500.0
+            - ARM_US 1294.3 1716.4 500.0
+            - ARM_US 1293.4 1717.3 500.0
+        - index: 6
+          q:
+          - -0.197148545
+          - -0.008456355
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.197148545
+            - -0.008456355
+            - 0.0
+            duration_sec: 0.8648063609998644
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.16224196
+              - -0.008456355
+              - 0.0
+              goal:
+              - -0.197148545
+              - -0.008456355
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.16224196
+              - -0.008456355
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.197148545
+              - -0.008456355
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.197148545
+              - -0.008456355
+              - 0.0
+              servo_deg:
+                lift: 67.40844086871002
+                tilt: 113.56058603441868
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 1248.9826763190001
+                tilt: 1761.7842892713186
+                gripper: 500.0
+            commanded_state:
+            - -0.197148545
+            - -0.008456355
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.14155217274358134
+              y: 0.0645
+              z: 0.1945039490222477
+              qx: 0.0
+              qy: 0.1026214703879665
+              qz: 0.0
+              qw: 0.9947204802432751
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview:
+            - ARM_US 1291.8 1719.0 500.0
+            - ARM_US 1288.1 1722.6 500.0
+            - ARM_US 1282.9 1727.8 500.0
+            - ARM_US 1276.8 1734.0 500.0
+            - ARM_US 1270.2 1740.6 500.0
+            - ARM_US 1263.7 1747.1 500.0
+            - ARM_US 1257.7 1753.0 500.0
+            - ARM_US 1253.0 1757.8 500.0
+            - ARM_US 1249.9 1760.9 500.0
+            - ARM_US 1249.0 1761.8 500.0
+        - index: 7
+          q:
+          - -0.23205513
+          - -0.008456355
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.23205513
+            - -0.008456355
+            - 0.0
+            duration_sec: 0.8843676100004814
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.197148545
+              - -0.008456355
+              - 0.0
+              goal:
+              - -0.23205513
+              - -0.008456355
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.197148545
+              - -0.008456355
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.23205513
+              - -0.008456355
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.23205513
+              - -0.008456355
+              - 0.0
+              servo_deg:
+                lift: 63.40844087328069
+                tilt: 117.56058602984801
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 1204.538231925341
+                tilt: 1806.2287336649779
+                gripper: 500.0
+            commanded_state:
+            - -0.23205513
+            - -0.008456355
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.1369194238779851
+              y: 0.0645
+              z: 0.2000960560360427
+              qx: 0.0
+              qy: 0.11996610673386436
+              qz: 0.0
+              qw: 0.9927779878880872
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview:
+            - ARM_US 1245.1 1765.7 500.0
+            - ARM_US 1240.3 1770.4 500.0
+            - ARM_US 1234.5 1776.3 500.0
+            - ARM_US 1227.9 1782.8 500.0
+            - ARM_US 1221.4 1789.4 500.0
+            - ARM_US 1215.2 1795.6 500.0
+            - ARM_US 1210.0 1800.8 500.0
+            - ARM_US 1206.2 1804.5 500.0
+            - ARM_US 1204.6 1806.2 500.0
+            - ARM_US 1204.5 1806.2 500.0
+        - index: 8
+          q:
+          - -0.266961715
+          - -0.008456355
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.266961715
+            - -0.008456355
+            - 0.0
+            duration_sec: 0.8185778469996876
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.23205513
+              - -0.008456355
+              - 0.0
+              goal:
+              - -0.266961715
+              - -0.008456355
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.23205513
+              - -0.008456355
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.266961715
+              - -0.008456355
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.266961715
+              - -0.008456355
+              - 0.0
+              servo_deg:
+                lift: 59.40844087785136
+                tilt: 121.56058602527735
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 1160.0937875316818
+                tilt: 1850.6731780586372
+                gripper: 500.0
+            commanded_state:
+            - -0.266961715
+            - -0.008456355
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.13209433543775356
+              y: 0.0645
+              z: 0.20552307588577262
+              qx: 0.0
+              qy: 0.13727420024159684
+              qz: 0.0
+              qw: 0.9905330857412235
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview:
+            - ARM_US 1202.8 1808.0 500.0
+            - ARM_US 1199.1 1811.7 500.0
+            - ARM_US 1193.9 1816.9 500.0
+            - ARM_US 1187.7 1823.1 500.0
+            - ARM_US 1181.1 1829.7 500.0
+            - ARM_US 1174.5 1836.2 500.0
+            - ARM_US 1168.7 1842.1 500.0
+            - ARM_US 1163.9 1846.8 500.0
+            - ARM_US 1160.9 1849.8 500.0
+            - ARM_US 1160.1 1850.7 500.0
+        - index: 9
+          q:
+          - -0.3018683
+          - -0.008456355
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.3018683
+            - -0.008456355
+            - 0.0
+            duration_sec: 0.83482807800101
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.266961715
+              - -0.008456355
+              - 0.0
+              goal:
+              - -0.3018683
+              - -0.008456355
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.266961715
+              - -0.008456355
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.3018683
+              - -0.008456355
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.3018683
+              - -0.008456355
+              - 0.0
+              servo_deg:
+                lift: 55.40844088242203
+                tilt: 125.56058602070668
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 1115.6493431380227
+                tilt: 1895.1176224522965
+                gripper: 500.0
+            commanded_state:
+            - -0.3018683
+            - -0.008456355
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.12708278604988985
+              y: 0.0645
+              z: 0.21077839658373396
+              qx: 0.0
+              qy: 0.15454047869822626
+              qz: 0.0
+              qw: 0.987986457621623
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview:
+            - ARM_US 1156.2 1854.5 500.0
+            - ARM_US 1151.5 1859.3 500.0
+            - ARM_US 1145.6 1865.1 500.0
+            - ARM_US 1139.1 1871.7 500.0
+            - ARM_US 1132.5 1878.3 500.0
+            - ARM_US 1126.2 1884.5 500.0
+            - ARM_US 1121.1 1889.7 500.0
+            - ARM_US 1117.4 1893.4 500.0
+            - ARM_US 1115.7 1895.1 500.0
+            - ARM_US 1115.6 1895.1 500.0
+        - index: 10
+          q:
+          - -0.336774885
+          - -0.008456355
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.336774885
+            - -0.008456355
+            - 0.0
+            duration_sec: 0.8129718280015368
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.3018683
+              - -0.008456355
+              - 0.0
+              goal:
+              - -0.336774885
+              - -0.008456355
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.3018683
+              - -0.008456355
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.336774885
+              - -0.008456355
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.336774885
+              - -0.008456355
+              - 0.0
+              servo_deg:
+                lift: 51.408440886992686
+                tilt: 129.56058601613603
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 1071.2048987443632
+                tilt: 1939.562066845956
+                gripper: 500.0
+            commanded_state:
+            - -0.336774885
+            - -0.008456355
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.12189088151533914
+              y: 0.0645
+              z: 0.21585561533119108
+              qx: 0.0
+              qy: 0.17175968262808455
+              qz: 0.0
+              qw: 0.985138879256879
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview:
+            - ARM_US 1110.6 1900.2 500.0
+            - ARM_US 1105.5 1905.3 500.0
+            - ARM_US 1099.3 1911.5 500.0
+            - ARM_US 1092.7 1918.0 500.0
+            - ARM_US 1086.2 1924.6 500.0
+            - ARM_US 1080.2 1930.5 500.0
+            - ARM_US 1075.4 1935.4 500.0
+            - ARM_US 1072.2 1938.6 500.0
+            - ARM_US 1071.2 1939.6 500.0
+        - index: 11
+          q:
+          - -0.37168147
+          - -0.008456355
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.37168147
+            - -0.008456355
+            - 0.0
+            duration_sec: 0.8103488560009282
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.336774885
+              - -0.008456355
+              - 0.0
+              goal:
+              - -0.37168147
+              - -0.008456355
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.336774885
+              - -0.008456355
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.37168147
+              - -0.008456355
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.37168147
+              - -0.008456355
+              - 0.0
+              servo_deg:
+                lift: 47.40844089156335
+                tilt: 133.56058601156536
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 1026.760454350704
+                tilt: 1984.006511239615
+                gripper: 500.0
+            commanded_state:
+            - -0.37168147
+            - -0.008456355
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.1165249473700107
+              y: 0.0645
+              z: 0.22074854631919985
+              qx: 0.0
+              qy: 0.18892656689486048
+              qz: 0.0
+              qw: 0.9819912180469446
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 12
+          q:
+          - -0.406588055
+          - -0.008456355
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.406588055
+            - -0.008456355
+            - 0.0
+            duration_sec: 0.8378531170001224
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.37168147
+              - -0.008456355
+              - 0.0
+              goal:
+              - -0.406588055
+              - -0.008456355
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.37168147
+              - -0.008456355
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.406588055
+              - -0.008456355
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.406588055
+              - -0.008456355
+              - 0.0
+              servo_deg:
+                lift: 43.408440896134024
+                tilt: 137.5605860069947
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 982.3160099570447
+                tilt: 2028.4509556332744
+                gripper: 500.0
+            commanded_state:
+            - -0.406588055
+            - -0.008456355
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.11099152117808693
+              y: 0.0645
+              z: 0.22545122826506328
+              qx: 0.0
+              qy: 0.20603590229931898
+              qz: 0.0
+              qw: 0.978544432799914
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 13
+          q:
+          - -0.406588055
+          - 0.02645023
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.406588055
+            - 0.02645023
+            - 0.0
+            duration_sec: 0.8191786299994419
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.406588055
+              - -0.008456355
+              - 0.0
+              goal:
+              - -0.406588055
+              - 0.02645023
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.406588055
+              - -0.008456355
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.406588055
+              - 0.02645023
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.406588055
+              - 0.02645023
+              - 0.0
+              servo_deg:
+                lift: 43.408440896134024
+                tilt: 133.56058601156533
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 982.3160099570447
+                tilt: 1984.0065112396148
+                gripper: 500.0
+            commanded_state:
+            - -0.406588055
+            - 0.02645023
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.11329542261100574
+              y: 0.0645
+              z: 0.21942429958191154
+              qx: 0.0
+              qy: 0.18892656689486045
+              qz: 0.0
+              qw: 0.9819912180469446
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 14
+          q:
+          - -0.406588055
+          - 0.061356815
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.406588055
+            - 0.061356815
+            - 0.0
+            duration_sec: 0.7877722189987253
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.406588055
+              - 0.02645023
+              - 0.0
+              goal:
+              - -0.406588055
+              - 0.061356815
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.406588055
+              - 0.02645023
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.406588055
+              - 0.061356815
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.406588055
+              - 0.061356815
+              - 0.0
+              servo_deg:
+                lift: 43.408440896134024
+                tilt: 129.56058601613603
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 982.3160099570447
+                tilt: 1939.562066845956
+                gripper: 500.0
+            commanded_state:
+            - -0.406588055
+            - 0.061356815
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.11538758379196051
+              y: 0.0645
+              z: 0.21332063734049383
+              qx: 0.0
+              qy: 0.17175968262808453
+              qz: 0.0
+              qw: 0.985138879256879
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 15
+          q:
+          - -0.44149464
+          - 0.061356815
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.44149464
+            - 0.061356815
+            - 0.0
+            duration_sec: 0.801137338999979
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.406588055
+              - 0.061356815
+              - 0.0
+              goal:
+              - -0.44149464
+              - 0.061356815
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.406588055
+              - 0.061356815
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.44149464
+              - 0.061356815
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.44149464
+              - 0.061356815
+              - 0.0
+              servo_deg:
+                lift: 39.40844090070469
+                tilt: 133.56058601156533
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 937.8715655633855
+                tilt: 1984.0065112396148
+                gripper: 500.0
+            commanded_state:
+            - -0.44149464
+            - 0.061356815
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.1101140807358091
+              y: 0.0645
+              z: 0.217988150751405
+              qx: 0.0
+              qy: 0.18892656689486045
+              qz: 0.0
+              qw: 0.9819912180469446
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 16
+          q:
+          - -0.44149464
+          - 0.0962634
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.44149464
+            - 0.0962634
+            - 0.0
+            duration_sec: 0.8441226960003405
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.44149464
+              - 0.061356815
+              - 0.0
+              goal:
+              - -0.44149464
+              - 0.0962634
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.44149464
+              - 0.061356815
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.44149464
+              - 0.0962634
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.44149464
+              - 0.0962634
+              - 0.0
+              servo_deg:
+                lift: 39.40844090070469
+                tilt: 129.56058601613603
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 937.8715655633855
+                tilt: 1939.562066845956
+                gripper: 500.0
+            commanded_state:
+            - -0.44149464
+            - 0.0962634
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.11220624191676387
+              y: 0.0645
+              z: 0.21188448850998726
+              qx: 0.0
+              qy: 0.17175968262808453
+              qz: 0.0
+              qw: 0.985138879256879
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 17
+          q:
+          - -0.44149464
+          - 0.131169985
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.44149464
+            - 0.131169985
+            - 0.0
+            duration_sec: 0.8548690839998017
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.44149464
+              - 0.0962634
+              - 0.0
+              goal:
+              - -0.44149464
+              - 0.131169985
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.44149464
+              - 0.0962634
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.44149464
+              - 0.131169985
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.44149464
+              - 0.131169985
+              - 0.0
+              servo_deg:
+                lift: 39.40844090070469
+                tilt: 125.56058602070668
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 937.8715655633855
+                tilt: 1895.1176224522965
+                gripper: 500.0
+            commanded_state:
+            - -0.44149464
+            - 0.131169985
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.11408411386963418
+              y: 0.0645
+              z: 0.20571152908253065
+              qx: 0.0
+              qy: 0.15454047869822626
+              qz: 0.0
+              qw: 0.987986457621623
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 18
+          q:
+          - -0.476401225
+          - 0.131169985
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.476401225
+            - 0.131169985
+            - 0.0
+            duration_sec: 0.8295593240000017
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.44149464
+              - 0.131169985
+              - 0.0
+              goal:
+              - -0.476401225
+              - 0.131169985
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.44149464
+              - 0.131169985
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.476401225
+              - 0.131169985
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.476401225
+              - 0.131169985
+              - 0.0
+              servo_deg:
+                lift: 35.408440905275356
+                tilt: 129.56058601613603
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 893.4271211697262
+                tilt: 1939.562066845956
+                gripper: 500.0
+            commanded_state:
+            - -0.476401225
+            - 0.131169985
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.10907695890039351
+              y: 0.0645
+              z: 0.21033818731238668
+              qx: 0.0
+              qy: 0.17175968262808453
+              qz: 0.0
+              qw: 0.985138879256879
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 19
+          q:
+          - -0.476401225
+          - 0.16607657
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.476401225
+            - 0.16607657
+            - 0.0
+            duration_sec: 0.8007993850005732
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.476401225
+              - 0.131169985
+              - 0.0
+              goal:
+              - -0.476401225
+              - 0.16607657
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.476401225
+              - 0.131169985
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.476401225
+              - 0.16607657
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.476401225
+              - 0.16607657
+              - 0.0
+              servo_deg:
+                lift: 35.408440905275356
+                tilt: 125.56058602070667
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 893.4271211697262
+                tilt: 1895.1176224522962
+                gripper: 500.0
+            commanded_state:
+            - -0.476401225
+            - 0.16607657
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.11095483085326385
+              y: 0.0645
+              z: 0.20416522788493008
+              qx: 0.0
+              qy: 0.15454047869822624
+              qz: 0.0
+              qw: 0.987986457621623
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 20
+          q:
+          - -0.476401225
+          - 0.200983155
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.476401225
+            - 0.200983155
+            - 0.0
+            duration_sec: 0.7804473620017234
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.476401225
+              - 0.16607657
+              - 0.0
+              goal:
+              - -0.476401225
+              - 0.200983155
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.476401225
+              - 0.16607657
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.476401225
+              - 0.200983155
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.476401225
+              - 0.200983155
+              - 0.0
+              servo_deg:
+                lift: 35.408440905275356
+                tilt: 121.56058602527735
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 893.4271211697262
+                tilt: 1850.6731780586372
+                gripper: 500.0
+            commanded_state:
+            - -0.476401225
+            - 0.200983155
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.11261612568034438
+              y: 0.0645
+              z: 0.19793049207160823
+              qx: 0.0
+              qy: 0.1372742002415968
+              qz: 0.0
+              qw: 0.9905330857412235
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 21
+          q:
+          - -0.51130781
+          - 0.200983155
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.51130781
+            - 0.200983155
+            - 0.0
+            duration_sec: 0.8226519029994961
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.476401225
+              - 0.200983155
+              - 0.0
+              goal:
+              - -0.51130781
+              - 0.200983155
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.476401225
+              - 0.200983155
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.51130781
+              - 0.200983155
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.51130781
+              - 0.200983155
+              - 0.0
+              servo_deg:
+                lift: 31.40844090984602
+                tilt: 125.5605860207067
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 848.9826767760669
+                tilt: 1895.1176224522965
+                gripper: 500.0
+            commanded_state:
+            - -0.51130781
+            - 0.200983155
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.10788141924503739
+              y: 0.0645
+              z: 0.20251065825005102
+              qx: 0.0
+              qy: 0.1545404786982263
+              qz: 0.0
+              qw: 0.987986457621623
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 22
+          q:
+          - -0.51130781
+          - 0.23588974
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.51130781
+            - 0.23588974
+            - 0.0
+            duration_sec: 0.7753176920014084
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.51130781
+              - 0.200983155
+              - 0.0
+              goal:
+              - -0.51130781
+              - 0.23588974
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.51130781
+              - 0.200983155
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.51130781
+              - 0.23588974
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.51130781
+              - 0.23588974
+              - 0.0
+              servo_deg:
+                lift: 31.40844090984602
+                tilt: 121.56058602527736
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 848.9826767760669
+                tilt: 1850.6731780586374
+                gripper: 500.0
+            commanded_state:
+            - -0.51130781
+            - 0.23588974
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.10954271407211795
+              y: 0.0645
+              z: 0.1962759224367292
+              qx: 0.0
+              qy: 0.13727420024159687
+              qz: 0.0
+              qw: 0.9905330857412235
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 23
+          q:
+          - -0.51130781
+          - 0.270796325
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.51130781
+            - 0.270796325
+            - 0.0
+            duration_sec: 0.8378776469999138
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.51130781
+              - 0.23588974
+              - 0.0
+              goal:
+              - -0.51130781
+              - 0.270796325
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.51130781
+              - 0.23588974
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.51130781
+              - 0.270796325
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.51130781
+              - 0.270796325
+              - 0.0
+              servo_deg:
+                lift: 31.40844090984602
+                tilt: 117.56058602984801
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 848.9826767760669
+                tilt: 1806.2287336649779
+                gripper: 500.0
+            commanded_state:
+            - -0.51130781
+            - 0.270796325
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.11098540774156933
+              y: 0.0645
+              z: 0.18998700630272586
+              qx: 0.0
+              qy: 0.11996610673386437
+              qz: 0.0
+              qw: 0.9927779878880872
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 24
+          q:
+          - -0.546214395
+          - 0.270796325
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.546214395
+            - 0.270796325
+            - 0.0
+            duration_sec: 0.8145922569983668
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.51130781
+              - 0.270796325
+              - 0.0
+              goal:
+              - -0.546214395
+              - 0.270796325
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.51130781
+              - 0.270796325
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.546214395
+              - 0.270796325
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.546214395
+              - 0.270796325
+              - 0.0
+              servo_deg:
+                lift: 27.408440914416687
+                tilt: 121.56058602527735
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 804.5382323824076
+                tilt: 1850.6731780586372
+                gripper: 500.0
+            commanded_state:
+            - -0.546214395
+            - 0.270796325
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.10652891835064872
+              y: 0.0645
+              z: 0.19451510020280016
+              qx: 0.0
+              qy: 0.13727420024159684
+              qz: 0.0
+              qw: 0.9905330857412235
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 25
+          q:
+          - -0.546214395
+          - 0.30570291
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.546214395
+            - 0.30570291
+            - 0.0
+            duration_sec: 0.8823409599990555
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.546214395
+              - 0.270796325
+              - 0.0
+              goal:
+              - -0.546214395
+              - 0.30570291
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.546214395
+              - 0.270796325
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.546214395
+              - 0.30570291
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.546214395
+              - 0.30570291
+              - 0.0
+              servo_deg:
+                lift: 27.408440914416687
+                tilt: 117.56058602984801
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 804.5382323824076
+                tilt: 1806.2287336649779
+                gripper: 500.0
+            commanded_state:
+            - -0.546214395
+            - 0.30570291
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.1079716120201001
+              y: 0.0645
+              z: 0.18822618406879682
+              qx: 0.0
+              qy: 0.11996610673386437
+              qz: 0.0
+              qw: 0.9927779878880872
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 26
+          q:
+          - -0.546214395
+          - 0.340609495
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.546214395
+            - 0.340609495
+            - 0.0
+            duration_sec: 0.8114087950016255
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.546214395
+              - 0.30570291
+              - 0.0
+              goal:
+              - -0.546214395
+              - 0.340609495
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.546214395
+              - 0.30570291
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.546214395
+              - 0.340609495
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.546214395
+              - 0.340609495
+              - 0.0
+              servo_deg:
+                lift: 27.408440914416687
+                tilt: 113.56058603441869
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 804.5382323824076
+                tilt: 1761.7842892713188
+                gripper: 500.0
+            commanded_state:
+            - -0.546214395
+            - 0.340609495
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.10919394683192013
+              y: 0.0645
+              z: 0.1818907496896705
+              qx: 0.0
+              qy: 0.10262147038796651
+              qz: 0.0
+              qw: 0.9947204802432751
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 27
+          q:
+          - -0.58112098
+          - 0.340609495
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.58112098
+            - 0.340609495
+            - 0.0
+            duration_sec: 0.8192874969990953
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.546214395
+              - 0.340609495
+              - 0.0
+              goal:
+              - -0.58112098
+              - 0.340609495
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.546214395
+              - 0.340609495
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.58112098
+              - 0.340609495
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.58112098
+              - 0.340609495
+              - 0.0
+              servo_deg:
+                lift: 23.408440918987353
+                tilt: 117.56058602984801
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 760.0937879887483
+                tilt: 1806.2287336649779
+                gripper: 500.0
+            commanded_state:
+            - -0.58112098
+            - 0.340609495
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.10502110403122666
+              y: 0.0645
+              z: 0.18636125452647118
+              qx: 0.0
+              qy: 0.11996610673386437
+              qz: 0.0
+              qw: 0.9927779878880872
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 28
+          q:
+          - -0.58112098
+          - 0.37551608
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.58112098
+            - 0.37551608
+            - 0.0
+            duration_sec: 0.8290071549999993
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.58112098
+              - 0.340609495
+              - 0.0
+              goal:
+              - -0.58112098
+              - 0.37551608
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.58112098
+              - 0.340609495
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.58112098
+              - 0.37551608
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.58112098
+              - 0.37551608
+              - 0.0
+              servo_deg:
+                lift: 23.408440918987353
+                tilt: 113.56058603441869
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 760.0937879887483
+                tilt: 1761.7842892713188
+                gripper: 500.0
+            commanded_state:
+            - -0.58112098
+            - 0.37551608
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.1062434388430467
+              y: 0.0645
+              z: 0.18002582014734486
+              qx: 0.0
+              qy: 0.10262147038796651
+              qz: 0.0
+              qw: 0.9947204802432751
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 29
+          q:
+          - -0.58112098
+          - 0.410422665
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.58112098
+            - 0.410422665
+            - 0.0
+            duration_sec: 0.8072065300002578
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.58112098
+              - 0.37551608
+              - 0.0
+              goal:
+              - -0.58112098
+              - 0.410422665
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.58112098
+              - 0.37551608
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.58112098
+              - 0.410422665
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.58112098
+              - 0.410422665
+              - 0.0
+              servo_deg:
+                lift: 23.408440918987353
+                tilt: 109.56058603898934
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 760.0937879887483
+                tilt: 1717.3398448776593
+                gripper: 500.0
+            commanded_state:
+            - -0.58112098
+            - 0.410422665
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.10724392557055673
+              y: 0.0645
+              z: 0.17365158627397004
+              qx: 0.0
+              qy: 0.08524557454814337
+              qz: 0.0
+              qw: 0.9963599711047996
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 30
+          q:
+          - -0.616027565
+          - 0.410422665
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.616027565
+            - 0.410422665
+            - 0.0
+            duration_sec: 0.9201807680001366
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.58112098
+              - 0.410422665
+              - 0.0
+              goal:
+              - -0.616027565
+              - 0.410422665
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.58112098
+              - 0.410422665
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.616027565
+              - 0.410422665
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.616027565
+              - 0.410422665
+              - 0.0
+              servo_deg:
+                lift: 19.408440923558018
+                tilt: 113.56058603441868
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 715.649343595089
+                tilt: 1761.7842892713186
+                gripper: 500.0
+            commanded_state:
+            - -0.616027565
+            - 0.410422665
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.10335981332625438
+              y: 0.0645
+              z: 0.17805905542599432
+              qx: 0.0
+              qy: 0.10262147038796648
+              qz: 0.0
+              qw: 0.9947204802432751
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 31
+          q:
+          - -0.616027565
+          - 0.44532925
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.616027565
+            - 0.44532925
+            - 0.0
+            duration_sec: 0.8116515400015487
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.616027565
+              - 0.410422665
+              - 0.0
+              goal:
+              - -0.616027565
+              - 0.44532925
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.616027565
+              - 0.410422665
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.616027565
+              - 0.44532925
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.616027565
+              - 0.44532925
+              - 0.0
+              servo_deg:
+                lift: 19.408440923558018
+                tilt: 109.56058603898934
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 715.649343595089
+                tilt: 1717.3398448776593
+                gripper: 500.0
+            commanded_state:
+            - -0.616027565
+            - 0.44532925
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.10436030005376441
+              y: 0.0645
+              z: 0.1716848215526195
+              qx: 0.0
+              qy: 0.08524557454814337
+              qz: 0.0
+              qw: 0.9963599711047996
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 32
+          q:
+          - -0.616027565
+          - 0.480235835
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.616027565
+            - 0.480235835
+            - 0.0
+            duration_sec: 0.850140268999894
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.616027565
+              - 0.44532925
+              - 0.0
+              goal:
+              - -0.616027565
+              - 0.480235835
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.616027565
+              - 0.44532925
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.616027565
+              - 0.480235835
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.616027565
+              - 0.480235835
+              - 0.0
+              servo_deg:
+                lift: 19.408440923558018
+                tilt: 105.56058604356001
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 715.649343595089
+                tilt: 1672.8954004840002
+                gripper: 500.0
+            commanded_state:
+            - -0.616027565
+            - 0.480235835
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.10513771975800298
+              y: 0.0645
+              z: 0.16527955420707768
+              qx: 0.0
+              qy: 0.06784371208057981
+              qz: 0.0
+              qw: 0.9976959610678633
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 33
+          q:
+          - -0.65093415
+          - 0.480235835
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.65093415
+            - 0.480235835
+            - 0.0
+            duration_sec: 0.8206407870002295
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.616027565
+              - 0.480235835
+              - 0.0
+              goal:
+              - -0.65093415
+              - 0.480235835
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.616027565
+              - 0.480235835
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.65093415
+              - 0.480235835
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.65093415
+              - 0.480235835
+              - 0.0
+              servo_deg:
+                lift: 15.408440928128684
+                tilt: 109.56058603898934
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 671.2048992014298
+                tilt: 1717.3398448776593
+                gripper: 500.0
+            commanded_state:
+            - -0.65093415
+            - 0.480235835
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.1015470702625489
+              y: 0.0645
+              z: 0.16961861785209464
+              qx: 0.0
+              qy: 0.08524557454814337
+              qz: 0.0
+              qw: 0.9963599711047996
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 34
+          q:
+          - -0.65093415
+          - 0.51514242
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.65093415
+            - 0.51514242
+            - 0.0
+            duration_sec: 0.7982051349990797
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.65093415
+              - 0.480235835
+              - 0.0
+              goal:
+              - -0.65093415
+              - 0.51514242
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.65093415
+              - 0.480235835
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.65093415
+              - 0.51514242
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.65093415
+              - 0.51514242
+              - 0.0
+              servo_deg:
+                lift: 15.408440928128684
+                tilt: 105.56058604356001
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 671.2048992014298
+                tilt: 1672.8954004840002
+                gripper: 500.0
+            commanded_state:
+            - -0.65093415
+            - 0.51514242
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.10232448996678747
+              y: 0.0645
+              z: 0.16321335050655283
+              qx: 0.0
+              qy: 0.06784371208057981
+              qz: 0.0
+              qw: 0.9976959610678633
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 35
+          q:
+          - -0.65093415
+          - 0.550049005
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.65093415
+            - 0.550049005
+            - 0.0
+            duration_sec: 1.0003457229995547
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.65093415
+              - 0.51514242
+              - 0.0
+              goal:
+              - -0.65093415
+              - 0.550049005
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.65093415
+              - 0.51514242
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.65093415
+              - 0.550049005
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.65093415
+              - 0.550049005
+              - 0.0
+              servo_deg:
+                lift: 15.408440928128684
+                tilt: 101.56058604813069
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 671.2048992014298
+                tilt: 1628.450956090341
+                gripper: 500.0
+            commanded_state:
+            - -0.65093415
+            - 0.550049005
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.10287789548159941
+              y: 0.0645
+              z: 0.15678485352043095
+              qx: 0.0
+              qy: 0.05042118376114693
+              qz: 0.0
+              qw: 0.9987280431769825
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 36
+          q:
+          - -0.685840735
+          - 0.550049005
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.685840735
+            - 0.550049005
+            - 0.0
+            duration_sec: 0.7997357949989237
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.65093415
+              - 0.550049005
+              - 0.0
+              goal:
+              - -0.685840735
+              - 0.550049005
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.65093415
+              - 0.550049005
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.685840735
+              - 0.550049005
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.685840735
+              - 0.550049005
+              - 0.0
+              servo_deg:
+                lift: 11.408440932699364
+                tilt: 105.56058604356001
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 626.7604548077707
+                tilt: 1672.8954004840002
+                gripper: 500.0
+            commanded_state:
+            - -0.685840735
+            - 0.550049005
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.09958508338829675
+              y: 0.0645
+              z: 0.16105022517778272
+              qx: 0.0
+              qy: 0.06784371208057981
+              qz: 0.0
+              qw: 0.9976959610678633
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 37
+          q:
+          - -0.685840735
+          - 0.58495559
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.685840735
+            - 0.58495559
+            - 0.0
+            duration_sec: 0.8179064600008132
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.685840735
+              - 0.550049005
+              - 0.0
+              goal:
+              - -0.685840735
+              - 0.58495559
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.685840735
+              - 0.550049005
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.685840735
+              - 0.58495559
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.685840735
+              - 0.58495559
+              - 0.0
+              servo_deg:
+                lift: 11.408440932699364
+                tilt: 101.56058604813069
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 626.7604548077707
+                tilt: 1628.450956090341
+                gripper: 500.0
+            commanded_state:
+            - -0.685840735
+            - 0.58495559
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.10013848890310868
+              y: 0.0645
+              z: 0.15462172819166084
+              qx: 0.0
+              qy: 0.05042118376114693
+              qz: 0.0
+              qw: 0.9987280431769825
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 38
+          q:
+          - -0.685840735
+          - 0.619862175
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.685840735
+            - 0.619862175
+            - 0.0
+            duration_sec: 0.7813233159995434
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.685840735
+              - 0.58495559
+              - 0.0
+              goal:
+              - -0.685840735
+              - 0.619862175
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.685840735
+              - 0.58495559
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.685840735
+              - 0.619862175
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.685840735
+              - 0.619862175
+              - 0.0
+              servo_deg:
+                lift: 11.408440932699364
+                tilt: 97.56058605270135
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 626.7604548077707
+                tilt: 1584.0065116966816
+                gripper: 500.0
+            commanded_state:
+            - -0.685840735
+            - 0.619862175
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.10046720598912136
+              y: 0.0645
+              z: 0.14817783369828452
+              qx: 0.0
+              qy: 0.03298329666073453
+              qz: 0.0
+              qw: 0.9994559030499495
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 39
+          q:
+          - -0.685840735
+          - 0.65476876
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.685840735
+            - 0.65476876
+            - 0.0
+            duration_sec: 0.8433985179999581
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.685840735
+              - 0.619862175
+              - 0.0
+              goal:
+              - -0.685840735
+              - 0.65476876
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.685840735
+              - 0.619862175
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.685840735
+              - 0.65476876
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.685840735
+              - 0.65476876
+              - 0.0
+              servo_deg:
+                lift: 11.408440932699364
+                tilt: 93.56058605727202
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 626.7604548077707
+                tilt: 1539.5620673030223
+                gripper: 500.0
+            commanded_state:
+            - -0.685840735
+            - 0.65476876
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.10057083415520135
+              y: 0.0645
+              z: 0.14172639259047012
+              qx: 0.0
+              qy: 0.015535362528665867
+              qz: 0.0
+              qw: 0.9998793189735964
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        - index: 40
+          q:
+          - -0.72074732
+          - 0.65476876
+          - 0.0
+          result:
+            ok: true
+            event: trajectory_completed
+            goal:
+            - -0.72074732
+            - 0.65476876
+            - 0.0
+            duration_sec: 0.8077240370002983
+            validation:
+              ok: true
+              event: goal_validated
+              source: direct_joint_goal
+              current:
+              - -0.685840735
+              - 0.65476876
+              - 0.0
+              goal:
+              - -0.72074732
+              - 0.65476876
+              - 0.0
+              path_samples: 5
+              start:
+              - -0.685840735
+              - 0.65476876
+              - 0.0
+              safe_region_loaded: true
+            bridge:
+              ok: true
+              event: trajectory_completed
+              commanded_state:
+              - -0.72074732
+              - 0.65476876
+              - 0.0
+              dry_run: true
+              goal:
+              - -0.72074732
+              - 0.65476876
+              - 0.0
+              servo_deg:
+                lift: 7.408440937270029
+                tilt: 97.56058605270135
+                gripper: 0.0
+              servo_pulse_us:
+                lift: 582.3160104141115
+                tilt: 1584.0065116966816
+                gripper: 500.0
+            commanded_state:
+            - -0.72074732
+            - 0.65476876
+            - 0.0
+            tool_pose:
+              frame_id: base_link
+              x: -0.09780496016829043
+              y: 0.0645
+              z: 0.14592042217627238
+              qx: 0.0
+              qy: 0.03298329666073453
+              qz: 0.0
+              qw: 0.9994559030499495
+            gripper_gap_m: 0.06999999999999999
+            servo_command_preview: []
+        final_q:
+        - -0.72074732
+        - 0.65476876
+        - 0.0
+      physical_pass: false
+      notes: ''
+    status: completed
+    completed_at: '2026-08-08T07:49:30+00:00'
+    started_at: '2026-08-08T07:47:41+00:00'
 source:
   actuator_limits_file: /home/dyddl2082/MacRobot/install/macrobot_safe_region/share/macrobot_safe_region/config/actuator_limits.yaml
   safe_region:
-    connected_csv: /home/dyddl2082/MacRobot/data/safe_region_exact_gripper_fine_calibrated/safe_connected_samples.csv
-    all_samples_csv: /home/dyddl2082/MacRobot/data/safe_region_exact_gripper_fine_calibrated/safe_samples.csv
-    connected_sample_count: 36805
-    all_sample_count: 134520
+    connected_csv: /home/dyddl2082/MacRobot/data/safe_region_physical_fine/safe_connected_samples.csv
+    all_samples_csv: /home/dyddl2082/MacRobot/data/safe_region_physical_fine/safe_samples.csv
+    connected_sample_count: 46946
+    all_sample_count: 165908
     bounds_rad:
       q1:
-      - -0.685840735
-      - 0.67551608
+      - -0.755653905
+      - 0.780235835
       q2:
-      - -1.02074732
-      - 0.86420827
+      - -0.88112098
+      - 1.07364778
       q3:
-      - -1.25
       - 0.0
+      - 1.527163096
     grid_step_rad:
       q1: 0.03490658499999999
       q2: 0.03490658499999999
-      q3: 0.043633231299999964
-  commissioning_started_at: '2026-08-08T05:23:39+00:00'
-  commissioning_finished_at: '2026-08-08T05:21:55+00:00'
+      q3: 0.04363323129999999
+  commissioning_started_at: '2026-08-08T07:47:19+00:00'
+  commissioning_finished_at: '2026-08-08T07:24:46+00:00'
 system_snapshot:
   current_q:
   - 0.0
