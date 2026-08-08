@@ -423,10 +423,21 @@ class CommissioningWizard:
             return
         self.report.begin_section("direction_and_mechanism")
         home = self.node.mapping.logical_limits.home
+        dq1 = self.node.direction_delta_q1
+        dq2 = self.node.direction_delta_q2
+        dq3 = self.node.direction_delta_q3
+
+        print(
+            "\n방향 테스트 변화량: "
+            f"q1={dq1:+.3f} rad, "
+            f"q2={dq2:+.3f} rad, "
+            f"q3={dq3:+.3f} rad"
+        )
+
         tests = [
-            ("q1_positive", (home[0] + 0.05, home[1], home[2])),
-            ("q2_positive", (home[0], home[1] + 0.05, home[2])),
-            ("q3_negative", (home[0], home[1], home[2] - 0.05)),
+            ("q1_positive", (home[0] + dq1, home[1], home[2])),
+            ("q2_positive", (home[0], home[1] + dq2, home[2])),
+            ("q3_negative", (home[0], home[1], home[2] + dq3)),
         ]
         records = []
         self._execute_and_review(home, "HOME")

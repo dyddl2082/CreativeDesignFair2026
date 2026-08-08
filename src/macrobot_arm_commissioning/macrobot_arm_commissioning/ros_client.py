@@ -47,10 +47,17 @@ class ArmCommissioningNode(Node):
         self.declare_parameter("allow_raw_pulse_commands", False)
         self.declare_parameter("motion_timeout_sec", 30.0)
         self.declare_parameter("settle_time_sec", 0.25)
-        self.declare_parameter("raw_pulse_absolute_min_us", 900.0)
-        self.declare_parameter("raw_pulse_absolute_max_us", 2100.0)
+        self.declare_parameter("raw_pulse_absolute_min_us", 500.0)
+        self.declare_parameter("raw_pulse_absolute_max_us", 2500.0)
         self.declare_parameter("raw_pulse_max_step_us", 25.0)
         self.declare_parameter("raw_pulse_step_delay_sec", 0.12)
+
+        # Direction/mechanism test deltas.
+        # These used to be 0.05 rad, but that is too subtle on the real arm.
+        # 0.15 rad produces about 17.2 deg servo-side motion because of 2:1 gears.
+        self.declare_parameter("direction_delta_q1", 0.15)
+        self.declare_parameter("direction_delta_q2", 0.15)
+        self.declare_parameter("direction_delta_q3", -0.15)
 
         self.declare_parameter("joint_goal_topic", "/macrobot/arm/joint_goal")
         self.declare_parameter("validation_status_topic", "/macrobot/arm/validation_status")
@@ -88,6 +95,9 @@ class ArmCommissioningNode(Node):
         self.raw_step_delay = float(
             self.get_parameter("raw_pulse_step_delay_sec").value
         )
+        self.direction_delta_q1 = float(self.get_parameter("direction_delta_q1").value)
+        self.direction_delta_q2 = float(self.get_parameter("direction_delta_q2").value)
+        self.direction_delta_q3 = float(self.get_parameter("direction_delta_q3").value)
 
         self.mapping = load_servo_mapping(self.actuator_limits_file)
         self.current_q: Q = self.mapping.logical_limits.home

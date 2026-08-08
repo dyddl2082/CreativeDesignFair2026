@@ -2,9 +2,9 @@ schema_version: 1
 
 direction_test:
   delta_rad:
-    q1: 0.05
-    q2: 0.05
-    q3: -0.05
+    q1: 0.15
+    q2: 0.15
+    q3: -0.15
 
 grasp_frame:
   q3_samples: [0.0, -0.6, -1.0]
