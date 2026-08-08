@@ -323,8 +323,8 @@ class CommissioningWizard:
         self.report.begin_section("pulse_zero_calibration")
         results: Dict[str, Any] = {}
         for axis_name, model_name in (
-            ("lift", "MG996R left/lift"),
-            ("tilt", "MG996R right/tilt"),
+            ("lift", "MG996R left / arm tilt (CCW = forward)"),
+            ("tilt", "MG996R right / rear lift (CW = up)"),
             ("gripper", "MG90S gripper"),
         ):
             axis = getattr(self.node.mapping, axis_name)
@@ -437,7 +437,7 @@ class CommissioningWizard:
         tests = [
             ("q1_positive", (home[0] + dq1, home[1], home[2])),
             ("q2_positive", (home[0], home[1] + dq2, home[2])),
-            ("q3_negative", (home[0], home[1], home[2] + dq3)),
+            ("q3_positive_close", (home[0], home[1], home[2] + dq3)),
         ]
         records = []
         self._execute_and_review(home, "HOME")
@@ -452,7 +452,7 @@ class CommissioningWizard:
                 ),
                 "gripper_clamps_parallel": (
                     ask_yes_no("양쪽 clamp가 평행을 유지하나요?", True)
-                    if name == "q3_negative"
+                    if name == "q3_positive_close"
                     else None
                 ),
                 "no_binding_or_abnormal_noise": ask_yes_no(
@@ -657,9 +657,9 @@ class CommissioningWizard:
         close_q3 = (
             self.safe_region.safe_close_q3()
             if self.safe_region
-            else self.node.mapping.logical_limits.q3_min
+            else self.node.mapping.logical_limits.q3_max
         )
-        defaults = [0.0, -0.6, close_q3]
+        defaults = [0.0, 0.8, close_q3]
         raw_q3 = ask_text(
             "측정 q3 목록(rad, 쉼표 구분)",
             ",".join(f"{value:.6f}" for value in defaults),
@@ -756,7 +756,7 @@ class CommissioningWizard:
         close_q3 = (
             self.safe_region.safe_close_q3()
             if self.safe_region
-            else self.node.mapping.logical_limits.q3_min
+            else self.node.mapping.logical_limits.q3_max
         )
         defaults: Dict[str, Q] = {
             "HOME": home,
@@ -870,7 +870,7 @@ class CommissioningWizard:
                     (
                         self.safe_region.safe_close_q3()
                         if self.safe_region
-                        else self.node.mapping.logical_limits.q3_min
+                        else self.node.mapping.logical_limits.q3_max
                     ),
                 )
             ),

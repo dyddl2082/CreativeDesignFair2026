@@ -12,14 +12,14 @@ def test_fit_grasp_frame_synthetic():
     z = -0.006
     length = 0.03
     samples = []
-    for q3 in (0.0, -0.6, -1.1):
+    for q3 in (0.0, 0.6, 1.1):
         samples.append(
             {
                 "q1": 0.0,
                 "q2": 0.0,
                 "q3": q3,
                 "measurement_frame": "wrist",
-                "measured_x": a - length * math.sin(q3),
+                "measured_x": a + length * math.sin(q3),
                 "measured_z": z,
             }
         )

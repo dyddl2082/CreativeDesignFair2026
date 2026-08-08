@@ -23,7 +23,7 @@ def quaternion_from_pitch(pitch: float) -> Quaternion:
 
 
 class LinkageStateNode(Node):
-    """Map three logical actuator coordinates to the full Fusion visual joints.
+    """Map corrected physical logical coordinates to the full Fusion visual joints.
 
     The node can also run in a pose-only mode for the reduced kinematic model:
     set ``publish_full_joint_states:=false`` and subscribe its logical input to
@@ -59,8 +59,8 @@ class LinkageStateNode(Node):
         self.declare_parameter('tool_pitch_min', -2.0)
         self.declare_parameter('tool_pitch_max', 2.0)
         self.declare_parameter('four_bar_margin', math.radians(10.0))
-        self.declare_parameter('gripper_min', -1.25)
-        self.declare_parameter('gripper_max', 0.0)
+        self.declare_parameter('gripper_min', 0.0)
+        self.declare_parameter('gripper_max', math.pi / 2.0)
 
         self.declare_parameter('lift_servo_joint', 'servo_left_gear_joint')
         self.declare_parameter('tilt_servo_joint', 'servo_right_gear_joint')
@@ -68,8 +68,8 @@ class LinkageStateNode(Node):
         self.declare_parameter('tilt_ratio_joint', 'ratio_right_gear_joint')
         self.declare_parameter('rear_passive_joint', 'ratio_left_gear_back_link_joint')
         self.declare_parameter('top_passive_joint', 'back_link_top_link_joint')
-        self.declare_parameter('lift_servo_multiplier', -2.0)
-        self.declare_parameter('tilt_servo_multiplier', 2.0)
+        self.declare_parameter('lift_servo_multiplier', 2.0)
+        self.declare_parameter('tilt_servo_multiplier', -2.0)
 
         self.declare_parameter('gripper_servo_joint', 'gripper_servo_joint')
         self.declare_parameter('gripper_left_gear_joint', 'gripper_left_gear_joint')
@@ -78,7 +78,7 @@ class LinkageStateNode(Node):
         self.declare_parameter('gripper_right_addition_joint', 'gripper_right_addition_joint')
         self.declare_parameter('gripper_left_clamp_joint', 'clamp_left_addition_joint')
         self.declare_parameter('gripper_right_clamp_joint', 'clamp_right_addition_joint')
-        self.declare_parameter('gripper_servo_multiplier', 2.0)
+        self.declare_parameter('gripper_servo_multiplier', -2.0)
 
         geometry = ArmGeometry(
             pivot_x=float(self.get_parameter('pivot_x').value),

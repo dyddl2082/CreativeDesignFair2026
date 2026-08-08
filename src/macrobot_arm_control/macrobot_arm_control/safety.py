@@ -40,10 +40,10 @@ class AnalyticValidator:
         if not (limits.q3_min <= q3 <= limits.q3_max):
             return ValidationResult(False, "q3_logical_limit", {"q3": q3})
 
-        tool_pitch = q1 + q2
-        if not (limits.tool_pitch_min <= tool_pitch <= limits.tool_pitch_max):
+        rear_lift_angle = q1 + q2
+        if not (limits.tool_pitch_min <= rear_lift_angle <= limits.tool_pitch_max):
             return ValidationResult(
-                False, "tool_pitch_limit", {"tool_pitch": tool_pitch}
+                False, "rear_lift_angle_limit", {"rear_lift_angle": rear_lift_angle}
             )
         toggle_bound = math.pi / 2.0 - limits.four_bar_margin_rad
         if abs(q2) > toggle_bound:
@@ -61,7 +61,7 @@ class AnalyticValidator:
             True,
             "safe",
             {
-                "tool_pitch": tool_pitch,
+                "rear_lift_angle": rear_lift_angle,
                 "servo_deg": commands,
                 "servo_pulse_us": self.mapping.servo_pulses_us(q1, q2, q3),
             },

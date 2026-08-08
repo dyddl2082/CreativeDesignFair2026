@@ -21,13 +21,15 @@ def base_point_to_wrist_offset(
     reference: GeometryReference,
 ) -> Tuple[float, float]:
     """Transform a measured base_link X/Z point into the wrist frame."""
-    pitch = q1 + q2
-    wrist_x = reference.pivot_x + reference.main_link_length * math.sin(q1)
+    rear_lift_angle = q1 + q2
+    wrist_x = reference.pivot_x - reference.main_link_length * math.sin(q1)
     wrist_z = reference.pivot_z + reference.main_link_length * math.cos(q1)
     dx = measured_x - wrist_x
     dz = measured_z - wrist_z
-    offset_x = dx * math.cos(pitch) - dz * math.sin(pitch)
-    offset_z = dx * math.sin(pitch) + dz * math.cos(pitch)
+    # Inverse of the corrected local-to-base rotation:
+    # x = ox*cos(h) - oz*sin(h), z = ox*sin(h) + oz*cos(h).
+    offset_x = dx * math.cos(rear_lift_angle) + dz * math.sin(rear_lift_angle)
+    offset_z = -dx * math.sin(rear_lift_angle) + dz * math.cos(rear_lift_angle)
     return offset_x, offset_z
 
 
@@ -93,14 +95,14 @@ def fit_grasp_frame(
             }
         )
 
-    predictor = [-math.sin(item["q3"]) for item in transformed]
+    predictor = [math.sin(item["q3"]) for item in transformed]
     observed_x = [item["offset_x"] for item in transformed]
     tool_offset_x, gripper_link_length = _linear_fit(predictor, observed_x)
     tool_offset_z = mean(item["offset_z"] for item in transformed)
 
     residuals = []
     for item in transformed:
-        predicted_x = tool_offset_x - gripper_link_length * math.sin(item["q3"])
+        predicted_x = tool_offset_x + gripper_link_length * math.sin(item["q3"])
         predicted_z = tool_offset_z
         residuals.append(
             {

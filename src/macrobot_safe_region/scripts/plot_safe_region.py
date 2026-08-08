@@ -29,8 +29,8 @@ def main():
 
     plt.figure(figsize=(8, 6))
     plt.scatter([r['q1_rad'] for r in selected], [r['q2_rad'] for r in selected], s=12)
-    plt.xlabel('q1 arm_lift_joint [rad]')
-    plt.ylabel('q2 wrist_pitch_joint [rad]')
+    plt.xlabel('q1 arm forward tilt (legacy arm_lift_joint) [rad]')
+    plt.ylabel('q2 relative rear lift (legacy wrist_pitch_joint) [rad]')
     plt.title(f'MacRobot connected safe region, q3={q3:.3f} rad')
     plt.grid(True)
     plt.tight_layout()

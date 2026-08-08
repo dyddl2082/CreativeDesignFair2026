@@ -22,8 +22,8 @@ macrobot_arm_servo_bridge:
     minimum_duration_sec: 0.20
     preempt_active_goal: true
 
-    # SERVO_US uses the calibrated pulse envelope instead of Pico's generic
-    # 500..2500 us angle conversion.
+    # pulse_us mode publishes one ARM_US command using the calibrated
+    # 500/1500/2500 us envelope.
     command_mode: pulse_us
     dry_run: true
     command_home_on_start: false

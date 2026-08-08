@@ -11,7 +11,7 @@
 ## 포함 시험
 
 1. MG996R/MG90S pulse, zero, sign, command range 기록
-2. q1 +0.05, q2 +0.05, q3 -0.05 방향 및 4-bar/gripper 제약 확인
+2. q1 +0.15, q2 +0.15, q3 +0.15 방향 및 4-bar/gripper 제약 확인
 3. MoveIt safe-region에서 자동 선택한 대표 경계 자세 시험
 4. 무부하·하중 반복 정밀도, 백래시, 온도 시험
 5. q3별 실제 clamp 접촉 중심을 이용한 grasp_frame 기하 보정
@@ -88,11 +88,11 @@ pulse 교정까지 할 때만 추가:
 현재 모델식은 다음과 같다.
 
 ```text
-offset_x(q3) = tool_offset_x - gripper_link_length * sin(q3)
+offset_x(q3) = tool_offset_x + gripper_link_length * sin(q3)
 offset_z(q3) = tool_offset_z
 ```
 
-q3=0, 약 -0.6, 실제 close 상태에서 접촉 중심을 측정하면 다음 값을 최소제곱으로 계산한다.
+q3=0, 약 +0.8, 실제 close 상태에서 접촉 중심을 측정하면 다음 값을 최소제곱으로 계산한다.
 
 ```text
 tool_offset_x

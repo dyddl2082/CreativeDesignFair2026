@@ -27,8 +27,14 @@ class SafeSample:
         return (self.q1, self.q2, self.q3)
 
     @property
-    def tool_pitch(self) -> float:
+    def rear_lift_angle(self) -> float:
+        """Absolute angle of the right driven/rear-lift gear."""
         return self.q1 + self.q2
+
+    @property
+    def tool_pitch(self) -> float:
+        """Backward-compatible alias for rear_lift_angle."""
+        return self.rear_lift_angle
 
 
 def _read_bool(value: object, default: bool = False) -> bool:
@@ -172,7 +178,8 @@ class SafeRegionDataset:
             "name": name,
             "category": category,
             "q": [sample.q1, sample.q2, sample.q3],
-            "tool_pitch": sample.tool_pitch,
+            "rear_lift_angle": sample.rear_lift_angle,
+            "tool_pitch": sample.tool_pitch,  # legacy report key
             "rationale": rationale,
         }
 
@@ -198,7 +205,7 @@ class SafeRegionDataset:
                     )
                 )
 
-        open_candidates = self._at_axis_value(2, self.q3_values[-1])
+        open_candidates = self._at_axis_value(2, self.q3_values[0])
         open_sample = self.nearest(home.q, open_candidates)
         cases.append(
             self._case(
@@ -226,7 +233,7 @@ class SafeRegionDataset:
             )
         )
 
-        near_close_value = self._second_inset(self.q3_values, high=False)
+        near_close_value = self._second_inset(self.q3_values, high=True)
         near_close_candidates = self._at_axis_value(2, near_close_value)
         near_close_sample = self.nearest(home.q, near_close_candidates)
         cases.append(
@@ -238,27 +245,27 @@ class SafeRegionDataset:
             )
         )
 
-        pitches = sorted({round(item.tool_pitch, 10) for item in self.connected})
+        pitches = sorted({round(item.rear_lift_angle, 10) for item in self.connected})
         for high in (False, True):
             target_pitch = self._second_inset(pitches, high)
             candidates = [
                 item
                 for item in self.connected
-                if abs(item.tool_pitch - target_pitch) < 1e-7
+                if abs(item.rear_lift_angle - target_pitch) < 1e-7
             ]
             if not candidates:
                 candidates = sorted(
                     self.connected,
-                    key=lambda item: abs(item.tool_pitch - target_pitch),
+                    key=lambda item: abs(item.rear_lift_angle - target_pitch),
                 )[: max(1, min(100, len(self.connected)))]
             sample = self.nearest(home.q, candidates)
             side = "max_inside" if high else "min_inside"
             cases.append(
                 self._case(
-                    f"tool_pitch_{side}",
+                    f"rear_lift_angle_{side}",
                     "coupled_boundary",
                     sample,
-                    "One sampled level inside the q1+q2 coupled boundary.",
+                    "One sampled level inside the q1+q2 rear-lift boundary.",
                 )
             )
 
@@ -377,5 +384,5 @@ class SafeRegionDataset:
 
     def safe_close_q3(self, inset_levels: int = 1) -> float:
         if len(self.q3_values) <= inset_levels:
-            return self.q3_values[0]
-        return self.q3_values[min(inset_levels, len(self.q3_values) - 1)]
+            return self.q3_values[-1]
+        return self.q3_values[max(0, len(self.q3_values) - 1 - inset_levels)]

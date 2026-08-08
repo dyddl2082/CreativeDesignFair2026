@@ -3,9 +3,10 @@
   <!--
     Reduced logical model of the geared four-bar arm and gripper.
 
-    q1 = arm_lift_joint
-    q2 = wrist_pitch_joint, relative to the main arm
-    q3 = gripper_joint, 0 rad is fully open and negative closes
+    q1 = arm_lift_joint (legacy name): left-servo arm tilt; positive tilts forward
+    q2 = wrist_pitch_joint (legacy name): relative rear-lift coordinate
+         right driven/rear-lift angle = q1 + q2
+    q3 = gripper_joint: 0 rad open; positive closes; pi/2 is full close
 
     The exact closed mechanisms are visualized by macrobot_full_visual.  This
     model is deliberately simple so FK/IK and joint-limit testing remain robust.
@@ -66,7 +67,7 @@
     <parent link="base_link"/>
     <child link="main_arm_link"/>
     <origin xyz="${pivot_x} ${pivot_y} ${pivot_z}" rpy="0 0 0"/>
-    <axis xyz="0 1 0"/>
+    <axis xyz="0 -1 0"/>
     <limit lower="-1.0" upper="1.0" effort="10.0" velocity="1.0"/>
   </joint>
 
@@ -86,7 +87,7 @@
     <parent link="main_arm_link"/>
     <child link="wrist_link"/>
     <origin xyz="0 0 ${main_length}" rpy="0 0 0"/>
-    <axis xyz="0 1 0"/>
+    <axis xyz="0 -1 0"/>
     <limit lower="-1.30" upper="1.30" effort="10.0" velocity="1.0"/>
   </joint>
 
@@ -107,8 +108,8 @@
     <parent link="wrist_link"/>
     <child link="left_finger_link"/>
     <origin xyz="-0.17215 -0.00390 0.00400" rpy="0 0 1.570796"/>
-    <axis xyz="0 0 1"/>
-    <limit lower="-1.25" upper="0.0" effort="5.0" velocity="1.0"/>
+    <axis xyz="0 0 -1"/>
+    <limit lower="0.0" upper="1.57079632679" effort="5.0" velocity="1.0"/>
   </joint>
 
   <link name="right_finger_link">
@@ -126,8 +127,8 @@
     <parent link="wrist_link"/>
     <child link="right_finger_link"/>
     <origin xyz="-0.17215 0.00610 0.00400" rpy="0 0 1.570796"/>
-    <axis xyz="0 0 1"/>
-    <limit lower="0.0" upper="1.25" effort="5.0" velocity="1.0"/>
+    <axis xyz="0 0 -1"/>
+    <limit lower="-1.57079632679" upper="0.0" effort="5.0" velocity="1.0"/>
     <mimic joint="gripper_joint" multiplier="-1.0" offset="0.0"/>
   </joint>
 

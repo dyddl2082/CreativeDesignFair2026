@@ -1,4 +1,4 @@
-"""Logical MacRobot arm joints to PCA9685 servo commands.
+"""Corrected MacRobot physical arm conventions to PCA9685 servo commands.
 
 This module deliberately has no ROS dependency so it can be unit tested on a
 normal Python installation.
@@ -26,9 +26,9 @@ class ServoAxis:
     model_multiplier: float
     command_min_deg: float
     command_max_deg: float
-    pulse_min_us: float = 1000.0
+    pulse_min_us: float = 500.0
     pulse_center_us: float = 1500.0
-    pulse_max_us: float = 2000.0
+    pulse_max_us: float = 2500.0
 
     def model_angle_to_command_deg(self, model_angle_rad: float) -> float:
         return self.zero_deg + self.sign * math.degrees(
@@ -154,28 +154,28 @@ def load_servo_mapping(path: str | Path) -> ServoMapping:
     )
 
     lift = ServoAxis(
-        name="lift_mg996r",
+        name="left_mg996r_arm_tilt",
         channel=int(p.get("lift_channel", 0)),
         zero_deg=float(p["lift_zero_deg"]),
         sign=float(p["lift_sign"]),
         model_multiplier=float(p["lift_model_multiplier"]),
         command_min_deg=float(p["lift_command_min_deg"]),
         command_max_deg=float(p["lift_command_max_deg"]),
-        pulse_min_us=float(p.get("lift_pulse_min_us", 1000.0)),
+        pulse_min_us=float(p.get("lift_pulse_min_us", 500.0)),
         pulse_center_us=float(p.get("lift_pulse_center_us", 1500.0)),
-        pulse_max_us=float(p.get("lift_pulse_max_us", 2000.0)),
+        pulse_max_us=float(p.get("lift_pulse_max_us", 2500.0)),
     )
     tilt = ServoAxis(
-        name="tilt_mg996r",
+        name="right_mg996r_rear_lift",
         channel=int(p.get("tilt_channel", 1)),
         zero_deg=float(p["tilt_zero_deg"]),
         sign=float(p["tilt_sign"]),
         model_multiplier=float(p["tilt_model_multiplier"]),
         command_min_deg=float(p["tilt_command_min_deg"]),
         command_max_deg=float(p["tilt_command_max_deg"]),
-        pulse_min_us=float(p.get("tilt_pulse_min_us", 1000.0)),
+        pulse_min_us=float(p.get("tilt_pulse_min_us", 500.0)),
         pulse_center_us=float(p.get("tilt_pulse_center_us", 1500.0)),
-        pulse_max_us=float(p.get("tilt_pulse_max_us", 2000.0)),
+        pulse_max_us=float(p.get("tilt_pulse_max_us", 2500.0)),
     )
     gripper = ServoAxis(
         name="gripper_mg90s",
@@ -185,8 +185,8 @@ def load_servo_mapping(path: str | Path) -> ServoMapping:
         model_multiplier=float(p["gripper_model_multiplier"]),
         command_min_deg=float(p["gripper_command_min_deg"]),
         command_max_deg=float(p["gripper_command_max_deg"]),
-        pulse_min_us=float(p.get("gripper_pulse_min_us", 1000.0)),
+        pulse_min_us=float(p.get("gripper_pulse_min_us", 500.0)),
         pulse_center_us=float(p.get("gripper_pulse_center_us", 1500.0)),
-        pulse_max_us=float(p.get("gripper_pulse_max_us", 2000.0)),
+        pulse_max_us=float(p.get("gripper_pulse_max_us", 2500.0)),
     )
     return ServoMapping(limits, lift, tilt, gripper)

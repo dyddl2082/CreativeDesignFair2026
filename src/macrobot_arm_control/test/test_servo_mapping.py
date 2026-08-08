@@ -15,18 +15,31 @@ def _actuator_file() -> Path:
     )
 
 
-def test_home_servo_commands():
+def test_home_servo_commands_and_pulses():
     mapping = load_servo_mapping(_actuator_file())
     commands = mapping.servo_commands_deg(0.0, 0.0, 0.0)
+    pulses = mapping.servo_pulses_us(0.0, 0.0, 0.0)
     assert commands['lift'] == 90.0
     assert commands['tilt'] == 90.0
-    assert abs(commands['gripper'] - 161.619724) < 1e-6
+    assert commands['gripper'] == 0.0
+    assert pulses['lift'] == 1500.0
+    assert pulses['tilt'] == 1500.0
+    assert pulses['gripper'] == 500.0
 
 
-def test_closed_gripper_servo_command():
+def test_positive_directions_match_physical_description():
     mapping = load_servo_mapping(_actuator_file())
-    command = mapping.servo_commands_deg(0.0, 0.0, -1.25)['gripper']
-    assert abs(command - 18.3802757) < 1e-5
+
+    q1 = mapping.servo_commands_deg(0.15, 0.0, 0.0)
+    assert q1['lift'] > 90.0       # left servo CCW
+    assert q1['tilt'] < 90.0       # right servo CW because rear angle also rises
+
+    q2 = mapping.servo_commands_deg(0.0, 0.15, 0.0)
+    assert q2['lift'] == 90.0
+    assert q2['tilt'] < 90.0       # pure rear lift: right servo CW
+
+    q3 = mapping.servo_commands_deg(0.0, 0.0, math.pi / 2.0)
+    assert abs(q3['gripper'] - 180.0) < 1e-9
 
 
 def test_analytic_rejects_servo_limit():
@@ -40,7 +53,7 @@ def test_analytic_rejects_servo_limit():
 def test_path_validation():
     mapping = load_servo_mapping(_actuator_file())
     validator = SafetyValidator(mapping)
-    result = validator.validate_path((0.0, 0.0, 0.0), (0.2, -0.1, -0.4), math.radians(1.0))
+    result = validator.validate_path((0.0, 0.0, 0.0), (0.2, -0.1, 0.4), math.radians(1.0))
     assert result.ok
     assert result.details['path_samples'] > 2
 
@@ -55,9 +68,9 @@ def test_safe_grid_cell(tmp_path):
         ])
         for q1 in (0.0, 0.1):
             for q2 in (0.0, 0.1):
-                for q3 in (-0.1, 0.0):
-                    writer.writerow([q1, q2, q3, 90, 90, 90, 1, 1, 'safe', ''])
+                for q3 in (0.0, 0.1):
+                    writer.writerow([q1, q2, q3, 90, 90, 0, 1, 1, 'safe', ''])
 
     grid = SafeRegionGrid(csv_path)
-    assert grid.validate((0.05, 0.05, -0.05), 'cell').ok
-    assert not grid.validate((0.15, 0.05, -0.05), 'cell').ok
+    assert grid.validate((0.05, 0.05, 0.05), 'cell').ok
+    assert not grid.validate((0.15, 0.05, 0.05), 'cell').ok

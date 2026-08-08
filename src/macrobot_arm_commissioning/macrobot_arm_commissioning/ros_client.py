@@ -57,7 +57,7 @@ class ArmCommissioningNode(Node):
         # 0.15 rad produces about 17.2 deg servo-side motion because of 2:1 gears.
         self.declare_parameter("direction_delta_q1", 0.15)
         self.declare_parameter("direction_delta_q2", 0.15)
-        self.declare_parameter("direction_delta_q3", -0.15)
+        self.declare_parameter("direction_delta_q3", 0.15)
 
         self.declare_parameter("joint_goal_topic", "/macrobot/arm/joint_goal")
         self.declare_parameter("validation_status_topic", "/macrobot/arm/validation_status")

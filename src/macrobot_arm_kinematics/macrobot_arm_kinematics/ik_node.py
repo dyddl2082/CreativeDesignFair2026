@@ -42,8 +42,8 @@ class IKNode(Node):
         self.declare_parameter('tool_pitch_min', -2.0)
         self.declare_parameter('tool_pitch_max', 2.0)
         self.declare_parameter('four_bar_margin', math.radians(10.0))
-        self.declare_parameter('gripper_min', -1.25)
-        self.declare_parameter('gripper_max', 0.0)
+        self.declare_parameter('gripper_min', 0.0)
+        self.declare_parameter('gripper_max', math.pi / 2.0)
 
         geometry = ArmGeometry(
             pivot_x=float(self.get_parameter('pivot_x').value),
@@ -146,7 +146,8 @@ class IKNode(Node):
                 'q2': best.q2,
                 'gripper_joint': self.gripper_q,
                 'gripper_gap_m': self.model.gripper_gap(self.gripper_q),
-                'tool_pitch': pose.pitch,
+                'rear_lift_angle': best.q1 + best.q2,
+                'urdf_pitch_about_positive_y': pose.pitch,
                 'position_error_m': best.position_error,
                 'seed_distance': best.seed_distance,
                 'target_x': msg.point.x,

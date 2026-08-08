@@ -4,10 +4,10 @@ direction_test:
   delta_rad:
     q1: 0.15
     q2: 0.15
-    q3: -0.15
+    q3: 0.15
 
 grasp_frame:
-  q3_samples: [0.0, -0.6, -1.0]
+  q3_samples: [0.0, 0.8, 1.4]
   measurement_frame: base_link
 
 repeatability:

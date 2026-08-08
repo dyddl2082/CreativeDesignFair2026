@@ -61,36 +61,43 @@ At q=0, the corrected collision geometry forms one connected gripper around x ap
 
 ## Gripper logical constraint
 
-One logical coordinate `q3 = gripper_joint` drives the tree coordinates:
+The physical build confirms a 1:2 external gear ratio. `q3=0` is open and
+positive `q3` closes the jaws. At `q3=pi/2`, the MG90S has turned 180 degrees
+CCW when viewed from its protruding shaft. The full visual tree uses:
 
 ```text
-gripper_servo_joint          =  2*q3
-gripper_left_gear_joint      =  q3
-gripper_right_gear_joint     = -q3
-gripper_left_addition_joint  =  q3
-gripper_right_addition_joint = -q3
-clamp_left_addition_joint    = -q3
-clamp_right_addition_joint   =  q3
+gripper_servo_joint          = -2*q3  # exported axis is -Z
+gripper_left_gear_joint      = -q3
+gripper_right_gear_joint     = +q3
+gripper_left_addition_joint  = -q3
+gripper_right_addition_joint = +q3
+clamp_left_addition_joint    = +q3
+clamp_right_addition_joint   = -q3
 ```
 
-The two addition links and the two gear links therefore move in matched pairs, while the clamp passive joints counter-rotate. This preserves parallel jaw orientation in the visual tree.
-
-The 1:2 gripper actuator ratio is inferred from the small and large gear dimensions and must be checked against the physical build.
+The negative servo-joint coordinate is caused by the exported -Z axis pointing
+opposite the physical protruding-shaft viewing direction. The actual MG90S
+command angle still increases CCW from 0 to 180 degrees.
 
 ## Arm four-bar constraint
 
-The confirmed arm mapping remains:
+The physically confirmed mapping is:
 
 ```text
-servo_left_gear_joint              = -2*q1
-servo_right_gear_joint             =  2*(q1+q2)
-ratio_left_gear_joint              =  q1
-ratio_right_gear_joint             = -(q1+q2)
-ratio_left_gear_back_link_joint    = -q2
-back_link_top_link_joint           = -q2
+h = q1 + q2
+servo_left_gear_joint              = +2*q1
+servo_right_gear_joint             = -2*h
+ratio_left_gear_joint              = q1
+ratio_right_gear_joint             = h
+ratio_left_gear_back_link_joint    = q2
+back_link_top_link_joint           = q2
 ```
 
-This keeps the opposite links parallel. q2 is kept away from the +/-90 degree toggle configuration by `four_bar_margin`.
+Positive q1 makes the left MG996R rotate CCW and tilts the arm forward.
+Positive h makes the right MG996R rotate CW and lifts the rear linkage. The
+passive-joint mapping keeps both pairs of opposite four-bar links parallel.
+`q2` remains separated from the +/-90-degree toggle configuration by
+`four_bar_margin`.
 
 ## Camera frame correction
 

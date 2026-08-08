@@ -10,23 +10,21 @@
     tool_pose_topic: /macrobot/arm/tool_pose
     gripper_gap_topic: /macrobot/gripper/gap
 
-    # Geometry recovered from the new Fusion export.
+    # Geometry recovered from the Fusion export.
     pivot_x: 0.02095
     pivot_y: 0.06340
     pivot_z: 0.064595
     main_link_length: 0.10000
-
-    # Nominal open-jaw grasp center, relative to the main-arm endpoint/wrist.
-    # Derived from the midpoint of the two clamp collision centroids.
     tool_offset_x: -0.184756
     tool_offset_z: -0.006000
     tool_y: 0.064500
-
-    # Symmetric gripper four-bar dimensions.
     gripper_link_length: 0.03000
     gripper_base_separation: 0.01000
 
-    # Logical arm constraints.  q2 is kept away from the four-bar toggle at +/- pi/2.
+    # Logical conventions (legacy ROS names retained):
+    # q1 / arm_lift_joint: left-servo arm tilt; positive tilts forward.
+    # q2 / wrist_pitch_joint: relative rear-lift coordinate.
+    # absolute right driven/rear-lift angle = q1 + q2; positive lifts upward.
     arm_lift_min: -1.0
     arm_lift_max: 1.0
     wrist_pitch_min: -1.30
@@ -35,10 +33,10 @@
     tool_pitch_max: 2.0
     four_bar_margin: 0.174533
 
-    # q3=0 is fully open. Negative q3 closes the jaws.
-    # The current CAD range is -1.25 rad (closed) to 0 rad (open).
-    gripper_min: -1.25
-    gripper_max: 0.0
+    # q3=0 is open. Positive q3 closes. With a 1:2 gear pair, q3=pi/2
+    # corresponds to 180 degrees at the MG90S shaft.
+    gripper_min: 0.0
+    gripper_max: 1.57079632679
 
     # Full Fusion arm joint names.
     lift_servo_joint: servo_left_gear_joint
@@ -48,11 +46,13 @@
     rear_passive_joint: ratio_left_gear_back_link_joint
     top_passive_joint: back_link_top_link_joint
 
-    # Confirmed 20:40 external gear pairs.
-    lift_servo_multiplier: -2.0
-    tilt_servo_multiplier: 2.0
+    # Visual-joint coordinates. Note that the right servo's URDF axis is -Y,
+    # and the gripper servo's URDF axis is -Z.
+    lift_servo_multiplier: 2.0
+    tilt_servo_multiplier: -2.0
 
-    # Full Fusion gripper joint names and inferred 1:2 actuator gear ratio.
+    # Gripper visual mapping. Physical servo CCW close is represented by a
+    # negative joint coordinate because gripper_servo_joint uses axis -Z.
     gripper_servo_joint: gripper_servo_joint
     gripper_left_gear_joint: gripper_left_gear_joint
     gripper_right_gear_joint: gripper_right_gear_joint
@@ -60,7 +60,7 @@
     gripper_right_addition_joint: gripper_right_addition_joint
     gripper_left_clamp_joint: clamp_left_addition_joint
     gripper_right_clamp_joint: clamp_right_addition_joint
-    gripper_servo_multiplier: 2.0
+    gripper_servo_multiplier: -2.0
 
     publish_full_joint_states: true
     publish_rate: 30.0

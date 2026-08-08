@@ -1,63 +1,42 @@
-# MacRobot actuator installation and calibration template.
-#
-# IMPORTANT INSTALLATION SEQUENCE
-# 1. Remove horns/gears from all three servos.
-# 2. Command every unloaded servo to 90 deg (about 1500 us) once.
-# 3. Install the two MG996R arm gears while the logical model is q1=q2=0.
-# 4. For the MG90S gripper, command 161.6197 deg and install the gear in the
-#    fully-open CAD pose. This centers the required 143.2394 deg travel inside
-#    a nominal 0..180 deg servo range.
-#
-# If the gripper servo is mounted in the reverse physical orientation, use:
-#   zero_deg: 18.3803
-#   sign: -1.0
-# instead of the default 161.6197 / +1.0 pair.
-#
-# command_min/max are deliberately conservative planning limits. Replace them
-# with the verified limits of the actual units before hardware operation.
+schema_version: 2
+conventions:
+  pulse_range_us: [500.0, 2500.0]
+  servo_angle_range_deg: [0.0, 180.0]
+  viewed_from: protruding output-shaft side
+  positive_servo_angle: counterclockwise
 
 actuators:
-  lift_mg996r:
-    pca9685_channel: 0
-    logical_joint: arm_lift_joint
-    initial_install_command_deg: 90.0
-    zero_deg: 90.0
-    sign: 1.0
-    model_multiplier: -2.0
-    command_min_deg: 10.0
-    command_max_deg: 170.0
-    pulse_min_us: 1000
-    pulse_center_us: 1500
-    pulse_max_us: 2000
+  left_tilt_mg996r:
+    channel: 0
+    logical_input: q1 (legacy joint name arm_lift_joint)
+    home_servo_deg: 90.0
+    command_formula: servo_deg = 90 + degrees(2*q1)
+    positive_effect: arm tilts forward
+    direction: counterclockwise
+    pulse_min_us: 500.0
+    pulse_center_us: 1500.0
+    pulse_max_us: 2500.0
 
-  tilt_mg996r:
-    pca9685_channel: 1
-    logical_expression: arm_lift_joint + wrist_pitch_joint
-    initial_install_command_deg: 90.0
-    zero_deg: 90.0
-    sign: 1.0
-    model_multiplier: 2.0
-    command_min_deg: 10.0
-    command_max_deg: 170.0
-    pulse_min_us: 1000
-    pulse_center_us: 1500
-    pulse_max_us: 2000
+  right_lift_mg996r:
+    channel: 1
+    logical_input: rear_lift_angle = q1 + q2
+    home_servo_deg: 90.0
+    command_formula: servo_deg = 90 - degrees(2*(q1+q2))
+    positive_effect: rear linkage rises
+    direction: clockwise
+    pulse_min_us: 500.0
+    pulse_center_us: 1500.0
+    pulse_max_us: 2500.0
 
   gripper_mg90s:
-    pca9685_channel: 2
-    logical_joint: gripper_joint
-    logical_open_rad: 0.0
-    logical_close_rad: -1.25
-    initial_unloaded_center_deg: 90.0
-    initial_install_command_deg: 161.6197
-    zero_deg: 161.6197
-    sign: 1.0
-    model_multiplier: 2.0
-    command_min_deg: 10.0
-    command_max_deg: 170.0
-    pulse_min_us: 1000
-    pulse_center_us: 1500
-    pulse_max_us: 2000
-    reverse_mount_alternative:
-      zero_deg: 18.3803
-      sign: -1.0
+    channel: 2
+    logical_input: q3 (gripper_joint)
+    home_servo_deg: 0.0
+    command_formula: servo_deg = degrees(2*q3)
+    positive_effect: gripper closes
+    direction: counterclockwise
+    open_q3_rad: 0.0
+    closed_q3_rad: 1.57079632679
+    pulse_min_us: 500.0
+    pulse_center_us: 1500.0
+    pulse_max_us: 2500.0

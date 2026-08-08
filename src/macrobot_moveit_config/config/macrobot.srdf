@@ -25,7 +25,7 @@
     <joint name="gripper_joint" value="0"/>
   </group_state>
   <group_state name="gripper_closed" group="gripper">
-    <joint name="gripper_joint" value="-1.25"/>
+    <joint name="gripper_joint" value="1.57079632679"/>
   </group_state>
 
   <!-- Adjacent or deliberately overlapping simplified collision bodies. -->

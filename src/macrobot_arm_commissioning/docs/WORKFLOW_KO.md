@@ -61,7 +61,7 @@ ros2 launch macrobot_safe_region \
 
 ## 5. 방향과 기구 제약 시험
 
-새 보정 파일과 새 safe-region을 사용해 q1 +0.05, q2 +0.05, q3 -0.05를 시험한다.
+새 보정 파일과 새 safe-region을 사용해 q1 +0.15, q2 +0.15, q3 +0.15를 시험한다.
 
 ## 6. 대표 경계 시험
 

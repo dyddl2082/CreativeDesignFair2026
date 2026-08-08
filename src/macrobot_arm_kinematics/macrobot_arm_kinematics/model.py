@@ -1,13 +1,18 @@
 """Reduced MacRobot arm and gripper kinematics.
 
-The physical arm contains a geared four-bar linkage.  It is represented by two
-logical arm coordinates plus one logical gripper coordinate:
+The current physical conventions are intentionally explicit:
 
-* q1: ``arm_lift_joint``
-* q2: ``wrist_pitch_joint`` (relative; absolute wrist pitch is q1 + q2)
-* q3: ``gripper_joint`` (0 rad is fully open; negative closes)
+* ``q1`` / legacy ROS name ``arm_lift_joint`` is the **left-servo arm-tilt**
+  coordinate.  Positive ``q1`` tilts the arm toward the robot front.
+* ``q2`` / legacy ROS name ``wrist_pitch_joint`` is the relative coordinate
+  used by the right rear-height mechanism.  The right driven-gear angle is
+  ``rear_lift_angle = q1 + q2``.  Positive values lift the rear linkage.
+* ``q3`` / ``gripper_joint`` is 0 rad when open and increases while closing.
+  A 1:2 external gear pair means q3=pi/2 corresponds to 180 degrees at the
+  gripper servo shaft.
 
-The full Fusion visual joints are generated from these logical coordinates.
+The old ROS joint names are retained to avoid breaking launch files and saved
+profiles.  Their physical meanings above are the authoritative definitions.
 """
 
 from __future__ import annotations
@@ -31,36 +36,45 @@ class ArmGeometry:
     # Main parallel link length.
     main_link_length: float = 0.10000
 
-    # Nominal open-gripper grasp center, expressed in the wrist frame at q3=0.
-    # Recovered from the midpoint of the two clamp collision centroids.
+    # Nominal open-gripper grasp center, expressed in the rear-link/tool frame
+    # at q3=0.
     tool_offset_x: float = -0.184756
     tool_offset_z: float = -0.006000
     tool_y: float = 0.064500
 
-    # Each gripper four-bar side link is 30 mm.  Closing shifts the jaw-center
-    # slightly along the local tool X direction.
+    # Each gripper four-bar side link is 30 mm. Closing shifts the nominal
+    # jaw-center slightly along local tool X.
     gripper_link_length: float = 0.03000
     gripper_base_separation: float = 0.01000
 
 
 @dataclass(frozen=True)
 class JointLimits:
+    # Legacy field names are retained for configuration compatibility.
+    # arm_lift_* constrains q1 = forward arm tilt.
     arm_lift_min: float = -1.0
     arm_lift_max: float = 1.0
+
+    # wrist_pitch_* constrains q2 = relative rear-lift coordinate.
     wrist_pitch_min: float = -1.30
     wrist_pitch_max: float = 1.30
+
+    # tool_pitch_* constrains the absolute right driven/rear-lift angle q1+q2.
     tool_pitch_min: float = -2.0
     tool_pitch_max: float = 2.0
+
     four_bar_margin: float = math.radians(10.0)
-    gripper_min: float = -1.25
-    gripper_max: float = 0.0
+
+    # q3=0 open; q3=pi/2 closed for a 180-degree servo through 1:2 gearing.
+    gripper_min: float = 0.0
+    gripper_max: float = math.pi / 2.0
 
     def contains(self, q1: float, q2: float, q3: float = 0.0) -> bool:
-        tool_pitch = q1 + q2
+        rear_lift_angle = q1 + q2
         return (
             self.arm_lift_min <= q1 <= self.arm_lift_max
             and self.wrist_pitch_min <= q2 <= self.wrist_pitch_max
-            and self.tool_pitch_min <= tool_pitch <= self.tool_pitch_max
+            and self.tool_pitch_min <= rear_lift_angle <= self.tool_pitch_max
             and abs(q2) <= (math.pi / 2.0 - self.four_bar_margin)
             and self.gripper_min <= q3 <= self.gripper_max
         )
@@ -71,6 +85,8 @@ class ToolPose2D:
     x: float
     y: float
     z: float
+    # Rotation about the URDF +Y axis. Since positive logical rear-lift is
+    # defined about -Y, the published +Y pitch is negative rear_lift_angle.
     pitch: float
 
 
@@ -94,35 +110,46 @@ class MacRobotArmModel:
         self.limits = limits
 
     def effective_tool_offset(self, q3: float = 0.0) -> Tuple[float, float]:
-        """Return the grasp-center X/Z offset in the wrist frame.
+        """Return the grasp-center X/Z offset in the rear/tool frame.
 
-        The jaw-center moves toward the robot by ``-L*sin(q3)`` as the
-        symmetric gripper closes with negative q3.  The nominal CAD/Fusion pose corresponds to q3=0.
+        Positive q3 closes the gripper. This is the sign-inverted form of the
+        previous model, where negative q3 represented closing.
         """
         g = self.geometry
         return (
-            g.tool_offset_x - g.gripper_link_length * math.sin(q3),
+            g.tool_offset_x + g.gripper_link_length * math.sin(q3),
             g.tool_offset_z,
         )
 
     def forward(self, q1: float, q2: float, q3: float = 0.0) -> ToolPose2D:
+        """Compute the nominal grasp center from the three logical joints.
+
+        Positive q1 rotates the main arm toward robot front (-X). Positive
+        rear_lift_angle=q1+q2 raises the right/rear linkage. Both logical arm
+        rotations are therefore represented about the physical -Y direction.
+        """
         g = self.geometry
-        pitch = q1 + q2
+        rear_lift_angle = q1 + q2
         offset_x, offset_z = self.effective_tool_offset(q3)
 
         x = (
             g.pivot_x
-            + g.main_link_length * math.sin(q1)
-            + offset_x * math.cos(pitch)
-            + offset_z * math.sin(pitch)
+            - g.main_link_length * math.sin(q1)
+            + offset_x * math.cos(rear_lift_angle)
+            - offset_z * math.sin(rear_lift_angle)
         )
         z = (
             g.pivot_z
             + g.main_link_length * math.cos(q1)
-            - offset_x * math.sin(pitch)
-            + offset_z * math.cos(pitch)
+            + offset_x * math.sin(rear_lift_angle)
+            + offset_z * math.cos(rear_lift_angle)
         )
-        return ToolPose2D(x=x, y=g.tool_y, z=z, pitch=pitch)
+        return ToolPose2D(
+            x=x,
+            y=g.tool_y,
+            z=z,
+            pitch=-rear_lift_angle,
+        )
 
     def inverse(
         self,
@@ -132,11 +159,7 @@ class MacRobotArmModel:
         seed_weight: float = 0.001,
         gripper_q: float = 0.0,
     ) -> List[IKSolution]:
-        """Return all bounded planar IK branches.
-
-        The fixed wrist-to-grasp vector may have both X and Z components.  It is
-        represented as an equivalent second link with a constant angular offset.
-        """
+        """Return all bounded planar IK branches for the corrected signs."""
         g = self.geometry
         px = x - g.pivot_x
         pz = z - g.pivot_z
@@ -157,11 +180,16 @@ class MacRobotArmModel:
 
         solutions: List[IKSolution] = []
         for delta in (delta_abs, -delta_abs):
-            alpha = math.atan2(pz, px) - math.atan2(
+            # Standard x-z plane angles:
+            # a1 = pi/2 + q1
+            # a2 = gamma + rear_lift_angle
+            a1 = math.atan2(pz, px) - math.atan2(
                 l2 * math.sin(delta), l1 + l2 * math.cos(delta)
             )
-            q1 = normalize_angle(math.pi / 2.0 - alpha)
-            q2 = normalize_angle(gamma - math.pi / 2.0 - delta)
+            q1 = normalize_angle(a1 - math.pi / 2.0)
+            rear_lift_angle = normalize_angle(a1 + delta - gamma)
+            q2 = normalize_angle(rear_lift_angle - q1)
+
             if not self.limits.contains(q1, q2, gripper_q):
                 continue
 
@@ -201,35 +229,36 @@ class MacRobotArmModel:
         q1: float,
         q2: float,
         q3: float = 0.0,
-        lift_servo_multiplier: float = -2.0,
-        tilt_servo_multiplier: float = 2.0,
-        gripper_servo_multiplier: float = 2.0,
+        lift_servo_multiplier: float = 2.0,
+        tilt_servo_multiplier: float = -2.0,
+        gripper_servo_multiplier: float = -2.0,
     ) -> dict[str, float]:
-        """Map logical joints to the Fusion-exported tree joint coordinates.
+        """Map logical coordinates to Fusion-exported tree joints.
 
-        Arm:
-          * 20:40 external gear pairs -> servo magnitude is 2x driven gear.
-          * passive joints preserve the parallelogram four-bar.
+        Arm conventions:
+          * left servo CCW => positive q1 => arm tilts forward;
+          * right servo CW => positive (q1+q2) => rear linkage rises;
+          * external 1:2 gear pairs reverse physical direction.
 
-        Gripper:
-          * q3 is the left driven-gear angle (q3=0 is the CAD open pose).
-          * the right gear counter-rotates 1:1.
-          * the two side links follow their driven gears.
-          * clamp passive joints counter-rotate, preserving parallel jaws.
+        Gripper convention:
+          * q3=0 open and positive q3 closes;
+          * the servo turns CCW by 2*q3, while the driven gear counter-rotates.
+          * ``gripper_servo_joint`` uses a -Z URDF axis, hence its joint
+            coordinate is -2*q3 although the physical servo rotation is CCW.
         """
-        tool_pitch = q1 + q2
+        rear_lift_angle = q1 + q2
         return {
             'lift_servo': lift_servo_multiplier * q1,
-            'tilt_servo': tilt_servo_multiplier * tool_pitch,
+            'tilt_servo': tilt_servo_multiplier * rear_lift_angle,
             'lift_ratio': q1,
-            'tilt_ratio': -tool_pitch,
-            'rear_passive': -q2,
-            'top_passive': -q2,
+            'tilt_ratio': rear_lift_angle,
+            'rear_passive': q2,
+            'top_passive': q2,
             'gripper_servo': gripper_servo_multiplier * q3,
-            'gripper_left_gear': q3,
-            'gripper_right_gear': -q3,
-            'gripper_left_addition': q3,
-            'gripper_right_addition': -q3,
-            'gripper_left_clamp': -q3,
-            'gripper_right_clamp': q3,
+            'gripper_left_gear': -q3,
+            'gripper_right_gear': q3,
+            'gripper_left_addition': -q3,
+            'gripper_right_addition': q3,
+            'gripper_left_clamp': q3,
+            'gripper_right_clamp': -q3,
         }

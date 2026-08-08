@@ -398,7 +398,9 @@
       <parent link="${prefix}base_link"/>
       <child link="${prefix}ratio_left_gear"/>
       <origin xyz="0.020950 0.057900 0.064595" rpy="0.000000 -0.000000 -0.000000"/>
-      <axis xyz="0.000000 1.000000 -0.000000"/>
+      <!-- Positive logical q1 is forward tilt. The driven gear rotates opposite
+           the left servo, so its semantic positive axis is -Y. -->
+      <axis xyz="0.000000 -1.000000 0.000000"/>
       <limit effort="100.0" velocity="1.00"/>
     </joint>
     <joint name="${prefix}ratio_right_gear_joint" type="continuous">

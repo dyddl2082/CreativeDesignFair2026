@@ -1,46 +1,60 @@
 logical_joints:
   arm_lift_joint:
-    meaning: Main 100 mm arm-link elevation coordinate.
+    legacy_name: true
+    recommended_label: arm_tilt
+    meaning: Left-servo arm tilt. Positive q1 tilts the arm toward robot front.
+    physical_actuator: left MG996R
+    servo_motion_for_positive: counterclockwise viewed from the output shaft
     full_visual_driver: ratio_left_gear_joint
     actuator_visual_joint: servo_left_gear_joint
-    actuator_to_driven_ratio: -2.0
+    actuator_to_driven_ratio: 2.0
 
   wrist_pitch_joint:
-    meaning: Wrist pitch relative to the main arm; absolute wrist pitch is q1 + q2.
+    legacy_name: true
+    recommended_label: rear_lift_relative
+    meaning: Relative rear-height coordinate. Absolute right driven angle is q1+q2.
+    physical_actuator: right MG996R
+    servo_motion_for_positive_rear_lift: clockwise viewed from the output shaft
     full_visual_driver: ratio_right_gear_joint
     actuator_visual_joint: servo_right_gear_joint
-    actuator_to_absolute_pitch_ratio: 2.0
+    actuator_to_absolute_rear_lift_ratio: -2.0
 
   gripper_joint:
     meaning: Symmetric gripper closure coordinate. 0 rad is open; positive closes.
+    physical_actuator: MG90S
+    servo_motion_for_positive: counterclockwise viewed from the output shaft
+    logical_range_rad: [0.0, 1.57079632679]
     full_visual_driver: gripper_left_gear_joint
     actuator_visual_joint: gripper_servo_joint
-    actuator_to_driven_ratio: 2.0
+    physical_actuator_to_driven_ratio: 2.0
 
 passive_constraints:
-  arm_four_bar:
+  arm_linkage:
+    definitions:
+      - rear_lift_angle = q1 + q2
     equations:
       - ratio_left_gear_joint = q1
-      - ratio_right_gear_joint = -(q1 + q2)
-      - ratio_left_gear_back_link_joint = -q2
-      - back_link_top_link_joint = -q2
+      - ratio_right_gear_joint = rear_lift_angle
+      - ratio_left_gear_back_link_joint = q2
+      - back_link_top_link_joint = q2
     safety:
       - Keep abs(q2) below pi/2 minus four_bar_margin.
 
   gripper:
     equations:
-      - gripper_left_gear_joint = q3
-      - gripper_right_gear_joint = -q3
-      - gripper_left_addition_joint = q3
-      - gripper_right_addition_joint = -q3
-      - clamp_left_addition_joint = -q3
-      - clamp_right_addition_joint = q3
+      - gripper_servo_joint = -2*q3  # axis -Z; physical servo rotation is CCW
+      - gripper_left_gear_joint = -q3
+      - gripper_right_gear_joint = q3
+      - gripper_left_addition_joint = -q3
+      - gripper_right_addition_joint = q3
+      - clamp_left_addition_joint = q3
+      - clamp_right_addition_joint = -q3
     notes:
-      - Left and right jaws remain parallel through their two small four-bar loops.
-      - Closing joints listed in Fusion robot_data.yaml are intentionally not put into URDF.
+      - The external gear pair reverses physical rotation and halves the driven angle.
+      - q3=pi/2 gives a 180-degree MG90S shaft rotation.
 
 frames:
   base_link: CAD and arm-kinematics reference.
-  camera_link: User-defined D435F depth-origin point, fixed to base_link.
+  camera_link: D435F depth-origin point, fixed to base_link.
   tool0: Wrist/gripper-platform reference.
   grasp_frame: Dynamic nominal object-grasp center broadcast by linkage_state_node.
