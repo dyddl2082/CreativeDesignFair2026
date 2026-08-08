@@ -25,7 +25,7 @@ import ujson
 # -----------------------------
 
 FIRMWARE_NAME = "MacRobot_Pico_MotorController"
-FIRMWARE_VERSION = "0.1.0"
+FIRMWARE_VERSION = "0.2.0-arm-us"
 
 
 # -----------------------------
@@ -89,8 +89,35 @@ STALL_MIN_PROGRESS_TICKS = 3
 
 PCA9685_ADDR = 0x40
 SERVO_FREQ_HZ = 50
-SERVO_MIN_US = 500
-SERVO_MAX_US = 2500
+
+# PCA9685 channels
+# CH0: left MG996R, arm lift
+# CH1: right MG996R, wrist/tilt
+# CH2: MG90S, gripper
+ARM_SERVO_CHANNELS = (0, 1, 2)
+
+SERVO_NAMES = {
+    0: "left_mg996r_lift",
+    1: "right_mg996r_tilt",
+    2: "mg90s_gripper",
+}
+
+# Per-channel pulse calibration:
+# (minimum_us, center_us, maximum_us)
+#
+# Commissioning 후 실측값으로 수정한다.
+SERVO_PULSE_US = {
+    0: (1000.0, 1500.0, 2000.0),
+    1: (1000.0, 1500.0, 2000.0),
+    2: (1000.0, 1500.0, 2000.0),
+}
+
+# None이면 해당 PCA9685 채널이 FULL OFF 상태다.
+last_servo_us = {
+    0: None,
+    1: None,
+    2: None,
+}
 
 
 # -----------------------------
@@ -196,55 +223,150 @@ class PCA9685:
         time.sleep_ms(10)
         self.set_pwm_freq(SERVO_FREQ_HZ)
 
+        # Do not drive an unknown physical arm pose at boot.
+        self.arm_off()
+
     def write8(self, reg, value):
-        self.i2c.writeto_mem(self.address, reg, bytes([value & 0xFF]))
+        self.i2c.writeto_mem(
+            self.address,
+            reg,
+            bytes([value & 0xFF]),
+        )
 
     def read8(self, reg):
-        return self.i2c.readfrom_mem(self.address, reg, 1)[0]
+        return self.i2c.readfrom_mem(
+            self.address,
+            reg,
+            1,
+        )[0]
 
     def set_pwm_freq(self, freq_hz):
-        # PCA9685 internal oscillator is approximately 25 MHz.
-        prescaleval = 25000000.0 / (4096.0 * float(freq_hz)) - 1.0
-        prescale = int(prescaleval + 0.5)
+        prescale_value = (
+            25_000_000.0
+            / (4096.0 * float(freq_hz))
+            - 1.0
+        )
+        prescale = int(prescale_value + 0.5)
 
-        oldmode = self.read8(self.MODE1)
-        sleep_mode = (oldmode & 0x7F) | 0x10
+        old_mode = self.read8(self.MODE1)
+        sleep_mode = (old_mode & 0x7F) | 0x10
 
         self.write8(self.MODE1, sleep_mode)
         self.write8(self.PRESCALE, prescale)
-        self.write8(self.MODE1, oldmode)
-
+        self.write8(self.MODE1, old_mode)
         time.sleep_ms(5)
 
-        # Restart + Auto Increment + All Call
-        self.write8(self.MODE1, oldmode | 0xA1)
+        # Restart + auto-increment + all-call.
+        self.write8(self.MODE1, old_mode | 0xA1)
 
-    def set_pwm(self, channel, on, off):
+    def set_pwm(self, channel, on_tick, off_tick):
         channel = int(channel)
+
+        if not 0 <= channel <= 15:
+            raise ValueError("PCA9685 channel must be 0..15")
+
         reg = self.LED0_ON_L + 4 * channel
-
         data = bytes([
-            on & 0xFF,
-            (on >> 8) & 0xFF,
-            off & 0xFF,
-            (off >> 8) & 0xFF,
+            on_tick & 0xFF,
+            (on_tick >> 8) & 0xFF,
+            off_tick & 0xFF,
+            (off_tick >> 8) & 0xFF,
         ])
-
         self.i2c.writeto_mem(self.address, reg, data)
 
-    def set_servo_us(self, channel, pulse_us):
-        pulse_us = clamp(float(pulse_us), 350.0, 3000.0)
-        ticks = int(pulse_us * 4096.0 / 20000.0)
-        ticks = clamp(ticks, 0, 4095)
-        self.set_pwm(channel, 0, ticks)
+    def _calibration(self, channel):
+        channel = int(channel)
+        if channel not in SERVO_PULSE_US:
+            raise ValueError(
+                "Servo channel is not configured: {}".format(channel)
+            )
+        return SERVO_PULSE_US[channel]
 
-    def set_servo_angle(self, channel, angle, min_us=SERVO_MIN_US, max_us=SERVO_MAX_US):
-        angle = clamp(float(angle), 0.0, 180.0)
-        pulse_us = min_us + (max_us - min_us) * angle / 180.0
-        self.set_servo_us(channel, pulse_us)
+    def _clamp_servo_us(self, channel, pulse_us):
+        minimum, _, maximum = self._calibration(channel)
+        return clamp(float(pulse_us), minimum, maximum)
+
+    def _write_servo_us_unchecked(self, channel, pulse_us):
+        # 50 Hz period is 20,000 us.
+        ticks = int(
+            round(float(pulse_us) * 4096.0 / 20_000.0)
+        )
+        ticks = int(clamp(ticks, 0, 4095))
+        self.set_pwm(int(channel), 0, ticks)
+
+    def set_servo_us(self, channel, pulse_us):
+        channel = int(channel)
+        applied_us = self._clamp_servo_us(
+            channel,
+            pulse_us,
+        )
+        self._write_servo_us_unchecked(
+            channel,
+            applied_us,
+        )
+        last_servo_us[channel] = applied_us
+        return applied_us
+
+    def set_arm_us(self, lift_us, tilt_us, gripper_us):
+        requested = {
+            0: float(lift_us),
+            1: float(tilt_us),
+            2: float(gripper_us),
+        }
+
+        # Validate/clamp all three before changing any output.
+        applied = {
+            channel: self._clamp_servo_us(
+                channel,
+                requested[channel],
+            )
+            for channel in ARM_SERVO_CHANNELS
+        }
+
+        # Sequential I2C writes are much faster than mechanical motion and
+        # belong to one serial command/trajectory sample.
+        for channel in ARM_SERVO_CHANNELS:
+            self._write_servo_us_unchecked(
+                channel,
+                applied[channel],
+            )
+            last_servo_us[channel] = applied[channel]
+
+        return [
+            applied[0],
+            applied[1],
+            applied[2],
+        ]
+
+    def set_servo_angle(self, channel, angle_deg):
+        # Legacy bench-test command. Normal arm motion uses SERVO_US/ARM_US.
+        channel = int(channel)
+        angle_deg = clamp(float(angle_deg), 0.0, 180.0)
+        minimum, center, maximum = self._calibration(channel)
+
+        if angle_deg <= 90.0:
+            ratio = angle_deg / 90.0
+            pulse_us = minimum + ratio * (center - minimum)
+        else:
+            ratio = (angle_deg - 90.0) / 90.0
+            pulse_us = center + ratio * (maximum - center)
+
+        return self.set_servo_us(channel, pulse_us)
 
     def servo_off(self, channel):
-        self.set_pwm(channel, 0, 0)
+        channel = int(channel)
+        if channel not in ARM_SERVO_CHANNELS:
+            raise ValueError(
+                "Arm servo channel is not configured: {}".format(channel)
+            )
+
+        # OFF_H bit 4 = FULL OFF. set_pwm packs 4096 as 0x1000.
+        self.set_pwm(channel, 0, 4096)
+        last_servo_us[channel] = None
+
+    def arm_off(self):
+        for channel in ARM_SERVO_CHANNELS:
+            self.servo_off(channel)
 
 
 # ============================================================
@@ -646,7 +768,10 @@ def handle_command(line):
                     "MOVE_TICKS <left_ticks> <right_ticks> [speed] [timeout_sec]",
                     "SERVO <channel> <angle_deg>",
                     "SERVO_US <channel> <pulse_us>",
+                    "ARM_US <lift_us> <tilt_us> <gripper_us>",
                     "SERVO_OFF <channel>",
+                    "ARM_OFF",
+                    "SERVO_STATE?",
                     "SET_CAL <ticks_per_cm> <ticks_per_deg>",
                     "GET_CAL",
                     "SET_PWM_LIMIT <0-255>",
@@ -671,6 +796,11 @@ def handle_command(line):
                 ticks_per_deg=TICKS_PER_DEG,
                 kp_sync=KP_SYNC,
                 pca9685_available=(pca is not None),
+                servo_pulse_us={
+                    "0": last_servo_us[0],
+                    "1": last_servo_us[1],
+                    "2": last_servo_us[2],
+                },
             )
 
         elif cmd == "ENC?":
@@ -728,32 +858,153 @@ def handle_command(line):
 
         elif cmd == "SERVO":
             if pca is None:
-                send(ok=False, event="servo_error", message="PCA9685 not available")
+                send(
+                    ok=False,
+                    event="servo_error",
+                    message="PCA9685 not available",
+                )
                 return
 
+            if len(parts) != 3:
+                raise ValueError(
+                    "Usage: SERVO <channel> <angle_deg>"
+                )
+
             channel = int(parts[1])
-            angle = float(parts[2])
-            pca.set_servo_angle(channel, angle)
-            send(ok=True, event="servo_set", channel=channel, angle=angle)
+            angle_deg = float(parts[2])
+            applied_us = pca.set_servo_angle(
+                channel,
+                angle_deg,
+            )
+
+            send(
+                ok=True,
+                event="servo_angle_set",
+                channel=channel,
+                servo_name=SERVO_NAMES[channel],
+                angle_deg=angle_deg,
+                applied_us=applied_us,
+            )
+
 
         elif cmd == "SERVO_US":
             if pca is None:
-                send(ok=False, event="servo_error", message="PCA9685 not available")
+                send(
+                    ok=False,
+                    event="servo_error",
+                    message="PCA9685 not available",
+                )
                 return
 
+            if len(parts) != 3:
+                raise ValueError(
+                    "Usage: SERVO_US <channel> <pulse_us>"
+                )
+
             channel = int(parts[1])
-            pulse_us = float(parts[2])
-            pca.set_servo_us(channel, pulse_us)
-            send(ok=True, event="servo_us_set", channel=channel, pulse_us=pulse_us)
+            requested_us = float(parts[2])
+            applied_us = pca.set_servo_us(
+                channel,
+                requested_us,
+            )
+
+            send(
+                ok=True,
+                event="servo_us_set",
+                channel=channel,
+                servo_name=SERVO_NAMES[channel],
+                requested_us=requested_us,
+                applied_us=applied_us,
+            )
+
+
+        elif cmd == "ARM_US":
+            if pca is None:
+                send(
+                    ok=False,
+                    event="servo_error",
+                    message="PCA9685 not available",
+                )
+                return
+
+            if len(parts) != 4:
+                raise ValueError(
+                    "Usage: ARM_US <lift_us> <tilt_us> <gripper_us>"
+                )
+
+            requested = [
+                float(parts[1]),
+                float(parts[2]),
+                float(parts[3]),
+            ]
+            applied = pca.set_arm_us(
+                requested[0],
+                requested[1],
+                requested[2],
+            )
+
+            send(
+                ok=True,
+                event="arm_us_set",
+                requested_us=requested,
+                applied_us=applied,
+                channels=[0, 1, 2],
+            )
+
 
         elif cmd == "SERVO_OFF":
             if pca is None:
-                send(ok=False, event="servo_error", message="PCA9685 not available")
+                send(
+                    ok=False,
+                    event="servo_error",
+                    message="PCA9685 not available",
+                )
                 return
+
+            if len(parts) != 2:
+                raise ValueError(
+                    "Usage: SERVO_OFF <channel>"
+                )
 
             channel = int(parts[1])
             pca.servo_off(channel)
-            send(ok=True, event="servo_off", channel=channel)
+
+            send(
+                ok=True,
+                event="servo_off",
+                channel=channel,
+                servo_name=SERVO_NAMES[channel],
+            )
+
+
+        elif cmd == "ARM_OFF":
+            if pca is None:
+                send(
+                    ok=False,
+                    event="servo_error",
+                    message="PCA9685 not available",
+                )
+                return
+
+            pca.arm_off()
+
+            send(
+                ok=True,
+                event="arm_off",
+                channels=[0, 1, 2],
+            )
+
+
+        elif cmd == "SERVO_STATE?":
+            send(
+                ok=True,
+                event="servo_state",
+                pulse_us={
+                    "0": last_servo_us[0],
+                    "1": last_servo_us[1],
+                    "2": last_servo_us[2],
+                },
+            )
 
         elif cmd == "SET_CAL":
             TICKS_PER_CM = float(parts[1])
