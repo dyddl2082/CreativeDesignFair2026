@@ -18,9 +18,9 @@
 
     # MG996R lift actuator.
     lift_channel: 0
-    lift_pulse_min_us: 1000.0
+    lift_pulse_min_us: 500.0
     lift_pulse_center_us: 1500.0
-    lift_pulse_max_us: 2000.0
+    lift_pulse_max_us: 2500.0
     lift_zero_deg: 90.0
     lift_sign: 1.0
     lift_model_multiplier: -2.0
@@ -29,23 +29,23 @@
 
     # MG996R wrist/tilt actuator; model input is q1+q2.
     tilt_channel: 1
-    tilt_pulse_min_us: 1000.0
+    tilt_pulse_min_us: 500.0
     tilt_pulse_center_us: 1500.0
-    tilt_pulse_max_us: 2000.0
+    tilt_pulse_max_us: 2500.0
     tilt_zero_deg: 90.0
-    tilt_sign: 1.0
+    tilt_sign: -1.0
     tilt_model_multiplier: 2.0
     tilt_command_min_deg: 10.0
     tilt_command_max_deg: 170.0
 
     # MG90S gripper actuator. q3=0 open, q3=-1.25 closed.
     gripper_channel: 2
-    gripper_pulse_min_us: 1000.0
+    gripper_pulse_min_us: 500.0
     gripper_pulse_center_us: 1500.0
-    gripper_pulse_max_us: 2000.0
+    gripper_pulse_max_us: 2500.0
     # Default mounting: open at 161.6197 deg, close at 18.3803 deg.
-    gripper_zero_deg: 161.619724
+    gripper_zero_deg: 0.0
     gripper_sign: 1.0
     gripper_model_multiplier: 2.0
-    gripper_command_min_deg: 10.0
-    gripper_command_max_deg: 170.0
+    gripper_command_min_deg: 0.0
+    gripper_command_max_deg: 160.0
