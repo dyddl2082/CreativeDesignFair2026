@@ -1,0 +1,18 @@
+schema_version: 1
+
+direction_test:
+  delta_rad:
+    q1: 0.05
+    q2: 0.05
+    q3: -0.05
+
+grasp_frame:
+  q3_samples: [0.0, -0.6, -1.0]
+  measurement_frame: base_link
+
+repeatability:
+  default_repetitions: 5
+
+moveit_boundaries:
+  inset_grid_levels: 1
+  max_collision_cases: 3

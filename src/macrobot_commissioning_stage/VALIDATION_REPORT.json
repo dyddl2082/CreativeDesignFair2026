@@ -1,0 +1,34 @@
+{
+  "artifact": "macrobot_arm_commissioning",
+  "version": "0.1.0",
+  "generated_at": "2026-08-06T13:32:15+00:00",
+  "checks": {
+    "python_compile": "passed",
+    "pytest": {
+      "status": "passed",
+      "tests": 4
+    },
+    "package_metadata": "passed",
+    "apply_report_smoke_test": "passed",
+    "yaml_config_parse": "passed",
+    "package_xml_parse": "passed"
+  },
+  "features": [
+    "single atomic YAML report",
+    "resumable interactive wizard",
+    "guarded raw pulse calibration",
+    "validated logical joint direction tests",
+    "MoveIt safe-region representative selection",
+    "connected-grid waypoint execution for boundary tests",
+    "repeatability/load/temperature statistics",
+    "grasp-frame least-squares fitting",
+    "primitive definition and executor",
+    "grasp-profile recording",
+    "calibration recommendation application tool"
+  ],
+  "limitations": [
+    "ROS 2 Jazzy runtime was not available in the artifact-generation container, so live topic and hardware execution must be tested on the Raspberry Pi.",
+    "Physical position, backlash, temperature, and grasp-center measurements require operator input because the current hobby servos provide no joint feedback.",
+    "Raw pulse calibration bypasses the IK validator and must only be enabled under direct supervision."
+  ]
+}
