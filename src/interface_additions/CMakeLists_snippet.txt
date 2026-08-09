@@ -1,3 +1,0 @@
-Add this entry inside rosidl_generate_interfaces(...), before DEPENDENCIES:
-
-  "msg/TemporalConfirmationResult.msg"

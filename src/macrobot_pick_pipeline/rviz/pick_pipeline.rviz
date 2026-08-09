@@ -1,0 +1,64 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: world
+    Frame Rate: 30
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Enabled: true
+      Name: Grid
+      Value: true
+      Cell Size: 0.05
+      Plane: XY
+      Plane Cell Count: 30
+    - Class: rviz_default_plugins/RobotModel
+      Enabled: true
+      Name: RobotModel
+      Value: true
+      Description Source: Topic
+      Description Topic:
+        Depth: 1
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Visual Enabled: true
+      Collision Enabled: false
+      Alpha: 1.0
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Name: TF
+      Value: true
+      Show Axes: true
+      Show Names: false
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: PickPlan
+      Value: true
+      Marker Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /macrobot/pick/markers
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/FocusCamera
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 0.55
+      Focal Point:
+        X: -0.08
+        Y: 0.06
+        Z: 0.10
+      Pitch: 0.45
+      Yaw: 0.8
+      Name: Current View
+  Name: root
+  Value: true

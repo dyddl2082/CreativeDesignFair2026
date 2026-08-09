@@ -30,7 +30,7 @@ def generate_launch_description():
         DeclareLaunchArgument("safe_region_csv", default_value=""),
         DeclareLaunchArgument("command_home_on_start", default_value="false"),
         DeclareLaunchArgument("use_sim_time", default_value="false"),
-        DeclareLaunchArgument("start_rviz", default_value="false"),
+        DeclareLaunchArgument("start_rviz", default_value="true"),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
