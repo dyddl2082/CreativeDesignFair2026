@@ -1,0 +1,48 @@
+candidate_refiner:
+  ros__parameters:
+    input_topic: /depth_candidates/raw_candidates
+    output_topic: /depth_candidates/candidates
+    status_topic: /depth_candidates/refiner_status
+    status_period_sec: 3.0
+
+    # Keep this near the real manipulation distance. 0.85m is much stricter
+    # than the old 1.5m setting and prevents distant clutter from becoming crops.
+    min_depth_m: 0.20
+    max_depth_m: 0.85
+
+    # Basic ROI limits.
+    min_bbox_width_px: 8
+    min_bbox_height_px: 8
+    max_bbox_width_px: 260
+    max_bbox_height_px: 220
+    max_bbox_area_ratio: 0.25
+    reject_border_candidates: true
+    border_margin_px: 2
+
+    # Cable / sparse-box suppression.
+    # Cable clusters tend to have long aspect ratios, low foreground fill, or
+    # many disconnected thin mask components inside one large bbox.
+    max_bbox_aspect_ratio: 4.8
+    min_fill_ratio: 0.055
+    large_bbox_area_px: 9000
+    large_bbox_min_fill_ratio: 0.12
+    max_sparse_component_count: 4
+    sparse_component_fill_ratio: 0.09
+    max_largest_component_aspect_ratio: 6.0
+    min_largest_component_area_ratio: 0.18
+
+    # Output and ranking.
+    max_output_candidates: 8
+    min_refined_score: -1.0
+    preferred_depth_m: 0.45
+    depth_prior_sigma_m: 0.30
+
+    # Important for Buds3: the original depth component may be only a part of
+    # the low object. We expand and optionally square the surviving ROI before
+    # the RGB cropper cuts it.
+    expand_roi_px: 12
+    expand_roi_ratio: 0.18
+    force_square_roi: true
+    max_expanded_side_px: 240
+
+    debug_include_candidates: true
