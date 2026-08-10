@@ -122,6 +122,9 @@ class RgbCandidateCropNode(Node):
             "reject_border_candidates": False,
             "extra_padding_px": 0,
             "extra_padding_ratio": 0.0,
+            "force_square_crop": False,
+            "min_context_side_px": 0,
+            "max_context_side_px": 0,
             "max_crop_side_px": 320,
             "min_crop_side_px": 32,
             "jpeg_quality": 70,
@@ -298,6 +301,15 @@ class RgbCandidateCropNode(Node):
                     ),
                     extra_padding_ratio=float(
                         self.get_parameter("extra_padding_ratio").value
+                    ),
+                    force_square_crop=bool(
+                        self.get_parameter("force_square_crop").value
+                    ),
+                    min_context_side_px=int(
+                        self.get_parameter("min_context_side_px").value
+                    ),
+                    max_context_side_px=int(
+                        self.get_parameter("max_context_side_px").value
                     ),
                 )
                 crop_bgr = extract_crop(color_bgr, roi)
