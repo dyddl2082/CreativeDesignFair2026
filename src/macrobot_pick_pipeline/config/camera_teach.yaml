@@ -3,12 +3,9 @@
     base_frame: base_link
     use_finder: true
     allow_motion_commands: true
-
-    # Camera-dependent workflows (former commissioning menus 5 and 7)
     require_camera_health: true
     camera_info_topic: /camera/camera/color/camera_info
     camera_health_timeout_sec: 3.0
-
     target_min_score: 0.55
     target_stability_count: 5
     target_stability_window_sec: 1.5
@@ -16,7 +13,6 @@
     target_lock_timeout_sec: 30.0
     motion_timeout_sec: 25.0
     timer_rate_hz: 20.0
-
     command_topic: /macrobot/pick/teach/command
     status_topic: /macrobot/pick/teach/status
     result_topic: /macrobot/pick/teach/result

@@ -26,6 +26,10 @@ def generate_launch_description():
     allow_teach_motion = LaunchConfiguration("allow_teach_motion")
     generated_profile_file = LaunchConfiguration("generated_profile_file")
     recordings_dir = LaunchConfiguration("recordings_dir")
+    start_base_alignment = LaunchConfiguration("start_base_alignment")
+    alignment_profile_file = LaunchConfiguration("alignment_profile_file")
+    alignment_dry_run = LaunchConfiguration("alignment_dry_run")
+    perception_input_mode = LaunchConfiguration("perception_input_mode")
 
     camera_teach_condition = IfCondition(
         PythonExpression([
@@ -41,6 +45,9 @@ def generate_launch_description():
         DeclareLaunchArgument("start_teach", default_value="false"),
         DeclareLaunchArgument("start_camera_teach", default_value="false"),
         DeclareLaunchArgument("start_arm_demo_recorder", default_value="true"),
+        DeclareLaunchArgument("start_base_alignment", default_value="true"),
+        DeclareLaunchArgument("alignment_dry_run", default_value="false"),
+        DeclareLaunchArgument("perception_input_mode", default_value="legacy"),
         DeclareLaunchArgument("allow_teach_motion", default_value="true"),
         DeclareLaunchArgument(
             "profile_file",
@@ -69,6 +76,16 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "recordings_dir",
             default_value=str(Path.home() / "MacRobot" / "data" / "arm_primitives"),
+        ),
+        DeclareLaunchArgument(
+            "alignment_profile_file",
+            default_value=str(
+                Path.home()
+                / "MacRobot"
+                / "data"
+                / "alignment"
+                / "base_alignment_profiles.yaml"
+            ),
         ),
 
         IncludeLaunchDescription(
@@ -100,7 +117,10 @@ def generate_launch_description():
             executable="detection_localizer_node",
             name="macrobot_detection_localizer",
             output="screen",
-            parameters=[str(package / "config" / "perception.yaml")],
+            parameters=[
+                str(package / "config" / "perception.yaml"),
+                {"input_mode": perception_input_mode},
+            ],
         ),
         Node(
             package="macrobot_pick_pipeline",
@@ -113,6 +133,22 @@ def generate_launch_description():
                     "use_finder": True,
                     "profile_file": profile_file,
                     "commissioning_report": commissioning_report,
+                },
+            ],
+        ),
+        Node(
+            package="macrobot_pick_pipeline",
+            executable="base_alignment_node",
+            name="macrobot_base_alignment",
+            output="screen",
+            condition=IfCondition(start_base_alignment),
+            parameters=[
+                str(package / "config" / "base_alignment.yaml"),
+                {
+                    "profile_file": alignment_profile_file,
+                    "dry_run_base": ParameterValue(
+                        alignment_dry_run, value_type=bool
+                    ),
                 },
             ],
         ),

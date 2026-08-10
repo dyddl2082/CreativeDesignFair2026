@@ -1,24 +1,18 @@
-# Camera-to-arm execution settings.
-#
-# Coordinates are expressed in base_link. In the current MacRobot model the
-# robot front is toward negative X and the arm grasp plane is near Y=0.0645 m.
-# The commissioning report, when present, overrides the joint-space seeds and
-# close_q3 for each named object. These Cartesian offsets remain the place to
-# describe where the desired grasp centre is relative to the detected object.
-
 defaults:
   open_q3: 0.0
   close_q3: 1.0
-
-  # The detected 3D point is treated as the object centre. Adjust this if the
-  # desired jaw centre is above/below or in front/behind that point.
-  grasp_offset_base: [0.0, 0.0, 0.0]
-
-  # Before grasping, stay 35 mm above the final grasp point.
-  # Object-specific profiles can add an X offset when a side approach is needed.
-  pregrasp_offset_base: [0.0, 0.0, 0.035]
-  lift_offset_base: [0.0, 0.0, 0.050]
-
+  grasp_offset_base:
+  - 0.0
+  - 0.0
+  - 0.0
+  pregrasp_offset_base:
+  - 0.0
+  - 0.0
+  - 0.035
+  lift_offset_base:
+  - 0.0
+  - 0.0
+  - 0.05
   lateral_tolerance_m: 0.035
   min_score: 0.55
   stability_count: 5
@@ -26,23 +20,47 @@ defaults:
   stability_radius_m: 0.012
   search_timeout_sec: 30.0
   motion_timeout_sec: 20.0
-
-  pre_grasp_seed_q: [0.0, 0.0, 0.0]
-  grasp_seed_q: [0.0, 0.0, 0.0]
-  lift_seed_q: [0.0, 0.0, 1.0]
+  pre_grasp_seed_q:
+  - 0.0
+  - 0.0
+  - 0.0
+  grasp_seed_q:
+  - 0.0
+  - 0.0
+  - 0.0
+  lift_seed_q:
+  - 0.0
+  - 0.0
+  - 1.0
   speed_scale: 0.5
   relocalize_before_grasp: false
-
 objects:
   Buds3:
     close_q3: 1.0
-    grasp_offset_base: [0.0, 0.0, 0.0]
-    pregrasp_offset_base: [0.0, 0.0, 0.035]
-    lift_offset_base: [0.0, 0.0, 0.050]
-    notes: "WSL2 mock profile; replace offsets with commissioning measurements."
-
+    grasp_offset_base:
+    - 0.0
+    - 0.0
+    - 0.0
+    pregrasp_offset_base:
+    - 0.0
+    - 0.0
+    - 0.035
+    lift_offset_base:
+    - 0.0
+    - 0.0
+    - 0.05
+    notes: WSL2 mock profile; replace offsets with commissioning measurements.
   USB:
     close_q3: 0.85
-    grasp_offset_base: [0.0, 0.0, 0.0]
-    pregrasp_offset_base: [0.030, 0.0, 0.025]
-    lift_offset_base: [0.0, 0.0, 0.045]
+    grasp_offset_base:
+    - 0.0
+    - 0.0
+    - 0.0
+    pregrasp_offset_base:
+    - 0.03
+    - 0.0
+    - 0.025
+    lift_offset_base:
+    - 0.0
+    - 0.0
+    - 0.045

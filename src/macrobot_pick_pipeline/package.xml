@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>macrobot_pick_pipeline</name>
-  <version>0.3.0</version>
-  <description>Camera-to-arm localization, validated pick execution, camera-gated calibration/profile teaching, and camera-independent arm demonstration recording for MacRobot.</description>
+  <version>0.4.0</version>
+  <description>Camera-to-arm localization, recorded-pose base alignment, validated pick execution, camera teaching, and camera-independent arm demonstration recording for MacRobot.</description>
   <maintainer email="dyddl2082@snu.ac.kr">MacRobot Team</maintainer>
   <license>MIT</license>
 
@@ -16,6 +16,7 @@
   <depend>geometry_msgs</depend>
   <depend>visualization_msgs</depend>
   <depend>tf2_ros</depend>
+  <depend>macrobot_interfaces</depend>
 
   <exec_depend>python3-yaml</exec_depend>
   <exec_depend>launch</exec_depend>
@@ -24,6 +25,7 @@
   <exec_depend>macrobot_description</exec_depend>
   <exec_depend>macrobot_arm_kinematics</exec_depend>
   <exec_depend>macrobot_arm_control</exec_depend>
+  <exec_depend>pico_debug</exec_depend>
 
   <test_depend>python3-pytest</test_depend>
 

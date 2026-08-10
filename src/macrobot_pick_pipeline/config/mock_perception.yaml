@@ -2,10 +2,9 @@ macrobot_mock_perception:
   ros__parameters:
     base_frame: base_link
     default_object_name: Buds3
-    # A reachable point in the current planar arm workspace.
-    point_x: -0.150
+    point_x: -0.15
     point_y: 0.0645
-    point_z: 0.120
+    point_z: 0.12
     score: 0.95
     noise_std_m: 0.0015
     publish_rate_hz: 10.0

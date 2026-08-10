@@ -7,7 +7,7 @@ package_name = "macrobot_pick_pipeline"
 
 setup(
     name=package_name,
-    version="0.3.0",
+    version="0.4.0",
     packages=find_packages(exclude=["test"]),
     data_files=[
         (
@@ -24,7 +24,7 @@ setup(
     zip_safe=True,
     maintainer="MacRobot Team",
     maintainer_email="dyddl2082@snu.ac.kr",
-    description="Camera localization, validated picking, camera-gated teaching and camera-independent arm demonstration recording for MacRobot",
+    description="Camera localization, recorded-pose base alignment, validated picking, camera teaching and arm demonstration recording for MacRobot",
     license="MIT",
     tests_require=["pytest"],
     entry_points={
@@ -37,6 +37,8 @@ setup(
             "pick_teach_cli = macrobot_pick_pipeline.pick_teach_cli:main",
             "arm_demo_recorder_node = macrobot_pick_pipeline.arm_demo_recorder_node:main",
             "arm_demo_cli = macrobot_pick_pipeline.arm_demo_cli:main",
+            "base_alignment_node = macrobot_pick_pipeline.base_alignment_node:main",
+            "base_alignment_cli = macrobot_pick_pipeline.base_alignment_cli:main",
         ],
     },
 )
