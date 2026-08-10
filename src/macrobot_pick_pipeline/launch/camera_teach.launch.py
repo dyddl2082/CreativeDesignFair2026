@@ -14,20 +14,22 @@ def generate_launch_description():
     description = Path(get_package_share_directory("macrobot_description"))
 
     start_rviz = LaunchConfiguration("start_rviz")
-    start_arm_demo = LaunchConfiguration("start_arm_demo")
-    start_camera_teach = LaunchConfiguration("start_camera_teach")
-    allow_motion = LaunchConfiguration("allow_motion_commands")
+    start_localizer = LaunchConfiguration("start_localizer")
+    start_coordinator = LaunchConfiguration("start_coordinator")
     use_finder = LaunchConfiguration("use_finder")
+    allow_motion = LaunchConfiguration("allow_motion_commands")
     report_path = LaunchConfiguration("report_path")
-    recordings_dir = LaunchConfiguration("recordings_dir")
     generated_profile_file = LaunchConfiguration("generated_profile_file")
+    profile_file = LaunchConfiguration("profile_file")
+    require_camera_health = LaunchConfiguration("require_camera_health")
 
     return LaunchDescription([
         DeclareLaunchArgument("start_rviz", default_value="true"),
-        DeclareLaunchArgument("start_arm_demo", default_value="true"),
-        DeclareLaunchArgument("start_camera_teach", default_value="false"),
-        DeclareLaunchArgument("allow_motion_commands", default_value="true"),
+        DeclareLaunchArgument("start_localizer", default_value="false"),
+        DeclareLaunchArgument("start_coordinator", default_value="false"),
         DeclareLaunchArgument("use_finder", default_value="true"),
+        DeclareLaunchArgument("allow_motion_commands", default_value="true"),
+        DeclareLaunchArgument("require_camera_health", default_value="true"),
         DeclareLaunchArgument(
             "report_path",
             default_value=str(
@@ -39,10 +41,6 @@ def generate_launch_description():
             ),
         ),
         DeclareLaunchArgument(
-            "recordings_dir",
-            default_value=str(Path.home() / "MacRobot" / "data" / "arm_primitives"),
-        ),
-        DeclareLaunchArgument(
             "generated_profile_file",
             default_value=str(
                 Path.home()
@@ -52,20 +50,30 @@ def generate_launch_description():
                 / "pick_profiles_recorded.yaml"
             ),
         ),
+        DeclareLaunchArgument(
+            "profile_file",
+            default_value=str(package / "config" / "pick_profiles.yaml"),
+        ),
         Node(
             package="macrobot_pick_pipeline",
-            executable="arm_demo_recorder_node",
-            name="macrobot_arm_demo_recorder",
+            executable="detection_localizer_node",
+            name="macrobot_detection_localizer",
             output="screen",
-            condition=IfCondition(start_arm_demo),
+            condition=IfCondition(start_localizer),
+            parameters=[str(package / "config" / "perception.yaml")],
+        ),
+        Node(
+            package="macrobot_pick_pipeline",
+            executable="pick_coordinator_node",
+            name="macrobot_pick_coordinator",
+            output="screen",
+            condition=IfCondition(start_coordinator),
             parameters=[
-                str(package / "config" / "arm_demo.yaml"),
+                str(package / "config" / "coordinator.yaml"),
                 {
-                    "allow_motion_commands": ParameterValue(
-                        allow_motion, value_type=bool
-                    ),
-                    "report_path": report_path,
-                    "recordings_dir": recordings_dir,
+                    "use_finder": ParameterValue(use_finder, value_type=bool),
+                    "profile_file": profile_file,
+                    "commissioning_report": report_path,
                 },
             ],
         ),
@@ -74,13 +82,15 @@ def generate_launch_description():
             executable="camera_teach_node",
             name="macrobot_camera_teach",
             output="screen",
-            condition=IfCondition(start_camera_teach),
             parameters=[
                 str(package / "config" / "camera_teach.yaml"),
                 {
                     "use_finder": ParameterValue(use_finder, value_type=bool),
                     "allow_motion_commands": ParameterValue(
                         allow_motion, value_type=bool
+                    ),
+                    "require_camera_health": ParameterValue(
+                        require_camera_health, value_type=bool
                     ),
                     "report_path": report_path,
                     "generated_profile_file": generated_profile_file,
@@ -93,7 +103,7 @@ def generate_launch_description():
         Node(
             package="rviz2",
             executable="rviz2",
-            name="rviz2_pick_teach",
+            name="rviz2_camera_teach",
             output="screen",
             arguments=["-d", str(package / "rviz" / "pick_pipeline.rviz")],
             condition=IfCondition(start_rviz),

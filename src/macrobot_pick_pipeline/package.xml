@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>macrobot_pick_pipeline</name>
-  <version>0.2.0</version>
-  <description>Camera-to-arm localization, validated pick execution, and camera-assisted teach/record workflows for MacRobot.</description>
+  <version>0.3.0</version>
+  <description>Camera-to-arm localization, validated pick execution, camera-gated calibration/profile teaching, and camera-independent arm demonstration recording for MacRobot.</description>
   <maintainer email="dyddl2082@snu.ac.kr">MacRobot Team</maintainer>
   <license>MIT</license>
 

@@ -5,7 +5,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
@@ -13,21 +13,34 @@ from launch_ros.parameter_descriptions import ParameterValue
 def generate_launch_description():
     package = Path(get_package_share_directory("macrobot_pick_pipeline"))
     arm_control = Path(get_package_share_directory("macrobot_arm_control"))
+    description = Path(get_package_share_directory("macrobot_description"))
 
     safe_region_csv = LaunchConfiguration("safe_region_csv")
     serial_port = LaunchConfiguration("serial_port")
     start_pico_debug = LaunchConfiguration("start_pico_debug")
     profile_file = LaunchConfiguration("profile_file")
     commissioning_report = LaunchConfiguration("commissioning_report")
-    start_teach = LaunchConfiguration("start_teach")
+    start_teach = LaunchConfiguration("start_teach")  # legacy alias for camera teach
+    start_camera_teach = LaunchConfiguration("start_camera_teach")
+    start_arm_demo_recorder = LaunchConfiguration("start_arm_demo_recorder")
     allow_teach_motion = LaunchConfiguration("allow_teach_motion")
     generated_profile_file = LaunchConfiguration("generated_profile_file")
+    recordings_dir = LaunchConfiguration("recordings_dir")
+
+    camera_teach_condition = IfCondition(
+        PythonExpression([
+            "'", start_camera_teach, "'.lower() == 'true' or '",
+            start_teach, "'.lower() == 'true'",
+        ])
+    )
 
     return LaunchDescription([
         DeclareLaunchArgument("safe_region_csv"),
         DeclareLaunchArgument("serial_port", default_value="/dev/ttyACM0"),
         DeclareLaunchArgument("start_pico_debug", default_value="true"),
         DeclareLaunchArgument("start_teach", default_value="false"),
+        DeclareLaunchArgument("start_camera_teach", default_value="false"),
+        DeclareLaunchArgument("start_arm_demo_recorder", default_value="true"),
         DeclareLaunchArgument("allow_teach_motion", default_value="true"),
         DeclareLaunchArgument(
             "profile_file",
@@ -52,6 +65,10 @@ def generate_launch_description():
                 / "commissioning"
                 / "pick_profiles_recorded.yaml"
             ),
+        ),
+        DeclareLaunchArgument(
+            "recordings_dir",
+            default_value=str(Path.home() / "MacRobot" / "data" / "arm_primitives"),
         ),
 
         IncludeLaunchDescription(
@@ -101,12 +118,29 @@ def generate_launch_description():
         ),
         Node(
             package="macrobot_pick_pipeline",
-            executable="pick_teach_node",
-            name="macrobot_pick_teach",
+            executable="arm_demo_recorder_node",
+            name="macrobot_arm_demo_recorder",
             output="screen",
-            condition=IfCondition(start_teach),
+            condition=IfCondition(start_arm_demo_recorder),
             parameters=[
-                str(package / "config" / "teach.yaml"),
+                str(package / "config" / "arm_demo.yaml"),
+                {
+                    "allow_motion_commands": ParameterValue(
+                        allow_teach_motion, value_type=bool
+                    ),
+                    "report_path": commissioning_report,
+                    "recordings_dir": recordings_dir,
+                },
+            ],
+        ),
+        Node(
+            package="macrobot_pick_pipeline",
+            executable="camera_teach_node",
+            name="macrobot_camera_teach",
+            output="screen",
+            condition=camera_teach_condition,
+            parameters=[
+                str(package / "config" / "camera_teach.yaml"),
                 {
                     "use_finder": True,
                     "allow_motion_commands": ParameterValue(
@@ -114,6 +148,9 @@ def generate_launch_description():
                     ),
                     "report_path": commissioning_report,
                     "generated_profile_file": generated_profile_file,
+                    "kinematics_file": str(
+                        description / "config" / "kinematics.yaml"
+                    ),
                 },
             ],
         ),

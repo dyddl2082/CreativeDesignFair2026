@@ -28,19 +28,16 @@ def ask_yes_no(prompt: str, default: bool = True) -> bool:
 
 def ask_float(prompt: str, default: float) -> float:
     while True:
-        value = ask_text(prompt, f"{default:.6f}")
+        raw = ask_text(prompt, f"{default:.6f}")
         try:
-            return float(value)
+            return float(raw)
         except ValueError:
             print("숫자를 입력하세요.")
 
 
 def ask_q(prompt: str, default=(0.0, 0.0, 0.0)):
     while True:
-        raw = ask_text(
-            prompt,
-            ",".join(f"{value:.6f}" for value in default),
-        )
+        raw = ask_text(prompt, ",".join(f"{value:.6f}" for value in default))
         try:
             values = tuple(float(item.strip()) for item in raw.split(","))
         except ValueError:
@@ -50,9 +47,9 @@ def ask_q(prompt: str, default=(0.0, 0.0, 0.0)):
         print("q1,q2,q3 형식으로 세 값을 입력하세요.")
 
 
-class TeachClientNode(Node):
+class CameraTeachClientNode(Node):
     def __init__(self) -> None:
-        super().__init__("macrobot_pick_teach_cli")
+        super().__init__("macrobot_camera_teach_cli")
         self.declare_parameter("command_topic", "/macrobot/pick/teach/command")
         self.declare_parameter("result_topic", "/macrobot/pick/teach/result")
         self.declare_parameter("status_topic", "/macrobot/pick/teach/status")
@@ -105,7 +102,7 @@ class TeachClientNode(Node):
         wait: bool = True,
         **kwargs: Any,
     ) -> Optional[Dict[str, Any]]:
-        command_id = f"cli-{uuid.uuid4().hex[:12]}"
+        command_id = f"camera-teach-cli-{uuid.uuid4().hex[:12]}"
         payload = {"action": action, "command_id": command_id, **kwargs}
         message = String()
         message.data = json.dumps(payload, ensure_ascii=False)
@@ -135,38 +132,59 @@ def print_result(result: Optional[Dict[str, Any]]) -> bool:
     return bool(result.get("ok"))
 
 
-class TeachWizard:
-    def __init__(self, node: TeachClientNode) -> None:
+class CameraTeachWizard:
+    def __init__(self, node: CameraTeachClientNode) -> None:
         self.node = node
         self.current_q = (0.0, 0.0, 0.0)
 
+    def _camera_ready(self) -> bool:
+        result = self.node.command("status", wait_timeout_sec=5.0)
+        if not result:
+            print("camera teach node의 상태 응답이 없습니다.")
+            return False
+        ready = bool(result.get("camera_ready"))
+        if not ready:
+            print(
+                "D435/CameraInfo가 없습니다. 메뉴 5와 7은 카메라가 연결될 때까지 "
+                "비활성입니다. 메뉴 6은 별도 arm_demo_cli에서 사용하세요."
+            )
+        return ready
+
     def run(self) -> None:
         while True:
-            print("\n=== MacRobot Camera-Arm Teach ===")
-            print("1. 카메라 target 고정")
+            ready = self._camera_ready()
+            state = "READY" if ready else "NO CAMERA"
+            print(f"\n=== MacRobot Camera Teach [{state}] ===")
             print("5. 카메라 보조 grasp_frame 보정")
-            print("6. primitive 기록 / 시험")
             print("7. 물체별 grasp profile 기록 / 시험")
             print("8. 현재 상태")
+            print("6. primitive 기록은 arm_demo_cli로 이동")
             print("9. 종료")
             choice = input("선택: ").strip()
             try:
-                if choice == "1":
-                    self.lock_target()
-                elif choice == "5":
-                    self.grasp_frame_workflow()
-                elif choice == "6":
-                    self.primitive_workflow()
+                if choice == "5":
+                    if ready:
+                        self.grasp_frame_workflow()
+                    else:
+                        print("카메라가 없어 실행할 수 없습니다.")
                 elif choice == "7":
-                    self.profile_workflow()
+                    if ready:
+                        self.profile_workflow()
+                    else:
+                        print("카메라가 없어 실행할 수 없습니다.")
                 elif choice == "8":
-                    self.show_status()
+                    print_result(self.node.command("status", wait_timeout_sec=5.0))
+                elif choice == "6":
+                    print(
+                        "새 터미널에서 다음을 실행하세요:\n"
+                        "  ros2 run macrobot_pick_pipeline arm_demo_cli"
+                    )
                 elif choice == "9":
                     return
                 else:
                     print("지원하지 않는 메뉴입니다.")
             except KeyboardInterrupt:
-                print("\n현재 작업을 취소합니다.")
+                print("\n현재 카메라 teach 작업을 취소합니다.")
                 print_result(self.node.command("cancel", wait_timeout_sec=5.0))
             except Exception as exc:
                 print(f"오류: {exc}")
@@ -177,25 +195,25 @@ class TeachWizard:
             print("물체 이름이 필요합니다.")
             return False
         print("여러 프레임에서 3D 위치가 안정될 때까지 기다립니다.")
-        result = self.node.command(
-            "lock_target",
-            object_name=object_name,
-            timeout_sec=60.0,
-            wait_timeout_sec=65.0,
+        return print_result(
+            self.node.command(
+                "lock_target",
+                object_name=object_name,
+                timeout_sec=60.0,
+                wait_timeout_sec=65.0,
+            )
         )
-        return print_result(result)
 
     def maybe_move(self, label: str) -> bool:
         if not ask_yes_no(f"{label}: validated q 목표를 보내겠습니까?", False):
-            print("별도 조종 도구로 안전하게 자세를 맞춘 뒤 Enter를 누르세요.")
+            print(
+                "별도 안전 조종 도구(arm_demo_cli 등)로 자세를 맞춘 뒤 Enter를 누르세요."
+            )
             input()
             return True
         q = ask_q("목표 q1,q2,q3", self.current_q)
         result = self.node.command(
-            "move_to_q",
-            q=list(q),
-            label=label,
-            wait_timeout_sec=45.0,
+            "move_to_q", q=list(q), label=label, wait_timeout_sec=45.0
         )
         if result and result.get("ok"):
             self.current_q = q
@@ -203,22 +221,18 @@ class TeachWizard:
 
     def grasp_frame_workflow(self) -> None:
         print("\n[메뉴 5] 카메라 보조 grasp_frame 보정")
-        print(
-            "작은 고정 calibration target의 중심을 실제 두 clamp 접촉 중심과 "
-            "일치시켜 기록합니다. 카메라 extrinsic이 먼저 정상이어야 합니다."
-        )
         if not self.lock_target("calibration_target"):
             return
         print_result(self.node.command("clear_grasp_samples", wait_timeout_sec=5.0))
         raw = ask_text("측정 q3 목록(rad)", "0.0,0.8,1.4")
-        q3_values = [float(item.strip()) for item in raw.split(",") if item.strip()]
+        values = [float(item.strip()) for item in raw.split(",") if item.strip()]
         offset = (
             ask_float("target 중심→실제 접촉점 X 보정(m)", 0.0),
             ask_float("target 중심→실제 접촉점 Y 보정(m)", 0.0),
             ask_float("target 중심→실제 접촉점 Z 보정(m)", 0.0),
         )
-        for index, gripper_q in enumerate(q3_values, 1):
-            print(f"\n샘플 {index}/{len(q3_values)}: q3={gripper_q:.4f}")
+        for index, gripper_q in enumerate(values, 1):
+            print(f"\n샘플 {index}/{len(values)}: q3={gripper_q:.4f}")
             q1 = ask_float("q1", self.current_q[0])
             q2 = ask_float("q2", self.current_q[1])
             result = self.node.command(
@@ -230,68 +244,33 @@ class TeachWizard:
             if not print_result(result):
                 return
             self.current_q = (q1, q2, gripper_q)
-            print(
-                "필요하면 별도 validated 조종으로 clamp 중심을 calibration target에 "
-                "정확히 맞춘 뒤 Enter를 누르세요."
-            )
-            input()
-            result = self.node.command(
-                "capture_grasp_sample",
-                label=f"q3_{gripper_q:.4f}",
-                contact_offset_base=list(offset),
-                notes=ask_text("샘플 메모", ""),
-                wait_timeout_sec=8.0,
-            )
-            if not print_result(result):
-                return
-        print("\n세 샘플 이상을 이용해 기하 파라미터를 fitting합니다.")
-        print_result(self.node.command("fit_grasp_frame", wait_timeout_sec=15.0))
-
-    def primitive_workflow(self) -> None:
-        print("\n[메뉴 6] primitive 기록 / 시험")
-        name = ask_text(
-            "primitive 이름",
-            "HOME",
-        ).upper()
-        if not name:
-            return
-        if ask_yes_no("기록 전에 목표 자세로 이동할까요?", False):
-            if not self.maybe_move(name):
-                return
-        else:
-            print("현재 실제/논리 자세를 기록합니다.")
-        result = self.node.command(
-            "record_primitive",
-            name=name,
-            speed_scale=ask_float("speed scale", 0.5),
-            approved=ask_yes_no("이 자세를 승인합니까?", True),
-            notes=ask_text("메모", ""),
-            wait_timeout_sec=8.0,
-        )
-        if not print_result(result):
-            return
-        if ask_yes_no("validator를 거쳐 primitive를 다시 시험할까요?", False):
-            print_result(
+            input("clamp 중심을 target에 맞춘 뒤 Enter: ")
+            if not print_result(
                 self.node.command(
-                    "test_primitive",
-                    name=name,
-                    wait_timeout_sec=45.0,
+                    "capture_grasp_sample",
+                    label=f"q3_{gripper_q:.4f}",
+                    contact_offset_base=list(offset),
+                    notes=ask_text("샘플 메모", ""),
+                    wait_timeout_sec=8.0,
                 )
-            )
+            ):
+                return
+        print_result(self.node.command("fit_grasp_frame", wait_timeout_sec=15.0))
 
     def profile_workflow(self) -> None:
         print("\n[메뉴 7] 카메라 기준 grasp profile 기록")
         object_name = ask_text("물체 이름", "Buds3")
         if not self.lock_target(object_name):
             return
-        result = self.node.command(
-            "start_profile",
-            object_name=object_name,
-            speed_scale=ask_float("기본 speed scale", 0.5),
-            notes=ask_text("profile 메모", ""),
-            wait_timeout_sec=8.0,
-        )
-        if not print_result(result):
+        if not print_result(
+            self.node.command(
+                "start_profile",
+                object_name=object_name,
+                speed_scale=ask_float("기본 speed scale", 0.5),
+                notes=ask_text("profile 메모", ""),
+                wait_timeout_sec=8.0,
+            )
+        ):
             return
 
         instructions = {
@@ -305,16 +284,16 @@ class TeachWizard:
             print(f"\n--- {stage}: {instructions[stage]} ---")
             if not self.maybe_move(stage):
                 return
-            result = self.node.command(
-                "capture_profile_stage",
-                stage=stage,
-                notes=ask_text(f"{stage} 메모", ""),
-                wait_timeout_sec=8.0,
-            )
-            if not print_result(result):
+            if not print_result(
+                self.node.command(
+                    "capture_profile_stage",
+                    stage=stage,
+                    notes=ask_text(f"{stage} 메모", ""),
+                    wait_timeout_sec=8.0,
+                )
+            ):
                 return
         if ask_yes_no("PLACE 자세도 기록할까요?", False):
-            print(f"\n--- PLACE: {instructions['PLACE']} ---")
             if not self.maybe_move("PLACE"):
                 return
             print_result(
@@ -325,7 +304,6 @@ class TeachWizard:
                     wait_timeout_sec=8.0,
                 )
             )
-
         result = self.node.command(
             "save_profile",
             notes=ask_text("최종 profile 메모", ""),
@@ -333,10 +311,7 @@ class TeachWizard:
         )
         if not print_result(result):
             return
-        if ask_yes_no("현재 카메라 target에 전체 pick sequence를 시험할까요?", False):
-            print(
-                "실제 로봇이 움직입니다. 최신 safe-region과 비상 정지를 확인하세요."
-            )
+        if ask_yes_no("현재 target에 전체 pick sequence를 시험할까요?", False):
             if ask_text("실행하려면 PICK 입력", "") == "PICK":
                 print_result(
                     self.node.command(
@@ -347,19 +322,16 @@ class TeachWizard:
                     )
                 )
 
-    def show_status(self) -> None:
-        print_result(self.node.command("status", wait_timeout_sec=5.0))
-
 
 def main(args=None) -> None:
     rclpy.init(args=args)
-    node = TeachClientNode()
+    node = CameraTeachClientNode()
     executor = MultiThreadedExecutor(num_threads=2)
     executor.add_node(node)
     thread = threading.Thread(target=executor.spin, daemon=True)
     thread.start()
     try:
-        TeachWizard(node).run()
+        CameraTeachWizard(node).run()
     finally:
         executor.shutdown()
         node.destroy_node()
