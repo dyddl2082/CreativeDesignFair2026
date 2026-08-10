@@ -9,36 +9,41 @@ aligned_depth_candidate:
     process_hz: 5.0
 
     depth_scale_m: 0.001
-    min_depth_m: 0.18
-    max_depth_m: 1.50
+    min_depth_m: 0.20
+    max_depth_m: 0.85
 
     enable_plane_removal: true
     plane_sample_stride: 4
     plane_ransac_iterations: 70
+
     plane_distance_threshold_m: 0.012
     plane_min_inlier_ratio: 0.25
-    plane_clearance_m: 0.025
-    plane_max_foreground_m: 0.60
+    plane_clearance_m: 0.012
+
+    plane_max_foreground_m: 0.80
     max_plane_samples: 16000
 
     fallback_background_percentile: 70.0
-    fallback_clearance_m: 0.035
+    fallback_clearance_m: 0.025
 
     roi_top_ratio: 0.00
     roi_bottom_ratio: 1.00
     roi_left_ratio: 0.00
     roi_right_ratio: 1.00
 
-    close_kernel_px: 9
-    open_kernel_px: 3
+    close_kernel_px: 7
+    open_kernel_px: 5
 
-    min_component_area_px: 300
-    max_component_area_ratio: 0.28
-    min_bbox_width_px: 14
-    min_bbox_height_px: 14
-    min_fill_ratio: 0.10
+    min_component_area_px: 80
+    max_component_area_ratio: 0.1
+
+    min_bbox_width_px: 16
+    min_bbox_height_px: 16
+
+    min_fill_ratio: 0.08
+
     min_valid_depth_ratio: 0.55
-    bbox_padding_px: 8
+    bbox_padding_px: 6
     border_margin_px: 2
     reject_border_components: false
     max_candidates: 12
@@ -66,21 +71,21 @@ rgb_candidate_crop:
 
     # Proposals are already sorted by proposal_score.
     max_crops_per_frame: 6
-    min_proposal_score: 0.0
+    min_proposal_score: 0.05
     reject_border_candidates: false
 
     # The depth proposal ROI already includes bbox_padding_px. Keep extra
     # padding at zero initially; add context later if embedding accuracy needs it.
-    extra_padding_px: 0
-    extra_padding_ratio: 0.0
+    extra_padding_px: 8
+    extra_padding_ratio: 0.15
 
     # Network-oriented crop encoding. One crop is one DDS sample.
-    max_crop_side_px: 320
+    max_crop_side_px: 324
     min_crop_side_px: 32
     jpeg_quality: 70
     min_jpeg_quality: 35
     jpeg_quality_step: 8
-    max_jpeg_bytes: 55000
+    max_jpeg_bytes: 90000
     jpeg_resize_factor: 0.80
     jpeg_max_resize_iterations: 6
 
