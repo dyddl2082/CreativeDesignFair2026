@@ -1,0 +1,35 @@
+{
+  "artifact": "macrobot_object_finder_stage",
+  "package": "macrobot_object_finder",
+  "version": "0.1.0",
+  "validated_at": "2026-08-10",
+  "checks": {
+    "python_compile": "passed",
+    "launch_python_compile": "passed",
+    "pure_python_unit_tests": {
+      "status": "passed",
+      "count": 6
+    },
+    "package_xml_parse": "passed",
+    "yaml_parse": "passed",
+    "bash_syntax": "passed",
+    "setuptools_entry_points": {
+      "status": "passed",
+      "entries": [
+        "object_finder_node",
+        "object_finder_cli"
+      ]
+    },
+    "result_contract": "score + center_px + depth_m + frame_id compatible with macrobot_pick_pipeline detection_localizer_node",
+    "bandwidth_policy": "object_finder_node has no Image, depth Image, CompressedImage, PointCloud2, or duplicate DepthCandidateArray subscription; WSL launch disables perception debug image publishers",
+    "duplicate_result_prevention": "WSL launches override temporal_confirmation publish_legacy_json=false",
+    "continuous_session_timeout": "first confirmed result disables timeout by default until cancel"
+  },
+  "not_runtime_validated_here": [
+    "ROS 2 Jazzy colcon build in the user's workspace",
+    "Pi-to-WSL DDS transport",
+    "Intel Arc XPU DINOv2 inference",
+    "live D435 detection accuracy and locally tuned thresholds",
+    "macrobot_pick_pipeline end-to-end localization/alignment/pick"
+  ]
+}

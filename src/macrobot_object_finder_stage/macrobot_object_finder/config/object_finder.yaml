@@ -1,0 +1,48 @@
+macrobot_object_finder:
+  ros__parameters:
+    goal_topic: /object_finder/goal
+    cancel_topic: /object_finder/cancel
+    result_topic: /object_finder/result
+    status_topic: /object_finder/status
+    active_target_topic: /macrobot/pick/active_target
+
+    candidate_target_topic: /candidate_filter/target
+    embedding_target_topic: /embedding_retrieval/target
+    confirmed_topic: /temporal_confirmation/confirmed
+    temporal_events_topic: /temporal_confirmation/results
+
+    camera_info_topic: /camera/camera/color/camera_info
+    filter_status_topic: /candidate_filter/status
+    embedding_status_topic: /embedding_retrieval/status
+    temporal_status_topic: /temporal_confirmation/status
+    point_camera_topic: /object_finder/point_camera
+
+    temporal_reset_service: /temporal_confirmation/reset
+    candidate_reload_service: /candidate_filter/reload_profile
+    embedding_reload_service: /embedding_retrieval/reload_banks
+    embedding_rebuild_service: /embedding_retrieval/rebuild_banks
+
+    default_timeout_sec: 60.0
+    default_continuous: true
+    default_min_score: 0.0
+    minimum_depth_m: 0.08
+    maximum_depth_m: 2.0
+    result_publish_hz: 5.0
+
+    health_timeout_sec: 7.0
+    status_period_sec: 1.0
+    target_repeat_count: 4
+    target_repeat_period_sec: 0.5
+    default_camera_frame: camera_color_optical_frame
+
+    positive_root_template: ~/MacRobot/data/curated/objects/{target}
+    require_positive_bank_files: true
+    minimum_positive_images: 1
+
+    reset_temporal_on_goal: true
+    reload_candidate_on_goal: false
+    reload_embedding_on_goal: false
+
+    # continuous=true인 goal은 첫 발견 뒤에는 cancel될 때까지 유지한다.
+    timeout_after_first_found: false
+    timer_hz: 10.0
