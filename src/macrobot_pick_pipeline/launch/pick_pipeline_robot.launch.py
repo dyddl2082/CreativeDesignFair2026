@@ -19,11 +19,16 @@ def generate_launch_description():
     start_pico_debug = LaunchConfiguration("start_pico_debug")
     profile_file = LaunchConfiguration("profile_file")
     commissioning_report = LaunchConfiguration("commissioning_report")
+    start_teach = LaunchConfiguration("start_teach")
+    allow_teach_motion = LaunchConfiguration("allow_teach_motion")
+    generated_profile_file = LaunchConfiguration("generated_profile_file")
 
     return LaunchDescription([
         DeclareLaunchArgument("safe_region_csv"),
         DeclareLaunchArgument("serial_port", default_value="/dev/ttyACM0"),
         DeclareLaunchArgument("start_pico_debug", default_value="true"),
+        DeclareLaunchArgument("start_teach", default_value="false"),
+        DeclareLaunchArgument("allow_teach_motion", default_value="true"),
         DeclareLaunchArgument(
             "profile_file",
             default_value=str(package / "config" / "pick_profiles.yaml"),
@@ -36,6 +41,16 @@ def generate_launch_description():
                 / "data"
                 / "commissioning"
                 / "arm_commissioning_report.yaml"
+            ),
+        ),
+        DeclareLaunchArgument(
+            "generated_profile_file",
+            default_value=str(
+                Path.home()
+                / "MacRobot"
+                / "data"
+                / "commissioning"
+                / "pick_profiles_recorded.yaml"
             ),
         ),
 
@@ -81,6 +96,24 @@ def generate_launch_description():
                     "use_finder": True,
                     "profile_file": profile_file,
                     "commissioning_report": commissioning_report,
+                },
+            ],
+        ),
+        Node(
+            package="macrobot_pick_pipeline",
+            executable="pick_teach_node",
+            name="macrobot_pick_teach",
+            output="screen",
+            condition=IfCondition(start_teach),
+            parameters=[
+                str(package / "config" / "teach.yaml"),
+                {
+                    "use_finder": True,
+                    "allow_motion_commands": ParameterValue(
+                        allow_teach_motion, value_type=bool
+                    ),
+                    "report_path": commissioning_report,
+                    "generated_profile_file": generated_profile_file,
                 },
             ],
         ),

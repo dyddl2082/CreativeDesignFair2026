@@ -2,12 +2,6 @@
 
 **상태:** 유지 · 실물 로봇팔 commissioning/정비 도구 · 상시 runtime 아님
 
-## 현재 진행 상태
-
-- 메뉴 1~3: 완료한 것으로 간주
-- 메뉴 4: 실물 복귀 후 필요하면 반복/하중 시험
-- 메뉴 5~7: 실물 복귀 후 grasp frame, primitive, object profile 기록
-
 ## 메뉴
 
 ```text

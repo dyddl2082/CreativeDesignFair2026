@@ -78,6 +78,16 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /macrobot/pick/markers
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Pick Teach
+      Value: true
+      Marker Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /macrobot/pick/teach/markers
   Tools:
     - Class: rviz_default_plugins/Interact
     - Class: rviz_default_plugins/MoveCamera

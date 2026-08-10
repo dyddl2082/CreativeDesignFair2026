@@ -109,6 +109,11 @@ class PickProfileRepository:
     def _key(name: str) -> str:
         return name.strip().casefold()
 
+    def reload(self) -> None:
+        self.default_profile = PickProfile(name="default")
+        self.object_profiles = {}
+        self._load()
+
     def _load(self) -> None:
         root: Dict[str, Any] = {}
         if self.profile_file.exists():
@@ -156,12 +161,27 @@ class PickProfileRepository:
                 replace(self.default_profile, name=str(object_name)),
             )
             override: Dict[str, Any] = {}
+            # Joint-space seeds remain useful for selecting the same IK branch.
             if "pre_grasp_q" in raw:
                 override["pre_grasp_seed_q"] = raw["pre_grasp_q"]
             if "grasp_q" in raw:
                 override["grasp_seed_q"] = raw["grasp_q"]
             if "lift_q" in raw:
                 override["lift_seed_q"] = raw["lift_q"]
+            for source_key, destination_key in (
+                ("pre_grasp_seed_q", "pre_grasp_seed_q"),
+                ("grasp_seed_q", "grasp_seed_q"),
+                ("lift_seed_q", "lift_seed_q"),
+                ("grasp_offset_base", "grasp_offset_base"),
+                ("pregrasp_offset_base", "pregrasp_offset_base"),
+                ("lift_offset_base", "lift_offset_base"),
+            ):
+                if source_key in raw:
+                    override[destination_key] = raw[source_key]
+            if "open_q3" in raw:
+                open_q3 = float(raw["open_q3"])
+                if open_q3 >= 0.0:
+                    override["open_q3"] = open_q3
             if "close_q3" in raw:
                 close_q3 = float(raw["close_q3"])
                 # Current physical convention is q3>=0 while closing. Ignore a

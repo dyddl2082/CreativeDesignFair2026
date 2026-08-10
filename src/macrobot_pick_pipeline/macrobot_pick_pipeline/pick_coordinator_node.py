@@ -13,6 +13,7 @@ from geometry_msgs.msg import Point, PointStamped
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Empty, String
+from std_srvs.srv import Trigger
 from visualization_msgs.msg import Marker, MarkerArray
 import yaml
 
@@ -107,6 +108,9 @@ class PickCoordinatorNode(Node):
         self.declare_parameter("marker_topic", "/macrobot/pick/markers")
         self.declare_parameter(
             "base_alignment_request_topic", "/macrobot/base/alignment_request"
+        )
+        self.declare_parameter(
+            "reload_profiles_service", "/macrobot/pick/reload_profiles"
         )
 
         self.declare_parameter("kinematics_file", str(default_kinematics))
@@ -225,6 +229,11 @@ class PickCoordinatorNode(Node):
             self._state_callback,
             50,
         )
+        self.create_service(
+            Trigger,
+            str(self.get_parameter("reload_profiles_service").value),
+            self._reload_profiles_callback,
+        )
 
         self.state = "IDLE"
         self.current_q: Q = (0.0, 0.0, 0.0)
@@ -267,6 +276,24 @@ class PickCoordinatorNode(Node):
             self.get_logger().info(json.dumps(payload, ensure_ascii=False))
         else:
             self.get_logger().warning(json.dumps(payload, ensure_ascii=False))
+
+    def _reload_profiles_callback(self, request, response):
+        del request
+        try:
+            self.profiles.reload()
+            response.success = True
+            response.message = (
+                "profiles reloaded: " + ", ".join(self.profiles.names())
+            )
+            self._status(
+                "profiles_reloaded",
+                profile_names=list(self.profiles.names()),
+            )
+        except Exception as exc:
+            response.success = False
+            response.message = str(exc)
+            self._status("profiles_reload_failed", False, error=str(exc))
+        return response
 
     def _parse_goal(self, text: str) -> Dict[str, object]:
         text = text.strip()

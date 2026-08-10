@@ -125,14 +125,20 @@ LIFT
 ~/MacRobot/data/commissioning/arm_commissioning_report.yaml
 ```
 
-다음 항목을 object profile seed로 사용한다.
+다음 항목을 object profile에 사용한다.
 
 ```text
-pre_grasp_q → pre_grasp_seed_q
-grasp_q     → grasp_seed_q
-lift_q      → lift_seed_q
-close_q3    → close_q3
+pre_grasp_q / pre_grasp_seed_q → pre_grasp_seed_q
+grasp_q / grasp_seed_q         → grasp_seed_q
+lift_q / lift_seed_q           → lift_seed_q
+open_q3                         → open_q3
+close_q3                        → close_q3
+grasp_offset_base               → camera object centre 기준 grasp offset
+pregrasp_offset_base            → grasp 기준 접근 offset
+lift_offset_base                → grasp 기준 lift offset
 ```
+
+카메라–로봇팔 teach workflow는 위 Cartesian offset과 joint seed를 같은 report에 기록한다.
 
 기존 음수-q3 시절의 report가 들어오면 `close_q3 < 0` 값은 무시한다.
 
