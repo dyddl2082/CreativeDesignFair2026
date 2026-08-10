@@ -1,0 +1,66 @@
+embedding_retrieval:
+  ros__parameters:
+    # PC-side input from candidate_filter_node.
+    input_topic: /candidate_filter/accepted_crops
+    result_topic: /embedding_retrieval/results
+    matched_topic: /embedding_retrieval/matched_crops
+    debug_topic: /embedding_retrieval/debug/compressed
+    status_topic: /embedding_retrieval/status
+    target_topic: /embedding_retrieval/target
+    reload_service: /embedding_retrieval/reload_banks
+    rebuild_service: /embedding_retrieval/rebuild_banks
+
+    target_object: Buds3
+
+    # DINOv2 ViT-S/14. The first run downloads model files unless already cached.
+    model_id: facebook/dinov2-small
+    device: xpu          # auto, cpu, cuda, cuda:0, ...
+    pooling: cls          # cls, mean_patch, cls_mean
+    use_amp: true         # used only on CUDA
+    model_cache_dir: ~/.cache/huggingface
+    local_files_only: false
+
+    # Positive view bank and hard-negative bank.
+    positive_root_template: ~/MacRobot/data/curated/objects/{target}
+    negative_roots:
+      - ~/MacRobot/data/negative/confusers/{target}
+      - ~/MacRobot/data/negative/backgrounds
+
+    embedding_cache_dir: ~/MacRobot/data/embeddings
+    use_embedding_cache: true
+    max_positive_images: 128
+    max_negative_images: 512
+    reference_batch_size: 8
+
+    # Positive score = mean of the closest positive views.
+    # Negative score = mean of the hardest negatives (1 means max similarity).
+    positive_top_k: 3
+    negative_top_k: 1
+
+    # Use the depth foreground mask added in the previous pipeline revision.
+    use_foreground_mask: true
+    mask_background_mode: foreground_mean  # none, black, neutral, foreground_mean, blur
+    mask_dilate_px: 3
+    mask_feather_px: 3
+    mask_neutral_value: 127
+
+    # Square padding avoids losing long objects in the model processor's center crop.
+    square_padding_ratio: 0.06
+    square_padding_mode: mean              # mean, neutral, reflect, replicate
+    square_padding_neutral_value: 127
+
+    # Start in observation/pass-through mode. Tune using real positive/negative logs.
+    enforce_thresholds: false
+    min_positive_similarity: 0.70
+    min_margin: 0.05
+    require_negative_bank_for_accept: true
+
+    publish_matched_crops: true
+    reliable_matched_output: false
+    max_pending_messages: 8
+
+    publish_debug: true
+    debug_mode: all         # all, accepted, rejected
+    debug_hz: 2.0
+    debug_jpeg_quality: 78
+    status_period_sec: 3.0

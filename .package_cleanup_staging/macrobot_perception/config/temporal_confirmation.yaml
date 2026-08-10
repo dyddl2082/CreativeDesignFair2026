@@ -1,0 +1,83 @@
+temporal_confirmation:
+  ros__parameters:
+    input_topic: /embedding_retrieval/results
+    result_topic: /temporal_confirmation/results
+    confirmed_topic: /temporal_confirmation/confirmed
+    status_topic: /temporal_confirmation/status
+    legacy_result_topic: /object_finder/result
+    target_topic: /embedding_retrieval/target
+    reset_service: /temporal_confirmation/reset
+
+    target_object: Buds3
+
+    # Use the depth-candidate metadata stream as a frame heartbeat. This lets
+    # empty/rejected frames count as misses instead of disappearing from N.
+    use_frame_heartbeat: true
+    frame_heartbeat_topic: /depth_candidates/candidates
+
+    # Wait for delayed Intel Arc embedding results before closing each frame.
+    frame_completion_delay_sec: 1.5
+    frame_flush_timeout_sec: 3.0
+    max_pending_frames: 32
+    timer_period_sec: 0.05
+
+    # Recommended while embedding_retrieval.enforce_thresholds is false.
+    # The retrieval node still calculates passed_positive_threshold and
+    # passed_margin_threshold in observation mode.
+    decision_source: threshold_flags  # threshold_flags, accepted, custom
+    require_positive_bank_for_hit: true
+    require_negative_bank_for_hit: true
+    custom_min_positive_similarity: 0.70
+    custom_min_margin: 0.05
+    min_objectness_score: -1.0       # negative disables this extra gate
+
+    # Confirm after at least 3 hits among the latest 5 evaluated proposal frames,
+    # including at least two consecutive hits.
+    window_size: 5
+    required_hits: 3
+    min_consecutive_hits: 2
+
+    # Hysteresis prevents one bad frame from immediately losing a confirmed object.
+    deconfirm_after_misses: 3
+    retire_after_misses: 6
+    track_timeout_sec: 2.5
+    max_tracks: 12
+    create_tracks_from_non_hits: false
+
+    # Candidate IDs are frame-local. Persistent tracks are associated by ROI,
+    # center displacement, depth, and area instead.
+    association_min_iou: 0.05
+    association_max_center_distance_px: 120.0
+    association_max_depth_difference_m: 0.18
+    association_max_area_ratio: 3.0
+    association_center_weight: 0.45
+    association_iou_weight: 0.30
+    association_depth_weight: 0.15
+    association_area_weight: 0.10
+
+    require_stability_for_confirm: true
+    min_hit_observations_for_stability: 2
+    max_center_std_px: 45.0
+    max_depth_std_m: 0.12
+
+    # Human-readable temporal score; this is not a calibrated probability.
+    temporal_hit_weight: 0.55
+    temporal_stability_weight: 0.25
+    temporal_margin_weight: 0.20
+    margin_reference_low: 0.05
+    margin_reference_good: 0.20
+
+    image_width: 640
+    image_height: 480
+    turn_deadband_norm: 0.12
+
+    publish_tentative_results: true
+    publish_confirmed_updates: true
+    confirmed_update_hz: 5.0
+
+    # Compatibility output for the old object_finder consumer.
+    publish_legacy_json: true
+    publish_lost_legacy_event: true
+    legacy_publish_hz: 5.0
+
+    status_period_sec: 3.0
