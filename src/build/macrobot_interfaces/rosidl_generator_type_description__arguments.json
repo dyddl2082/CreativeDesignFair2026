@@ -1,0 +1,21 @@
+{
+  "package_name": "macrobot_interfaces",
+  "output_dir": "/home/dyddl2082/MacRobot/src/build/macrobot_interfaces/rosidl_generator_type_description/macrobot_interfaces",
+  "idl_tuples": [
+    "/home/dyddl2082/MacRobot/src/build/macrobot_interfaces/rosidl_adapter/macrobot_interfaces:msg/DepthCandidate.idl",
+    "/home/dyddl2082/MacRobot/src/build/macrobot_interfaces/rosidl_adapter/macrobot_interfaces:msg/DepthCandidateArray.idl",
+    "/home/dyddl2082/MacRobot/src/build/macrobot_interfaces/rosidl_adapter/macrobot_interfaces:msg/RgbCandidateCrop.idl",
+    "/home/dyddl2082/MacRobot/src/build/macrobot_interfaces/rosidl_adapter/macrobot_interfaces:msg/CandidateFilterResult.idl",
+    "/home/dyddl2082/MacRobot/src/build/macrobot_interfaces/rosidl_adapter/macrobot_interfaces:msg/FilteredCandidateCrop.idl",
+    "/home/dyddl2082/MacRobot/src/build/macrobot_interfaces/rosidl_adapter/macrobot_interfaces:msg/EmbeddingRetrievalResult.idl",
+    "/home/dyddl2082/MacRobot/src/build/macrobot_interfaces/rosidl_adapter/macrobot_interfaces:msg/EmbeddingMatchedCandidate.idl",
+    "/home/dyddl2082/MacRobot/src/build/macrobot_interfaces/rosidl_adapter/macrobot_interfaces:msg/TemporalConfirmationResult.idl"
+  ],
+  "include_paths": [
+    "sensor_msgs:/opt/ros/jazzy/share/sensor_msgs",
+    "builtin_interfaces:/opt/ros/jazzy/share/builtin_interfaces",
+    "geometry_msgs:/opt/ros/jazzy/share/geometry_msgs",
+    "std_msgs:/opt/ros/jazzy/share/std_msgs",
+    "service_msgs:/opt/ros/jazzy/share/service_msgs"
+  ]
+}

@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: macrobot-object-finder
+Version: 0.1.0
+Summary: Command/session layer for the MacRobot D435 candidate, DINOv2, and temporal-confirmation object-finding pipeline.
+Maintainer: MacRobot Team
+Maintainer-email: dyddl2082@snu.ac.kr
+License: Apache-2.0

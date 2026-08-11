@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: macrobot-arm-kinematics
+Version: 0.3.0
+Summary: Reduced FK/IK and full-linkage visualization mapping for MacRobot.
+Maintainer: Kim Jinhyeong
+Maintainer-email: dyddl2082@snu.ac.kr
+License: MIT

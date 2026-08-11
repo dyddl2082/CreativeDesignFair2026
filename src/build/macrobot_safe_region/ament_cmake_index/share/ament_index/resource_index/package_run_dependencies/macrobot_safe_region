@@ -1,0 +1,1 @@
+rclcpp;std_msgs;geometry_msgs;shape_msgs;moveit_core;moveit_ros_planning;moveit_msgs;ament_index_python;xacro;macrobot_description;macrobot_moveit_config

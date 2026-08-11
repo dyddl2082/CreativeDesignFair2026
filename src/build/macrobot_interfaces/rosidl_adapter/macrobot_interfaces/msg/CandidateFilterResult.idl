@@ -1,0 +1,97 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from macrobot_interfaces/msg/CandidateFilterResult.msg
+// generated code does not contain a copyright notice
+
+#include "macrobot_interfaces/msg/DepthCandidate.idl"
+#include "sensor_msgs/msg/RegionOfInterest.idl"
+#include "std_msgs/msg/Header.idl"
+
+module macrobot_interfaces {
+  module msg {
+    @verbatim (language="comment", text=
+      "Per-candidate filtering decision produced by the PC-side candidate filter.")
+    struct CandidateFilterResult {
+      std_msgs::msg::Header proposal_header;
+
+      std_msgs::msg::Header image_header;
+
+      uint32 candidate_id;
+
+      uint32 crop_index;
+
+      uint32 frame_crop_count;
+
+      string target_object;
+
+      boolean reference_profile_available;
+
+      uint32 reference_image_count;
+
+      boolean camera_info_available;
+
+      boolean plane_found;
+
+      boolean foreground_height_valid;
+
+      boolean foreground_mask_available;
+
+      boolean accepted;
+
+      string reject_stage;
+
+      string reject_reason;
+
+      @verbatim (language="comment", text=
+        "Generic score: is this a valid, stable physical-object candidate?")
+      float objectness_score;
+
+      @verbatim (language="comment", text=
+        "Weak target-specific hint from color and optional physical size." "\n"
+        "This is not the final Buds3 confidence.")
+      float target_hint_score;
+
+      @verbatim (language="comment", text=
+        "Temporary compatibility alias. Set equal to objectness_score." "\n"
+        "Remove after old log-analysis tools have been migrated.")
+      float filter_score;
+
+      float depth_score;
+
+      float quality_score;
+
+      float color_score;
+
+      float shape_score;
+
+      float physical_size_score;
+
+      float sharpness;
+
+      float mean_brightness;
+
+      float dark_ratio;
+
+      float bright_clip_ratio;
+
+      float edge_density;
+
+      float mask_fill_ratio;
+
+      float mask_solidity;
+
+      float color_similarity;
+
+      float aspect_ratio;
+
+      float estimated_width_m;
+
+      float estimated_height_m;
+
+      float sync_offset_abs_sec;
+
+      macrobot_interfaces::msg::DepthCandidate candidate;
+
+      sensor_msgs::msg::RegionOfInterest crop_roi;
+    };
+  };
+};

@@ -1,0 +1,160 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="macrobot_arm_kinematic">
+  <!--
+    Reduced logical model of the geared four-bar arm and gripper.
+
+    q1 = arm_lift_joint (legacy name): left-servo arm tilt; positive tilts forward
+    q2 = wrist_pitch_joint (legacy name): relative rear-lift coordinate
+         right driven/rear-lift angle = q1 + q2
+    q3 = gripper_joint: 0 rad open; positive closes; pi/2 is full close
+
+    The exact closed mechanisms are visualized by macrobot_full_visual.  This
+    model is deliberately simple so FK/IK and joint-limit testing remain robust.
+  -->
+  <xacro:property name="pivot_x" value="0.020950"/>
+  <xacro:property name="pivot_y" value="0.063400"/>
+  <xacro:property name="pivot_z" value="0.064595"/>
+  <xacro:property name="main_length" value="0.100000"/>
+  <xacro:property name="tool_offset_x" value="-0.184756"/>
+  <xacro:property name="tool_offset_z" value="-0.006000"/>
+
+  <material name="arm_blue"><color rgba="0.35 0.50 0.90 1"/></material>
+  <material name="gripper_gray"><color rgba="0.35 0.35 0.38 1"/></material>
+  <material name="tool_orange"><color rgba="1.0 0.45 0.10 1"/></material>
+  <material name="camera_green"><color rgba="0.1 0.9 0.2 1"/></material>
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://macrobot_description/meshes/macrobot/base_link.dae" scale="1 1 1"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://macrobot_description/meshes/macrobot/base_link.dae" scale="1 1 1"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- D435F depth-origin marker exported by the user. -->
+  <link name="camera_link">
+    <visual>
+      <geometry><sphere radius="0.0035"/></geometry>
+      <material name="camera_green"/>
+    </visual>
+  </link>
+  <joint name="camera_fix_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="-0.030850 -0.000413 0.017858" rpy="0 0 0"/>
+  </joint>
+
+  <link name="main_arm_link">
+    <visual>
+      <origin xyz="0 0 ${main_length/2}" rpy="0 0 0"/>
+      <geometry><box size="0.012 0.020 ${main_length}"/></geometry>
+      <material name="arm_blue"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${main_length/2}" rpy="0 0 0"/>
+      <geometry><box size="0.012 0.020 ${main_length}"/></geometry>
+    </collision>
+  </link>
+
+  <joint name="arm_lift_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="main_arm_link"/>
+    <origin xyz="${pivot_x} ${pivot_y} ${pivot_z}" rpy="0 0 0"/>
+    <axis xyz="0 -1 0"/>
+    <limit lower="-1.0" upper="1.0" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <link name="wrist_link">
+    <visual>
+      <origin xyz="${tool_offset_x/2} 0 ${tool_offset_z/2}" rpy="0 0 0"/>
+      <geometry><box size="0.185 0.030 0.012"/></geometry>
+      <material name="arm_blue"/>
+    </visual>
+    <collision>
+      <origin xyz="${tool_offset_x/2} 0 ${tool_offset_z/2}" rpy="0 0 0"/>
+      <geometry><box size="0.185 0.030 0.012"/></geometry>
+    </collision>
+  </link>
+
+  <joint name="wrist_pitch_joint" type="revolute">
+    <parent link="main_arm_link"/>
+    <child link="wrist_link"/>
+    <origin xyz="0 0 ${main_length}" rpy="0 0 0"/>
+    <axis xyz="0 -1 0"/>
+    <limit lower="-1.30" upper="1.30" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <!-- A lightweight logical gripper visualization.  The full package contains
+       the exact gear/four-bar jaw geometry. -->
+  <link name="left_finger_link">
+    <visual>
+      <origin xyz="-0.030 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.060 0.012 0.020"/></geometry>
+      <material name="gripper_gray"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.030 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.060 0.012 0.020"/></geometry>
+    </collision>
+  </link>
+  <joint name="gripper_joint" type="revolute">
+    <parent link="wrist_link"/>
+    <child link="left_finger_link"/>
+    <origin xyz="-0.17215 -0.00390 0.00400" rpy="0 0 1.570796"/>
+    <axis xyz="0 0 -1"/>
+    <limit lower="0.0" upper="1.57079632679" effort="5.0" velocity="1.0"/>
+  </joint>
+
+  <link name="right_finger_link">
+    <visual>
+      <origin xyz="0.030 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.060 0.012 0.020"/></geometry>
+      <material name="gripper_gray"/>
+    </visual>
+    <collision>
+      <origin xyz="0.030 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.060 0.012 0.020"/></geometry>
+    </collision>
+  </link>
+  <joint name="gripper_right_mimic_joint" type="revolute">
+    <parent link="wrist_link"/>
+    <child link="right_finger_link"/>
+    <origin xyz="-0.17215 0.00610 0.00400" rpy="0 0 1.570796"/>
+    <axis xyz="0 0 -1"/>
+    <limit lower="-1.57079632679" upper="0.0" effort="5.0" velocity="1.0"/>
+    <mimic joint="gripper_joint" multiplier="-1.0" offset="0.0"/>
+  </joint>
+
+  <link name="tool0">
+    <visual>
+      <geometry><sphere radius="0.004"/></geometry>
+      <material name="tool_orange"/>
+    </visual>
+  </link>
+  <joint name="tool0_joint" type="fixed">
+    <parent link="wrist_link"/>
+    <child link="tool0"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Nominal open-jaw grasp center.  The running linkage_state_node also
+       broadcasts a q3-dependent dynamic frame named grasp_frame. -->
+  <link name="grasp_nominal">
+    <visual>
+      <geometry><sphere radius="0.005"/></geometry>
+      <material name="tool_orange"/>
+    </visual>
+  </link>
+  <joint name="grasp_nominal_joint" type="fixed">
+    <parent link="wrist_link"/>
+    <child link="grasp_nominal"/>
+    <origin xyz="${tool_offset_x} 0.00110 ${tool_offset_z}" rpy="0 0 0"/>
+  </joint>
+</robot>

@@ -1,0 +1,39 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from macrobot_interfaces/msg/DepthCandidateArray.msg
+// generated code does not contain a copyright notice
+
+#include "macrobot_interfaces/msg/DepthCandidate.idl"
+#include "sensor_msgs/msg/CompressedImage.idl"
+#include "std_msgs/msg/Header.idl"
+
+module macrobot_interfaces {
+  module msg {
+    typedef float float__4[4];
+    @verbatim (language="comment", text=
+      "Header copied from the source aligned-depth image.")
+    struct DepthCandidateArray {
+      std_msgs::msg::Header header;
+
+      uint32 image_width;
+
+      uint32 image_height;
+
+      @verbatim (language="comment", text=
+        "Background-plane diagnostics for this frame.")
+      boolean plane_found;
+
+      float plane_inlier_ratio;
+
+      float__4 plane_coefficients;
+
+      @verbatim (language="comment", text=
+        "Full-frame binary foreground mask in proposal/depth coordinates." "\n"
+        "Pixel values are 0 for background and 255 for foreground.")
+      boolean foreground_mask_available;
+
+      sensor_msgs::msg::CompressedImage foreground_mask;
+
+      sequence<macrobot_interfaces::msg::DepthCandidate> candidates;
+    };
+  };
+};

@@ -1,0 +1,8 @@
+/home/dyddl2082/MacRobot/src/build/macrobot_interfaces/rosidl_adapter/macrobot_interfaces:msg/DepthCandidate.idl
+/home/dyddl2082/MacRobot/src/build/macrobot_interfaces/rosidl_adapter/macrobot_interfaces:msg/DepthCandidateArray.idl
+/home/dyddl2082/MacRobot/src/build/macrobot_interfaces/rosidl_adapter/macrobot_interfaces:msg/RgbCandidateCrop.idl
+/home/dyddl2082/MacRobot/src/build/macrobot_interfaces/rosidl_adapter/macrobot_interfaces:msg/CandidateFilterResult.idl
+/home/dyddl2082/MacRobot/src/build/macrobot_interfaces/rosidl_adapter/macrobot_interfaces:msg/FilteredCandidateCrop.idl
+/home/dyddl2082/MacRobot/src/build/macrobot_interfaces/rosidl_adapter/macrobot_interfaces:msg/EmbeddingRetrievalResult.idl
+/home/dyddl2082/MacRobot/src/build/macrobot_interfaces/rosidl_adapter/macrobot_interfaces:msg/EmbeddingMatchedCandidate.idl
+/home/dyddl2082/MacRobot/src/build/macrobot_interfaces/rosidl_adapter/macrobot_interfaces:msg/TemporalConfirmationResult.idl

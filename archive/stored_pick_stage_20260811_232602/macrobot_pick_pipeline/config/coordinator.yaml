@@ -1,0 +1,7 @@
+macrobot_pick_coordinator:
+  ros__parameters:
+    base_frame: base_link
+    use_finder: true
+    replace_active_goal: true
+    timer_rate_hz: 20.0
+    default_execute: true

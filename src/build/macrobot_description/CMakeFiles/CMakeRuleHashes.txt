@@ -1,0 +1,2 @@
+# Hashes of file build rules.
+8241a68acaf8cb83c22223ef2012b4f2 CMakeFiles/macrobot_description_uninstall

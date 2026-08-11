@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: macrobot-arm-commissioning
+Version: 0.1.0
+Summary: Interactive commissioning, test orchestration, and single-file reporting for MacRobot arm
+Maintainer: MacRobot Team
+Maintainer-email: dyddl2082@snu.ac.kr
+License: MIT

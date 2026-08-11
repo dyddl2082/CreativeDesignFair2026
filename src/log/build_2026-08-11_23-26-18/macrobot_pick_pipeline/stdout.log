@@ -1,0 +1,145 @@
+running egg_info
+creating ../build/macrobot_pick_pipeline/macrobot_pick_pipeline.egg-info
+writing ../build/macrobot_pick_pipeline/macrobot_pick_pipeline.egg-info/PKG-INFO
+writing dependency_links to ../build/macrobot_pick_pipeline/macrobot_pick_pipeline.egg-info/dependency_links.txt
+writing entry points to ../build/macrobot_pick_pipeline/macrobot_pick_pipeline.egg-info/entry_points.txt
+writing requirements to ../build/macrobot_pick_pipeline/macrobot_pick_pipeline.egg-info/requires.txt
+writing top-level names to ../build/macrobot_pick_pipeline/macrobot_pick_pipeline.egg-info/top_level.txt
+writing manifest file '../build/macrobot_pick_pipeline/macrobot_pick_pipeline.egg-info/SOURCES.txt'
+reading manifest file '../build/macrobot_pick_pipeline/macrobot_pick_pipeline.egg-info/SOURCES.txt'
+writing manifest file '../build/macrobot_pick_pipeline/macrobot_pick_pipeline.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build
+creating /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib
+creating /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/pick_coordinator_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/arm_demo_store.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/arm_demo_recorder_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/__init__.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/arm_demo_cli.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/teach_core.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/camera_teach_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/stored_object_pick_cli.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/stored_object_pick_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/stored_object_core.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/pick_teach_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/base_alignment_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/profiles.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/mock_perception_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/base_alignment_cli.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/grasp_frame_fit.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/alignment_core.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/visible_pick_test_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/detection_localizer_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/teach_store.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/planner.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/demo_core.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+copying macrobot_pick_pipeline/pick_teach_cli.py -> /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline
+running install
+running install_lib
+creating /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/pick_coordinator_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/arm_demo_store.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/arm_demo_recorder_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/__init__.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/arm_demo_cli.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/teach_core.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/camera_teach_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/stored_object_pick_cli.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/stored_object_pick_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/stored_object_core.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/pick_teach_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/base_alignment_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/profiles.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/mock_perception_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/base_alignment_cli.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/grasp_frame_fit.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/alignment_core.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/visible_pick_test_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/detection_localizer_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/teach_store.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/planner.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/demo_core.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+copying /home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/build/lib/macrobot_pick_pipeline/pick_teach_cli.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/pick_coordinator_node.py to pick_coordinator_node.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/arm_demo_store.py to arm_demo_store.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/arm_demo_recorder_node.py to arm_demo_recorder_node.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/arm_demo_cli.py to arm_demo_cli.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/teach_core.py to teach_core.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/camera_teach_node.py to camera_teach_node.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/stored_object_pick_cli.py to stored_object_pick_cli.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/stored_object_pick_node.py to stored_object_pick_node.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/stored_object_core.py to stored_object_core.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/pick_teach_node.py to pick_teach_node.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/base_alignment_node.py to base_alignment_node.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/profiles.py to profiles.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/mock_perception_node.py to mock_perception_node.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/base_alignment_cli.py to base_alignment_cli.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/grasp_frame_fit.py to grasp_frame_fit.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/alignment_core.py to alignment_core.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/visible_pick_test_node.py to visible_pick_test_node.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/detection_localizer_node.py to detection_localizer_node.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/teach_store.py to teach_store.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/planner.py to planner.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/demo_core.py to demo_core.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline/pick_teach_cli.py to pick_teach_cli.cpython-312.pyc
+running install_data
+creating /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/ament_index
+creating /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/ament_index/resource_index
+creating /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/ament_index/resource_index/packages
+copying resource/macrobot_pick_pipeline -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/ament_index/resource_index/packages
+copying package.xml -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline
+copying README.md -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline
+creating /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/launch
+copying launch/arm_demo.launch.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/launch
+copying launch/real_camera_rviz.launch.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/launch
+copying launch/pick_pipeline_robot.launch.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/launch
+copying launch/pick_teach.launch.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/launch
+copying launch/pick_pipeline_wsl.launch.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/launch
+copying launch/stored_object_pick.launch.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/launch
+copying launch/camera_teach.launch.py -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/launch
+creating /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/config
+copying config/stored_object_pick.yaml -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/config
+copying config/pick_profiles.yaml -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/config
+copying config/base_alignment.yaml -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/config
+copying config/mock_perception.yaml -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/config
+copying config/perception.yaml -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/config
+copying config/stored_object_profiles.example.yaml -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/config
+copying config/coordinator.yaml -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/config
+copying config/teach.yaml -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/config
+copying config/camera_teach.yaml -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/config
+copying config/arm_demo.yaml -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/config
+creating /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/rviz
+copying rviz/real_camera.rviz -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/rviz
+copying rviz/pick_pipeline.rviz -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/rviz
+creating /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/docs
+copying docs/TEACH_REDESIGN_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/docs
+copying docs/WSL2_TEST_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/docs
+copying docs/REAL_CAMERA_LATER_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/docs
+copying docs/CANCELLATION_CONTRACT_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/docs
+copying docs/STORED_OBJECT_PICK_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/docs
+copying docs/ARCHITECTURE_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/docs
+copying docs/TEAM_GATEWAY_MAPPING_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/docs
+copying docs/CAMERA_ARM_TEACH_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/docs
+copying docs/OBJECT_FINDER_TEAM_INTERFACE_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/docs
+copying docs/BASE_ALIGNMENT_AND_PICK_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/docs
+copying docs/TEST_PROCEDURE_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/share/macrobot_pick_pipeline/docs
+running install_egg_info
+Copying ../build/macrobot_pick_pipeline/macrobot_pick_pipeline.egg-info to /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/python3.12/site-packages/macrobot_pick_pipeline-0.5.0-py3.12.egg-info
+running install_scripts
+Installing arm_demo_cli script to /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/macrobot_pick_pipeline
+Installing arm_demo_recorder_node script to /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/macrobot_pick_pipeline
+Installing base_alignment_cli script to /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/macrobot_pick_pipeline
+Installing base_alignment_node script to /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/macrobot_pick_pipeline
+Installing camera_teach_node script to /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/macrobot_pick_pipeline
+Installing detection_localizer_node script to /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/macrobot_pick_pipeline
+Installing mock_perception_node script to /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/macrobot_pick_pipeline
+Installing pick_coordinator_node script to /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/macrobot_pick_pipeline
+Installing pick_teach_cli script to /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/macrobot_pick_pipeline
+Installing pick_teach_node script to /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/macrobot_pick_pipeline
+Installing stored_object_pick_cli script to /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/macrobot_pick_pipeline
+Installing stored_object_pick_node script to /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/macrobot_pick_pipeline
+Installing visible_pick_test_node script to /home/dyddl2082/MacRobot/src/install/macrobot_pick_pipeline/lib/macrobot_pick_pipeline
+writing list of installed files to '/home/dyddl2082/MacRobot/src/build/macrobot_pick_pipeline/install.log'

@@ -1,0 +1,8 @@
+source;share/macrobot_safe_region/hook/cmake_prefix_path.ps1
+source;share/macrobot_safe_region/hook/cmake_prefix_path.dsv
+source;share/macrobot_safe_region/hook/cmake_prefix_path.sh
+source;share/macrobot_safe_region/local_setup.bash
+source;share/macrobot_safe_region/local_setup.dsv
+source;share/macrobot_safe_region/local_setup.ps1
+source;share/macrobot_safe_region/local_setup.sh
+source;share/macrobot_safe_region/local_setup.zsh

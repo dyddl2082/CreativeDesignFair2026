@@ -1,0 +1,18 @@
+/**:
+  ros__parameters:
+    allow_motion_commands: true
+    command_topic: /macrobot/arm/demo/command
+    status_topic: /macrobot/arm/demo/status
+    result_topic: /macrobot/arm/demo/result
+    logical_state_topic: /macrobot/arm/logical_joint_states
+    joint_goal_topic: /macrobot/arm/joint_goal
+    validation_status_topic: /macrobot/arm/validation_status
+    bridge_status_topic: /macrobot/arm/servo_bridge/status
+    arm_stop_topic: /macrobot/arm/stop
+    sample_rate_hz: 30.0
+    min_joint_delta_rad: 0.003
+    max_sample_interval_sec: 0.25
+    max_recording_duration_sec: 180.0
+    playback_keyframe_delta_rad: 0.01
+    playback_keyframe_interval_sec: 1.0
+    motion_timeout_sec: 25.0

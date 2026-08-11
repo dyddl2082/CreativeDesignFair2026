@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: macrobot-arm-control
+Version: 0.1.0
+Summary: IK safety validator and Pico servo bridge for MacRobot.
+Maintainer: Kim Jinhyeong
+Maintainer-email: dyddl2082@snu.ac.kr
+License: MIT

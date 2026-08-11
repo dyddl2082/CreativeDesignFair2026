@@ -1,0 +1,51 @@
+running egg_info
+creating ../build/depth_candidate_proposal/depth_candidate_proposal.egg-info
+writing ../build/depth_candidate_proposal/depth_candidate_proposal.egg-info/PKG-INFO
+writing dependency_links to ../build/depth_candidate_proposal/depth_candidate_proposal.egg-info/dependency_links.txt
+writing entry points to ../build/depth_candidate_proposal/depth_candidate_proposal.egg-info/entry_points.txt
+writing requirements to ../build/depth_candidate_proposal/depth_candidate_proposal.egg-info/requires.txt
+writing top-level names to ../build/depth_candidate_proposal/depth_candidate_proposal.egg-info/top_level.txt
+writing manifest file '../build/depth_candidate_proposal/depth_candidate_proposal.egg-info/SOURCES.txt'
+reading manifest file '../build/depth_candidate_proposal/depth_candidate_proposal.egg-info/SOURCES.txt'
+writing manifest file '../build/depth_candidate_proposal/depth_candidate_proposal.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/dyddl2082/MacRobot/src/build/depth_candidate_proposal/build
+creating /home/dyddl2082/MacRobot/src/build/depth_candidate_proposal/build/lib
+creating /home/dyddl2082/MacRobot/src/build/depth_candidate_proposal/build/lib/depth_candidate_proposal
+copying depth_candidate_proposal/aligned_depth_candidate_node.py -> /home/dyddl2082/MacRobot/src/build/depth_candidate_proposal/build/lib/depth_candidate_proposal
+copying depth_candidate_proposal/__init__.py -> /home/dyddl2082/MacRobot/src/build/depth_candidate_proposal/build/lib/depth_candidate_proposal
+copying depth_candidate_proposal/crop_core.py -> /home/dyddl2082/MacRobot/src/build/depth_candidate_proposal/build/lib/depth_candidate_proposal
+copying depth_candidate_proposal/rgb_candidate_crop_node.py -> /home/dyddl2082/MacRobot/src/build/depth_candidate_proposal/build/lib/depth_candidate_proposal
+copying depth_candidate_proposal/proposal_core.py -> /home/dyddl2082/MacRobot/src/build/depth_candidate_proposal/build/lib/depth_candidate_proposal
+running install
+running install_lib
+creating /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/lib/python3.12/site-packages/depth_candidate_proposal
+copying /home/dyddl2082/MacRobot/src/build/depth_candidate_proposal/build/lib/depth_candidate_proposal/aligned_depth_candidate_node.py -> /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/lib/python3.12/site-packages/depth_candidate_proposal
+copying /home/dyddl2082/MacRobot/src/build/depth_candidate_proposal/build/lib/depth_candidate_proposal/__init__.py -> /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/lib/python3.12/site-packages/depth_candidate_proposal
+copying /home/dyddl2082/MacRobot/src/build/depth_candidate_proposal/build/lib/depth_candidate_proposal/crop_core.py -> /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/lib/python3.12/site-packages/depth_candidate_proposal
+copying /home/dyddl2082/MacRobot/src/build/depth_candidate_proposal/build/lib/depth_candidate_proposal/rgb_candidate_crop_node.py -> /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/lib/python3.12/site-packages/depth_candidate_proposal
+copying /home/dyddl2082/MacRobot/src/build/depth_candidate_proposal/build/lib/depth_candidate_proposal/proposal_core.py -> /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/lib/python3.12/site-packages/depth_candidate_proposal
+byte-compiling /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/lib/python3.12/site-packages/depth_candidate_proposal/aligned_depth_candidate_node.py to aligned_depth_candidate_node.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/lib/python3.12/site-packages/depth_candidate_proposal/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/lib/python3.12/site-packages/depth_candidate_proposal/crop_core.py to crop_core.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/lib/python3.12/site-packages/depth_candidate_proposal/rgb_candidate_crop_node.py to rgb_candidate_crop_node.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/lib/python3.12/site-packages/depth_candidate_proposal/proposal_core.py to proposal_core.cpython-312.pyc
+running install_data
+creating /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/share/ament_index
+creating /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/share/ament_index/resource_index
+creating /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/share/ament_index/resource_index/packages
+copying resource/depth_candidate_proposal -> /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/share/ament_index/resource_index/packages
+copying package.xml -> /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/share/depth_candidate_proposal
+creating /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/share/depth_candidate_proposal/launch
+copying launch/edge_candidate_pipeline.launch.py -> /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/share/depth_candidate_proposal/launch
+copying launch/depth_candidate.launch.py -> /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/share/depth_candidate_proposal/launch
+copying launch/rgb_candidate_crop.launch.py -> /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/share/depth_candidate_proposal/launch
+creating /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/share/depth_candidate_proposal/config
+copying config/depth_candidate.yaml -> /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/share/depth_candidate_proposal/config
+running install_egg_info
+Copying ../build/depth_candidate_proposal/depth_candidate_proposal.egg-info to /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/lib/python3.12/site-packages/depth_candidate_proposal-0.2.0-py3.12.egg-info
+running install_scripts
+Installing aligned_depth_candidate_node script to /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/lib/depth_candidate_proposal
+Installing rgb_candidate_crop_node script to /home/dyddl2082/MacRobot/src/install/depth_candidate_proposal/lib/depth_candidate_proposal
+writing list of installed files to '/home/dyddl2082/MacRobot/src/build/depth_candidate_proposal/install.log'

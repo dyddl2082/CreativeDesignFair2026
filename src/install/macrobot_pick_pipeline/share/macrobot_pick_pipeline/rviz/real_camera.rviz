@@ -1,0 +1,118 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Selection
+    Name: Selection
+Visualization Manager:
+  Class: ""
+  Global Options:
+    Background Color: 35; 38; 43
+    Fixed Frame: world
+    Frame Rate: 30
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Enabled: true
+      Name: Ground Grid
+      Value: true
+      Cell Size: 0.05
+      Plane: XY
+      Plane Cell Count: 40
+    - Class: rviz_default_plugins/RobotModel
+      Enabled: true
+      Name: MacRobot
+      Value: true
+      Description Source: Topic
+      Description Topic:
+        Depth: 1
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Visual Enabled: true
+      Collision Enabled: false
+      Alpha: 1.0
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Name: TF
+      Value: true
+      Show Axes: true
+      Show Names: false
+      Marker Scale: 0.04
+    - Class: rviz_default_plugins/PointCloud2
+      Enabled: true
+      Name: D435F PointCloud
+      Value: true
+      Topic:
+        Depth: 3
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /camera/camera/depth/color/points
+      Selectable: true
+      Style: Points
+      Size (Pixels): 2
+      Size (m): 0.003
+      Alpha: 1.0
+      Decay Time: 0
+      Position Transformer: XYZ
+      Color Transformer: RGB8
+      Use Fixed Frame: true
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Name: D435F Color
+      Value: true
+      Image Topic:
+        Depth: 3
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /camera/camera/color/image_raw
+      Normalize Range: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Pick Plan
+      Value: true
+      Marker Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /macrobot/pick/markers
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Pick Teach
+      Value: true
+      Marker Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /macrobot/pick/teach/markers
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Base Alignment
+      Value: true
+      Marker Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /macrobot/base_alignment/markers
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 0.58
+      Focal Point:
+        X: -0.08
+        Y: 0.06
+        Z: 0.09
+      Pitch: 0.42
+      Yaw: 0.85
+      Name: Current View
+  Name: root
+  Value: true

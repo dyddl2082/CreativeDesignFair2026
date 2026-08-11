@@ -1,0 +1,2 @@
+[console_scripts]
+teleop_to_pico_node = macrobot_teleop.teleop_to_pico_node:main

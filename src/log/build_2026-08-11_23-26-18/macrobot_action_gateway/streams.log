@@ -1,0 +1,94 @@
+[3.938s] Invoking command in '/home/dyddl2082/MacRobot/src/macrobot_action_gateway': PYTHONPATH=/home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../build/macrobot_action_gateway build --build-base /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build install --record /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/install.log --install-scripts $base/lib/macrobot_action_gateway --single-version-externally-managed install_data
+[4.619s] running egg_info
+[4.620s] creating ../build/macrobot_action_gateway/macrobot_action_gateway.egg-info
+[4.669s] writing ../build/macrobot_action_gateway/macrobot_action_gateway.egg-info/PKG-INFO
+[4.669s] writing dependency_links to ../build/macrobot_action_gateway/macrobot_action_gateway.egg-info/dependency_links.txt
+[4.670s] writing entry points to ../build/macrobot_action_gateway/macrobot_action_gateway.egg-info/entry_points.txt
+[4.670s] writing requirements to ../build/macrobot_action_gateway/macrobot_action_gateway.egg-info/requires.txt
+[4.670s] writing top-level names to ../build/macrobot_action_gateway/macrobot_action_gateway.egg-info/top_level.txt
+[4.670s] writing manifest file '../build/macrobot_action_gateway/macrobot_action_gateway.egg-info/SOURCES.txt'
+[4.763s] reading manifest file '../build/macrobot_action_gateway/macrobot_action_gateway.egg-info/SOURCES.txt'
+[4.764s] adding license file 'LICENSE'
+[4.765s] writing manifest file '../build/macrobot_action_gateway/macrobot_action_gateway.egg-info/SOURCES.txt'
+[4.765s] running build
+[4.765s] running build_py
+[4.766s] creating /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build
+[4.766s] creating /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib
+[4.766s] creating /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway
+[4.767s] copying macrobot_action_gateway/action_manager.py -> /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway
+[4.767s] copying macrobot_action_gateway/gateway_protocol.py -> /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway
+[4.767s] copying macrobot_action_gateway/ast_validator.py -> /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway
+[4.768s] copying macrobot_action_gateway/__init__.py -> /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway
+[4.768s] copying macrobot_action_gateway/code_runner.py -> /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway
+[4.768s] copying macrobot_action_gateway/gateway_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway
+[4.768s] copying macrobot_action_gateway/gateway_runtime.py -> /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway
+[4.769s] copying macrobot_action_gateway/event_stream.py -> /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway
+[4.769s] copying macrobot_action_gateway/resource_manager.py -> /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway
+[4.769s] copying macrobot_action_gateway/state_store.py -> /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway
+[4.769s] copying macrobot_action_gateway/bridge.py -> /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway
+[4.770s] copying macrobot_action_gateway/robot_facade.py -> /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway
+[4.770s] copying macrobot_action_gateway/api_types.py -> /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway
+[4.770s] copying macrobot_action_gateway/gateway_cli.py -> /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway
+[4.770s] running install
+[4.777s] running install_lib
+[4.825s] creating /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway
+[4.825s] copying /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway/action_manager.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway
+[4.826s] copying /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway/gateway_protocol.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway
+[4.826s] copying /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway/ast_validator.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway
+[4.827s] copying /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway/__init__.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway
+[4.827s] copying /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway/code_runner.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway
+[4.827s] copying /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway/gateway_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway
+[4.827s] copying /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway/gateway_runtime.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway
+[4.827s] copying /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway/event_stream.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway
+[4.827s] copying /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway/resource_manager.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway
+[4.827s] copying /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway/state_store.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway
+[4.827s] copying /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway/bridge.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway
+[4.827s] copying /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway/robot_facade.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway
+[4.827s] copying /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway/api_types.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway
+[4.828s] copying /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build/lib/macrobot_action_gateway/gateway_cli.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway
+[4.828s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway/action_manager.py to action_manager.cpython-312.pyc
+[4.837s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway/gateway_protocol.py to gateway_protocol.cpython-312.pyc
+[4.838s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway/ast_validator.py to ast_validator.cpython-312.pyc
+[4.853s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway/__init__.py to __init__.cpython-312.pyc
+[4.854s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway/code_runner.py to code_runner.cpython-312.pyc
+[4.862s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway/gateway_node.py to gateway_node.cpython-312.pyc
+[4.872s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway/gateway_runtime.py to gateway_runtime.cpython-312.pyc
+[4.879s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway/event_stream.py to event_stream.cpython-312.pyc
+[4.879s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway/resource_manager.py to resource_manager.cpython-312.pyc
+[4.881s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway/state_store.py to state_store.cpython-312.pyc
+[4.886s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway/bridge.py to bridge.cpython-312.pyc
+[4.888s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway/robot_facade.py to robot_facade.cpython-312.pyc
+[4.890s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway/api_types.py to api_types.cpython-312.pyc
+[4.895s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway/gateway_cli.py to gateway_cli.cpython-312.pyc
+[4.901s] running install_data
+[4.903s] creating /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/ament_index
+[4.904s] creating /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/ament_index/resource_index
+[4.907s] creating /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/ament_index/resource_index/packages
+[4.909s] copying resource/macrobot_action_gateway -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/ament_index/resource_index/packages
+[4.911s] copying package.xml -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway
+[4.912s] copying LICENSE -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway
+[4.913s] creating /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway/launch
+[4.915s] copying launch/action_gateway.launch.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway/launch
+[4.915s] creating /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway/config
+[4.915s] copying config/api_registry.yaml -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway/config
+[4.915s] copying config/object_catalog.yaml -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway/config
+[4.915s] copying config/gateway.yaml -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway/config
+[4.915s] creating /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway/examples
+[4.915s] copying examples/arm_then_gripper.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway/examples
+[4.915s] copying examples/get_state.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway/examples
+[4.916s] copying examples/pick_buds3.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway/examples
+[4.916s] copying examples/move_then_turn.py -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway/examples
+[4.916s] creating /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway/docs
+[4.916s] copying docs/ROS_MAPPING_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway/docs
+[4.916s] copying docs/QUICK_TEST_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway/docs
+[4.916s] copying docs/IMPLEMENTATION_MATRIX_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway/docs
+[4.916s] copying docs/SECURITY_AND_LIMITATIONS_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway/docs
+[4.916s] copying docs/NEXT_ACTION_DECISION_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/share/macrobot_action_gateway/docs
+[4.917s] running install_egg_info
+[4.955s] Copying ../build/macrobot_action_gateway/macrobot_action_gateway.egg-info to /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages/macrobot_action_gateway-0.1.1-py3.12.egg-info
+[4.960s] running install_scripts
+[5.279s] Installing action_gateway_cli script to /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/macrobot_action_gateway
+[5.281s] Installing action_gateway_node script to /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/macrobot_action_gateway
+[5.282s] Installing robot_code_runner script to /home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/macrobot_action_gateway
+[5.283s] writing list of installed files to '/home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/install.log'
+[5.343s] Invoked command in '/home/dyddl2082/MacRobot/src/macrobot_action_gateway' returned '0': PYTHONPATH=/home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dyddl2082/MacRobot/src/install/macrobot_action_gateway/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../build/macrobot_action_gateway build --build-base /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/build install --record /home/dyddl2082/MacRobot/src/build/macrobot_action_gateway/install.log --install-scripts $base/lib/macrobot_action_gateway --single-version-externally-managed install_data

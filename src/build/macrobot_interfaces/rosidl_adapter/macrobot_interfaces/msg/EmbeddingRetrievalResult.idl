@@ -1,0 +1,98 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from macrobot_interfaces/msg/EmbeddingRetrievalResult.msg
+// generated code does not contain a copyright notice
+
+#include "macrobot_interfaces/msg/DepthCandidate.idl"
+#include "sensor_msgs/msg/RegionOfInterest.idl"
+#include "std_msgs/msg/Header.idl"
+
+module macrobot_interfaces {
+  module msg {
+    @verbatim (language="comment", text=
+      "Per-candidate DINOv2 retrieval and negative-margin result.")
+    struct EmbeddingRetrievalResult {
+      std_msgs::msg::Header proposal_header;
+
+      std_msgs::msg::Header image_header;
+
+      uint32 candidate_id;
+
+      uint32 crop_index;
+
+      uint32 frame_crop_count;
+
+      string target_object;
+
+      string model_id;
+
+      string pooling;
+
+      string device;
+
+      uint32 embedding_dim;
+
+      boolean positive_bank_available;
+
+      uint32 positive_reference_count;
+
+      boolean negative_bank_available;
+
+      uint32 negative_reference_count;
+
+      boolean foreground_mask_used;
+
+      @verbatim (language="comment", text=
+        "Copied from CandidateFilterResult when available. -1 means unavailable.")
+      float objectness_score;
+
+      float target_hint_score;
+
+      @verbatim (language="comment", text=
+        "positive_similarity and negative_similarity are top-k means." "\n"
+        "best_* fields are the single highest cosine similarities.")
+      float positive_similarity;
+
+      float best_positive_similarity;
+
+      float negative_similarity;
+
+      float best_negative_similarity;
+
+      float margin;
+
+      string best_positive_path;
+
+      string best_negative_path;
+
+      sequence<string> top_positive_paths;
+
+      sequence<float> top_positive_scores;
+
+      sequence<string> top_negative_paths;
+
+      sequence<float> top_negative_scores;
+
+      @verbatim (language="comment", text=
+        "Observation mode forwards evaluated candidates even when these thresholds fail.")
+      boolean thresholds_enforced;
+
+      boolean passed_positive_threshold;
+
+      boolean passed_margin_threshold;
+
+      boolean accepted;
+
+      string reject_reason;
+
+      float preprocessing_ms;
+
+      float inference_ms;
+
+      float matching_ms;
+
+      macrobot_interfaces::msg::DepthCandidate candidate;
+
+      sensor_msgs::msg::RegionOfInterest crop_roi;
+    };
+  };
+};

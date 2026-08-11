@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: macrobot-pick-pipeline
+Version: 0.5.0
+Summary: Stored-object search pose recovery, cancellable visual alignment, validated recorded-grasp execution, camera localization and arm demonstration recording for MacRobot
+Maintainer: MacRobot Team
+Maintainer-email: dyddl2082@snu.ac.kr
+License: MIT

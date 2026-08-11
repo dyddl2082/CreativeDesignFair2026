@@ -1,0 +1,3 @@
+[console_scripts]
+ik_node = macrobot_arm_kinematics.ik_node:main
+linkage_state_node = macrobot_arm_kinematics.linkage_state_node:main

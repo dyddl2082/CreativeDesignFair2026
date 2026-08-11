@@ -191,3 +191,20 @@ ros2 run macrobot_action_gateway robot_code_runner \
 ## 설계 결정
 
 업로드된 API 사양을 검토한 뒤 왜 Gateway가 다음 단계인지, 현재 ROS에 어떤 방식으로 연결했는지는 `docs/NEXT_ACTION_DECISION_KO.md`에 정리되어 있다.
+
+## 0.1.1 stored find-align-pick cancellation
+
+`ALIGN_WITH_OBJECT`와 `PICK_OBJECT`는 이제 저장 위치 기반 정식 노드의 terminal 결과를 확인한다.
+
+```text
+CANCEL_ACTION / WAIT_ACTION timeout
+→ /macrobot/base_alignment/cancel
+→ stored node CANCEL_REQUESTED
+→ Pico STOP + arm hold/stop + finder cancel
+→ action_state=CANCELED 또는 TIMED_OUT 확인
+→ Gateway public terminal result
+```
+
+취소 메시지를 publish했다는 사실만으로 `CANCELED`를 반환하지 않는다. 설정된 시간 안에 terminal 결과를 받지 못하면 `SAFE_STOP_UNCONFIRMED`로 실패한다.
+
+현재 무한궤도 차체의 보정값에 맞춰 Gateway 기본 회전 PWM은 `150`이다.

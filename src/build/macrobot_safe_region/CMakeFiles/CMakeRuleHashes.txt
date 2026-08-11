@@ -1,0 +1,2 @@
+# Hashes of file build rules.
+f6ec105a5426cba086efdabb7c7a07d9 CMakeFiles/macrobot_safe_region_uninstall

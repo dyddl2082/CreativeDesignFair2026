@@ -1,0 +1,478 @@
+[0.359s] Invoking command in '/home/dyddl2082/MacRobot/src/build/macrobot_interfaces': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/dyddl2082/MacRobot/install/macrobot_pick_pipeline:/home/dyddl2082/MacRobot/install/pico_debug:/home/dyddl2082/MacRobot/install/macrobot_teleop:/home/dyddl2082/MacRobot/install/macrobot_arm_commissioning:/home/dyddl2082/MacRobot/install/macrobot_arm_control:/home/dyddl2082/MacRobot/install/macrobot_object_finder:/home/dyddl2082/MacRobot/install/macrobot_perception:/home/dyddl2082/MacRobot/install/depth_candidate_proposal:/home/dyddl2082/MacRobot/install/macrobot_arm_kinematics:/home/dyddl2082/MacRobot/install/d435_capture_crop:/opt/ros/jazzy /usr/bin/cmake /home/dyddl2082/MacRobot/src/macrobot_interfaces -DCMAKE_INSTALL_PREFIX=/home/dyddl2082/MacRobot/src/install/macrobot_interfaces
+[1.844s] -- The C compiler identification is GNU 13.3.0
+[2.599s] -- The CXX compiler identification is GNU 13.3.0
+[5.012s] -- Detecting C compiler ABI info
+[5.688s] -- Detecting C compiler ABI info - done
+[5.709s] -- Check for working C compiler: /usr/bin/cc - skipped
+[5.710s] -- Detecting C compile features
+[5.711s] -- Detecting C compile features - done
+[5.889s] -- Detecting CXX compiler ABI info
+[6.459s] -- Detecting CXX compiler ABI info - done
+[6.469s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[6.469s] -- Detecting CXX compile features
+[6.469s] -- Detecting CXX compile features - done
+[6.562s] -- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+[6.991s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+[7.443s] -- Found rosidl_default_generators: 1.6.1 (/opt/ros/jazzy/share/rosidl_default_generators/cmake)
+[7.486s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[8.165s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[8.374s] -- Found rosidl_adapter: 4.6.9 (/opt/ros/jazzy/share/rosidl_adapter/cmake)
+[8.397s] -- Found sensor_msgs: 5.3.8 (/opt/ros/jazzy/share/sensor_msgs/cmake)
+[10.694s] -- Found ament_cmake_ros: 0.12.1 (/opt/ros/jazzy/share/ament_cmake_ros/cmake)
+[12.137s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[13.501s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[13.508s] -- Found python_cmake_module: 0.11.1 (/opt/ros/jazzy/share/python_cmake_module/cmake)
+[13.738s] -- Found PythonExtra: /usr/bin/python3  
+[14.637s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter Development NumPy Development.Module Development.Embed 
+[14.843s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+[14.862s] -- Configuring done (14.4s)
+[14.962s] -- Generating done (0.1s)
+[14.992s] -- Build files have been written to: /home/dyddl2082/MacRobot/src/build/macrobot_interfaces
+[15.004s] Invoked command in '/home/dyddl2082/MacRobot/src/build/macrobot_interfaces' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/dyddl2082/MacRobot/install/macrobot_pick_pipeline:/home/dyddl2082/MacRobot/install/pico_debug:/home/dyddl2082/MacRobot/install/macrobot_teleop:/home/dyddl2082/MacRobot/install/macrobot_arm_commissioning:/home/dyddl2082/MacRobot/install/macrobot_arm_control:/home/dyddl2082/MacRobot/install/macrobot_object_finder:/home/dyddl2082/MacRobot/install/macrobot_perception:/home/dyddl2082/MacRobot/install/depth_candidate_proposal:/home/dyddl2082/MacRobot/install/macrobot_arm_kinematics:/home/dyddl2082/MacRobot/install/d435_capture_crop:/opt/ros/jazzy /usr/bin/cmake /home/dyddl2082/MacRobot/src/macrobot_interfaces -DCMAKE_INSTALL_PREFIX=/home/dyddl2082/MacRobot/src/install/macrobot_interfaces
+[15.006s] Invoking command in '/home/dyddl2082/MacRobot/src/build/macrobot_interfaces': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/dyddl2082/MacRobot/install/macrobot_pick_pipeline:/home/dyddl2082/MacRobot/install/pico_debug:/home/dyddl2082/MacRobot/install/macrobot_teleop:/home/dyddl2082/MacRobot/install/macrobot_arm_commissioning:/home/dyddl2082/MacRobot/install/macrobot_arm_control:/home/dyddl2082/MacRobot/install/macrobot_object_finder:/home/dyddl2082/MacRobot/install/macrobot_perception:/home/dyddl2082/MacRobot/install/depth_candidate_proposal:/home/dyddl2082/MacRobot/install/macrobot_arm_kinematics:/home/dyddl2082/MacRobot/install/d435_capture_crop:/opt/ros/jazzy /usr/bin/cmake --build /home/dyddl2082/MacRobot/src/build/macrobot_interfaces -- -j18 -l18
+[15.098s] [  1%] [34m[1mGenerating Rust code for ROS interfaces[0m
+[15.101s] [  2%] [34m[1mGenerating type hashes for ROS interfaces[0m
+[15.126s] [  2%] Built target ament_cmake_python_copy_macrobot_interfaces
+[15.771s] running egg_info
+[15.773s] creating macrobot_interfaces.egg-info
+[15.827s] writing macrobot_interfaces.egg-info/PKG-INFO
+[15.827s] writing dependency_links to macrobot_interfaces.egg-info/dependency_links.txt
+[15.828s] writing top-level names to macrobot_interfaces.egg-info/top_level.txt
+[15.828s] writing manifest file 'macrobot_interfaces.egg-info/SOURCES.txt'
+[15.960s] reading manifest file 'macrobot_interfaces.egg-info/SOURCES.txt'
+[15.960s] writing manifest file 'macrobot_interfaces.egg-info/SOURCES.txt'
+[16.053s] [  2%] Built target ament_cmake_python_build_macrobot_interfaces_egg
+[16.707s] [  2%] Built target macrobot_interfaces__rosidl_generator_type_description
+[16.738s] [  3%] [34m[1mGenerating C code for ROS interfaces[0m
+[16.751s] [  3%] [34m[1mGenerating C++ code for ROS interfaces[0m
+[17.103s] [  3%] Built target macrobot_interfaces__rs
+[19.084s] [  3%] Built target macrobot_interfaces__cpp
+[19.375s] [  4%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/depth_candidate__type_support.c.o[0m
+[19.376s] [  6%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/depth_candidate__description.c.o[0m
+[19.376s] [  6%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/depth_candidate__functions.c.o[0m
+[19.376s] [  7%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/depth_candidate_array__functions.c.o[0m
+[19.376s] [  8%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/rgb_candidate_crop__description.c.o[0m
+[19.378s] [  9%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/depth_candidate_array__type_support.c.o[0m
+[19.380s] [ 11%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/rgb_candidate_crop__type_support.c.o[0m
+[19.380s] [ 11%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/depth_candidate_array__description.c.o[0m
+[19.380s] [ 15%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/embedding_retrieval_result__description.c.o[0m
+[19.380s] [ 15%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/filtered_candidate_crop__description.c.o[0m
+[19.383s] [ 17%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/candidate_filter_result__functions.c.o[0m
+[19.384s] [ 13%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/rgb_candidate_crop__functions.c.o[0m
+[19.384s] [ 17%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/candidate_filter_result__description.c.o[0m
+[19.385s] [ 17%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/candidate_filter_result__type_support.c.o[0m
+[19.391s] [ 18%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/filtered_candidate_crop__functions.c.o[0m
+[19.391s] [ 19%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/embedding_retrieval_result__functions.c.o[0m
+[19.411s] [ 20%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/filtered_candidate_crop__type_support.c.o[0m
+[19.445s] [ 21%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/embedding_retrieval_result__type_support.c.o[0m
+[19.528s] [ 21%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/embedding_matched_candidate__description.c.o[0m
+[19.538s] [ 22%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/temporal_confirmation_result__description.c.o[0m
+[19.550s] [ 23%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/embedding_matched_candidate__functions.c.o[0m
+[19.563s] [ 24%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/embedding_matched_candidate__type_support.c.o[0m
+[19.565s] [ 25%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/temporal_confirmation_result__type_support.c.o[0m
+[19.570s] [ 26%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_c.dir/rosidl_generator_c/macrobot_interfaces/msg/detail/temporal_confirmation_result__functions.c.o[0m
+[19.688s] [ 27%] [32m[1mLinking C shared library libmacrobot_interfaces__rosidl_generator_c.so[0m
+[19.959s] [ 27%] Built target macrobot_interfaces__rosidl_generator_c
+[19.970s] [ 28%] [34m[1mGenerating C type support for eProsima Fast-RTPS[0m
+[19.972s] [ 29%] [34m[1mGenerating C++ type support dispatch for ROS interfaces[0m
+[19.974s] [ 30%] [34m[1mGenerating C type support dispatch for ROS interfaces[0m
+[19.977s] [ 31%] [34m[1mGenerating C++ type support for eProsima Fast-RTPS[0m
+[19.977s] [ 32%] [34m[1mGenerating C++ introspection for ROS interfaces[0m
+[19.978s] [ 33%] [34m[1mGenerating C introspection for ROS interfaces[0m
+[22.106s] [ 34%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/macrobot_interfaces/msg/depth_candidate__type_support.cpp.o[0m
+[22.108s] [ 35%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/macrobot_interfaces/msg/depth_candidate_array__type_support.cpp.o[0m
+[22.109s] [ 37%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/macrobot_interfaces/msg/rgb_candidate_crop__type_support.cpp.o[0m
+[22.110s] [ 37%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/macrobot_interfaces/msg/filtered_candidate_crop__type_support.cpp.o[0m
+[22.112s] [ 38%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/macrobot_interfaces/msg/temporal_confirmation_result__type_support.cpp.o[0m
+[22.112s] [ 39%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/macrobot_interfaces/msg/embedding_matched_candidate__type_support.cpp.o[0m
+[22.112s] [ 40%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/macrobot_interfaces/msg/candidate_filter_result__type_support.cpp.o[0m
+[22.112s] [ 41%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/macrobot_interfaces/msg/embedding_retrieval_result__type_support.cpp.o[0m
+[22.365s] [ 42%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/macrobot_interfaces/msg/depth_candidate_array__type_support.cpp.o[0m
+[22.369s] [ 43%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/macrobot_interfaces/msg/depth_candidate__type_support.cpp.o[0m
+[22.384s] [ 44%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/macrobot_interfaces/msg/rgb_candidate_crop__type_support.cpp.o[0m
+[22.384s] [ 44%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/macrobot_interfaces/msg/candidate_filter_result__type_support.cpp.o[0m
+[22.400s] [ 45%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/macrobot_interfaces/msg/filtered_candidate_crop__type_support.cpp.o[0m
+[22.427s] [ 46%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/macrobot_interfaces/msg/embedding_retrieval_result__type_support.cpp.o[0m
+[22.467s] [ 47%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/macrobot_interfaces/msg/detail/depth_candidate__type_support.c.o[0m
+[22.531s] [ 48%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/macrobot_interfaces/msg/embedding_matched_candidate__type_support.cpp.o[0m
+[22.566s] [ 49%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/macrobot_interfaces/msg/detail/depth_candidate_array__type_support.c.o[0m
+[22.591s] [ 50%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/macrobot_interfaces/msg/temporal_confirmation_result__type_support.cpp.o[0m
+[22.700s] [ 51%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/macrobot_interfaces/msg/detail/rgb_candidate_crop__type_support.c.o[0m
+[22.716s] [ 52%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/macrobot_interfaces/msg/detail/candidate_filter_result__type_support.c.o[0m
+[22.721s] [ 53%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/macrobot_interfaces/msg/detail/filtered_candidate_crop__type_support.c.o[0m
+[22.769s] [ 53%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/macrobot_interfaces/msg/detail/embedding_retrieval_result__type_support.c.o[0m
+[22.833s] [ 54%] [32m[1mLinking CXX shared library libmacrobot_interfaces__rosidl_typesupport_c.so[0m
+[22.843s] [ 55%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/macrobot_interfaces/msg/detail/embedding_matched_candidate__type_support.c.o[0m
+[22.847s] [ 56%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/macrobot_interfaces/msg/detail/temporal_confirmation_result__type_support.c.o[0m
+[22.908s] [ 57%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/macrobot_interfaces/msg/detail/depth_candidate__type_support.cpp.o[0m
+[22.972s] [ 59%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/macrobot_interfaces/msg/detail/rgb_candidate_crop__type_support.cpp.o[0m
+[22.983s] [ 59%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/macrobot_interfaces/msg/detail/depth_candidate_array__type_support.cpp.o[0m
+[22.990s] [ 60%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/macrobot_interfaces/msg/detail/candidate_filter_result__type_support.cpp.o[0m
+[23.029s] [ 61%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/macrobot_interfaces/msg/detail/embedding_retrieval_result__type_support.cpp.o[0m
+[23.044s] [ 62%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/macrobot_interfaces/msg/detail/filtered_candidate_crop__type_support.cpp.o[0m
+[23.056s] [ 63%] [32m[1mLinking C shared library libmacrobot_interfaces__rosidl_typesupport_introspection_c.so[0m
+[24.012s] [ 63%] Built target macrobot_interfaces__rosidl_typesupport_c
+[24.083s] [ 65%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/macrobot_interfaces/msg/detail/embedding_matched_candidate__type_support.cpp.o[0m
+[24.084s] [ 65%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/macrobot_interfaces/msg/detail/temporal_confirmation_result__type_support.cpp.o[0m
+[24.163s] [ 66%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/macrobot_interfaces/msg/detail/dds_fastrtps/depth_candidate__type_support.cpp.o[0m
+[24.171s] [ 67%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/macrobot_interfaces/msg/detail/dds_fastrtps/candidate_filter_result__type_support.cpp.o[0m
+[24.179s] [ 67%] Built target macrobot_interfaces__rosidl_typesupport_introspection_c
+[24.193s] [ 68%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/macrobot_interfaces/msg/detail/dds_fastrtps/filtered_candidate_crop__type_support.cpp.o[0m
+[24.214s] [ 69%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/macrobot_interfaces/msg/detail/dds_fastrtps/rgb_candidate_crop__type_support.cpp.o[0m
+[24.216s] [ 70%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/macrobot_interfaces/msg/detail/dds_fastrtps/depth_candidate_array__type_support.cpp.o[0m
+[24.235s] [ 71%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/macrobot_interfaces/msg/detail/dds_fastrtps/embedding_retrieval_result__type_support.cpp.o[0m
+[24.244s] [ 72%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/macrobot_interfaces/msg/detail/depth_candidate__type_support_c.cpp.o[0m
+[24.261s] [ 73%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/macrobot_interfaces/msg/detail/dds_fastrtps/embedding_matched_candidate__type_support.cpp.o[0m
+[24.353s] [ 74%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/macrobot_interfaces/msg/detail/depth_candidate_array__type_support_c.cpp.o[0m
+[24.448s] [ 75%] [32m[1mLinking CXX shared library libmacrobot_interfaces__rosidl_typesupport_cpp.so[0m
+[24.827s] [ 76%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/macrobot_interfaces/msg/detail/rgb_candidate_crop__type_support_c.cpp.o[0m
+[24.990s] [ 77%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/macrobot_interfaces/msg/detail/dds_fastrtps/temporal_confirmation_result__type_support.cpp.o[0m
+[25.023s] [ 78%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/macrobot_interfaces/msg/detail/candidate_filter_result__type_support_c.cpp.o[0m
+[25.163s] [ 78%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/macrobot_interfaces/msg/detail/filtered_candidate_crop__type_support_c.cpp.o[0m
+[25.222s] [ 79%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/macrobot_interfaces/msg/detail/embedding_retrieval_result__type_support_c.cpp.o[0m
+[25.490s] [ 80%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/macrobot_interfaces/msg/detail/embedding_matched_candidate__type_support_c.cpp.o[0m
+[25.613s] [ 80%] Built target macrobot_interfaces__rosidl_typesupport_cpp
+[25.647s] [ 81%] [32mBuilding CXX object CMakeFiles/macrobot_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/macrobot_interfaces/msg/detail/temporal_confirmation_result__type_support_c.cpp.o[0m
+[26.408s] [ 82%] [32m[1mLinking CXX shared library libmacrobot_interfaces__rosidl_typesupport_introspection_cpp.so[0m
+[27.361s] [ 82%] Built target macrobot_interfaces__rosidl_typesupport_introspection_cpp
+[27.525s] [ 83%] [32m[1mLinking CXX shared library libmacrobot_interfaces__rosidl_typesupport_fastrtps_cpp.so[0m
+[27.756s] [ 84%] [32m[1mLinking CXX shared library libmacrobot_interfaces__rosidl_typesupport_fastrtps_c.so[0m
+[27.930s] [ 84%] Built target macrobot_interfaces__rosidl_typesupport_fastrtps_cpp
+[28.112s] [ 84%] Built target macrobot_interfaces__rosidl_typesupport_fastrtps_c
+[28.156s] [ 84%] Built target macrobot_interfaces
+[28.185s] [ 85%] [34m[1mGenerating Python code for ROS interfaces[0m
+[32.521s] [ 85%] Built target macrobot_interfaces__py
+[32.550s] [ 86%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_py.dir/rosidl_generator_py/macrobot_interfaces/msg/_rgb_candidate_crop_s.c.o[0m
+[32.553s] [ 87%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_py.dir/rosidl_generator_py/macrobot_interfaces/msg/_depth_candidate_s.c.o[0m
+[32.554s] [ 88%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_py.dir/rosidl_generator_py/macrobot_interfaces/msg/_filtered_candidate_crop_s.c.o[0m
+[32.554s] [ 89%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_py.dir/rosidl_generator_py/macrobot_interfaces/msg/_depth_candidate_array_s.c.o[0m
+[32.555s] [ 90%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_py.dir/rosidl_generator_py/macrobot_interfaces/msg/_temporal_confirmation_result_s.c.o[0m
+[32.560s] [ 91%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_py.dir/rosidl_generator_py/macrobot_interfaces/msg/_candidate_filter_result_s.c.o[0m
+[32.576s] [ 92%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_py.dir/rosidl_generator_py/macrobot_interfaces/msg/_embedding_retrieval_result_s.c.o[0m
+[32.581s] [ 93%] [32mBuilding C object CMakeFiles/macrobot_interfaces__rosidl_generator_py.dir/rosidl_generator_py/macrobot_interfaces/msg/_embedding_matched_candidate_s.c.o[0m
+[33.231s] [ 94%] [32m[1mLinking C shared library libmacrobot_interfaces__rosidl_generator_py.so[0m
+[33.619s] [ 94%] Built target macrobot_interfaces__rosidl_generator_py
+[33.663s] [ 95%] [32mBuilding C object CMakeFiles/macrobot_interfaces_s__rosidl_typesupport_fastrtps_c.dir/rosidl_generator_py/macrobot_interfaces/_macrobot_interfaces_s.ep.rosidl_typesupport_fastrtps_c.c.o[0m
+[33.669s] [ 96%] [32mBuilding C object CMakeFiles/macrobot_interfaces_s__rosidl_typesupport_introspection_c.dir/rosidl_generator_py/macrobot_interfaces/_macrobot_interfaces_s.ep.rosidl_typesupport_introspection_c.c.o[0m
+[33.672s] [ 97%] [32mBuilding C object CMakeFiles/macrobot_interfaces_s__rosidl_typesupport_c.dir/rosidl_generator_py/macrobot_interfaces/_macrobot_interfaces_s.ep.rosidl_typesupport_c.c.o[0m
+[33.921s] [ 98%] [32m[1mLinking C shared module rosidl_generator_py/macrobot_interfaces/macrobot_interfaces_s__rosidl_typesupport_fastrtps_c.so[0m
+[33.926s] [ 99%] [32m[1mLinking C shared module rosidl_generator_py/macrobot_interfaces/macrobot_interfaces_s__rosidl_typesupport_introspection_c.so[0m
+[33.927s] [100%] [32m[1mLinking C shared module rosidl_generator_py/macrobot_interfaces/macrobot_interfaces_s__rosidl_typesupport_c.so[0m
+[34.194s] [100%] Built target macrobot_interfaces_s__rosidl_typesupport_c
+[34.197s] [100%] Built target macrobot_interfaces_s__rosidl_typesupport_fastrtps_c
+[34.208s] [100%] Built target macrobot_interfaces_s__rosidl_typesupport_introspection_c
+[34.263s] Invoked command in '/home/dyddl2082/MacRobot/src/build/macrobot_interfaces' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/dyddl2082/MacRobot/install/macrobot_pick_pipeline:/home/dyddl2082/MacRobot/install/pico_debug:/home/dyddl2082/MacRobot/install/macrobot_teleop:/home/dyddl2082/MacRobot/install/macrobot_arm_commissioning:/home/dyddl2082/MacRobot/install/macrobot_arm_control:/home/dyddl2082/MacRobot/install/macrobot_object_finder:/home/dyddl2082/MacRobot/install/macrobot_perception:/home/dyddl2082/MacRobot/install/depth_candidate_proposal:/home/dyddl2082/MacRobot/install/macrobot_arm_kinematics:/home/dyddl2082/MacRobot/install/d435_capture_crop:/opt/ros/jazzy /usr/bin/cmake --build /home/dyddl2082/MacRobot/src/build/macrobot_interfaces -- -j18 -l18
+[34.265s] Invoking command in '/home/dyddl2082/MacRobot/src/build/macrobot_interfaces': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/dyddl2082/MacRobot/install/macrobot_pick_pipeline:/home/dyddl2082/MacRobot/install/pico_debug:/home/dyddl2082/MacRobot/install/macrobot_teleop:/home/dyddl2082/MacRobot/install/macrobot_arm_commissioning:/home/dyddl2082/MacRobot/install/macrobot_arm_control:/home/dyddl2082/MacRobot/install/macrobot_object_finder:/home/dyddl2082/MacRobot/install/macrobot_perception:/home/dyddl2082/MacRobot/install/depth_candidate_proposal:/home/dyddl2082/MacRobot/install/macrobot_arm_kinematics:/home/dyddl2082/MacRobot/install/d435_capture_crop:/opt/ros/jazzy /usr/bin/cmake --install /home/dyddl2082/MacRobot/src/build/macrobot_interfaces
+[34.275s] -- Install configuration: ""
+[34.276s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/ament_index/resource_index/rosidl_interfaces/macrobot_interfaces
+[34.279s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/DepthCandidate.json
+[34.279s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/DepthCandidateArray.json
+[34.279s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/RgbCandidateCrop.json
+[34.279s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/CandidateFilterResult.json
+[34.279s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/FilteredCandidateCrop.json
+[34.279s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/EmbeddingRetrievalResult.json
+[34.280s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/EmbeddingMatchedCandidate.json
+[34.280s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/TemporalConfirmationResult.json
+[34.280s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces
+[34.282s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg
+[34.282s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail
+[34.283s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/rgb_candidate_crop__description.c
+[34.283s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/temporal_confirmation_result__type_support.c
+[34.283s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/candidate_filter_result__type_support.c
+[34.284s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_matched_candidate__struct.h
+[34.284s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_matched_candidate__type_support.h
+[34.285s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_matched_candidate__functions.c
+[34.286s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/temporal_confirmation_result__type_support.h
+[34.287s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/candidate_filter_result__functions.c
+[34.288s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate_array__functions.c
+[34.288s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_matched_candidate__functions.h
+[34.288s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate__struct.h
+[34.289s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/temporal_confirmation_result__description.c
+[34.289s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/candidate_filter_result__type_support.h
+[34.289s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/temporal_confirmation_result__functions.h
+[34.290s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/filtered_candidate_crop__description.c
+[34.290s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_matched_candidate__description.c
+[34.293s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_retrieval_result__type_support.h
+[34.294s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_retrieval_result__struct.h
+[34.297s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate_array__type_support.c
+[34.298s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/candidate_filter_result__struct.h
+[34.299s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/filtered_candidate_crop__type_support.c
+[34.299s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_retrieval_result__functions.c
+[34.300s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate__description.c
+[34.301s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/temporal_confirmation_result__struct.h
+[34.302s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/rgb_candidate_crop__functions.h
+[34.304s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/rgb_candidate_crop__struct.h
+[34.305s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/rgb_candidate_crop__type_support.h
+[34.310s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_retrieval_result__type_support.c
+[34.312s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate_array__functions.h
+[34.314s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/temporal_confirmation_result__functions.c
+[34.316s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/filtered_candidate_crop__functions.h
+[34.317s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate__type_support.c
+[34.317s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate_array__struct.h
+[34.318s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/rgb_candidate_crop__functions.c
+[34.319s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate__functions.h
+[34.319s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/filtered_candidate_crop__functions.c
+[34.319s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/filtered_candidate_crop__type_support.h
+[34.320s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_retrieval_result__functions.h
+[34.320s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_matched_candidate__type_support.c
+[34.320s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate__type_support.h
+[34.320s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/candidate_filter_result__description.c
+[34.320s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate_array__type_support.h
+[34.321s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate_array__description.c
+[34.321s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/candidate_filter_result__functions.h
+[34.321s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/rgb_candidate_crop__type_support.c
+[34.322s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_retrieval_result__description.c
+[34.322s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate__functions.c
+[34.322s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/filtered_candidate_crop__struct.h
+[34.322s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/embedding_retrieval_result.h
+[34.323s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/rosidl_generator_c__visibility_control.h
+[34.323s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/depth_candidate_array.h
+[34.323s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/embedding_matched_candidate.h
+[34.323s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/rgb_candidate_crop.h
+[34.324s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/candidate_filter_result.h
+[34.324s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/temporal_confirmation_result.h
+[34.324s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/filtered_candidate_crop.h
+[34.325s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/depth_candidate.h
+[34.325s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/environment/library_path.sh
+[34.325s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/environment/library_path.dsv
+[34.325s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/libmacrobot_interfaces__rosidl_generator_c.so
+[34.325s] -- Set non-toolchain portion of runtime path of "/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/libmacrobot_interfaces__rosidl_generator_c.so" to ""
+[34.326s] -- Up-to-date: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces
+[34.326s] -- Up-to-date: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg
+[34.326s] -- Up-to-date: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail
+[34.326s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_matched_candidate__rosidl_typesupport_fastrtps_c.h
+[34.326s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/filtered_candidate_crop__rosidl_typesupport_fastrtps_c.h
+[34.327s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate__rosidl_typesupport_fastrtps_c.h
+[34.327s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_retrieval_result__rosidl_typesupport_fastrtps_c.h
+[34.327s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/rgb_candidate_crop__rosidl_typesupport_fastrtps_c.h
+[34.327s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate_array__rosidl_typesupport_fastrtps_c.h
+[34.328s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/candidate_filter_result__rosidl_typesupport_fastrtps_c.h
+[34.328s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/temporal_confirmation_result__rosidl_typesupport_fastrtps_c.h
+[34.328s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/rosidl_typesupport_fastrtps_c__visibility_control.h
+[34.328s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/libmacrobot_interfaces__rosidl_typesupport_fastrtps_c.so
+[34.329s] -- Set non-toolchain portion of runtime path of "/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/libmacrobot_interfaces__rosidl_typesupport_fastrtps_c.so" to ""
+[34.329s] -- Up-to-date: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces
+[34.329s] -- Up-to-date: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg
+[34.329s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/rosidl_typesupport_introspection_c__visibility_control.h
+[34.330s] -- Up-to-date: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail
+[34.330s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/temporal_confirmation_result__type_support.c
+[34.330s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/candidate_filter_result__type_support.c
+[34.330s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_matched_candidate__rosidl_typesupport_introspection_c.h
+[34.330s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate_array__type_support.c
+[34.330s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate_array__rosidl_typesupport_introspection_c.h
+[34.331s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/candidate_filter_result__rosidl_typesupport_introspection_c.h
+[34.331s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/temporal_confirmation_result__rosidl_typesupport_introspection_c.h
+[34.331s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/filtered_candidate_crop__type_support.c
+[34.332s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/filtered_candidate_crop__rosidl_typesupport_introspection_c.h
+[34.332s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_retrieval_result__type_support.c
+[34.332s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate__type_support.c
+[34.332s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/rgb_candidate_crop__rosidl_typesupport_introspection_c.h
+[34.332s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_matched_candidate__type_support.c
+[34.333s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_retrieval_result__rosidl_typesupport_introspection_c.h
+[34.333s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/rgb_candidate_crop__type_support.c
+[34.333s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate__rosidl_typesupport_introspection_c.h
+[34.333s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/libmacrobot_interfaces__rosidl_typesupport_introspection_c.so
+[34.333s] -- Set non-toolchain portion of runtime path of "/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/libmacrobot_interfaces__rosidl_typesupport_introspection_c.so" to ""
+[34.333s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/libmacrobot_interfaces__rosidl_typesupport_c.so
+[34.333s] -- Set non-toolchain portion of runtime path of "/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/libmacrobot_interfaces__rosidl_typesupport_c.so" to ""
+[34.333s] -- Up-to-date: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces
+[34.333s] -- Up-to-date: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg
+[34.334s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/depth_candidate_array.hpp
+[34.334s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/embedding_retrieval_result.hpp
+[34.334s] -- Up-to-date: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail
+[34.335s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/filtered_candidate_crop__builder.hpp
+[34.336s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/candidate_filter_result__type_support.hpp
+[34.336s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/temporal_confirmation_result__struct.hpp
+[34.336s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/candidate_filter_result__struct.hpp
+[34.336s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/filtered_candidate_crop__type_support.hpp
+[34.336s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate__traits.hpp
+[34.337s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate__builder.hpp
+[34.337s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/filtered_candidate_crop__traits.hpp
+[34.337s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/rgb_candidate_crop__struct.hpp
+[34.337s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate_array__builder.hpp
+[34.338s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_retrieval_result__struct.hpp
+[34.338s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate__type_support.hpp
+[34.338s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_retrieval_result__traits.hpp
+[34.339s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/rgb_candidate_crop__builder.hpp
+[34.339s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate_array__type_support.hpp
+[34.340s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate__struct.hpp
+[34.340s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/filtered_candidate_crop__struct.hpp
+[34.340s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/candidate_filter_result__traits.hpp
+[34.340s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/candidate_filter_result__builder.hpp
+[34.341s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/rgb_candidate_crop__type_support.hpp
+[34.341s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/temporal_confirmation_result__type_support.hpp
+[34.341s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_matched_candidate__type_support.hpp
+[34.341s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_matched_candidate__traits.hpp
+[34.342s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/temporal_confirmation_result__builder.hpp
+[34.342s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/temporal_confirmation_result__traits.hpp
+[34.342s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate_array__traits.hpp
+[34.342s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_retrieval_result__builder.hpp
+[34.342s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/rgb_candidate_crop__traits.hpp
+[34.342s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_matched_candidate__struct.hpp
+[34.343s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_retrieval_result__type_support.hpp
+[34.343s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate_array__struct.hpp
+[34.343s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_matched_candidate__builder.hpp
+[34.344s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/depth_candidate.hpp
+[34.344s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/temporal_confirmation_result.hpp
+[34.344s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/rosidl_generator_cpp__visibility_control.hpp
+[34.345s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/embedding_matched_candidate.hpp
+[34.346s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/rgb_candidate_crop.hpp
+[34.346s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/candidate_filter_result.hpp
+[34.346s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/filtered_candidate_crop.hpp
+[34.347s] -- Up-to-date: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces
+[34.348s] -- Up-to-date: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg
+[34.348s] -- Up-to-date: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail
+[34.350s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/filtered_candidate_crop__rosidl_typesupport_fastrtps_cpp.hpp
+[34.352s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate__rosidl_typesupport_fastrtps_cpp.hpp
+[34.356s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/candidate_filter_result__rosidl_typesupport_fastrtps_cpp.hpp
+[34.358s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/temporal_confirmation_result__rosidl_typesupport_fastrtps_cpp.hpp
+[34.360s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_matched_candidate__rosidl_typesupport_fastrtps_cpp.hpp
+[34.360s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/dds_fastrtps
+[34.361s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate_array__rosidl_typesupport_fastrtps_cpp.hpp
+[34.361s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_retrieval_result__rosidl_typesupport_fastrtps_cpp.hpp
+[34.361s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/rgb_candidate_crop__rosidl_typesupport_fastrtps_cpp.hpp
+[34.362s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/rosidl_typesupport_fastrtps_cpp__visibility_control.h
+[34.363s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/libmacrobot_interfaces__rosidl_typesupport_fastrtps_cpp.so
+[34.366s] -- Set non-toolchain portion of runtime path of "/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/libmacrobot_interfaces__rosidl_typesupport_fastrtps_cpp.so" to ""
+[34.366s] -- Up-to-date: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces
+[34.368s] -- Up-to-date: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg
+[34.370s] -- Up-to-date: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail
+[34.374s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/filtered_candidate_crop__type_support.cpp
+[34.375s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_matched_candidate__rosidl_typesupport_introspection_cpp.hpp
+[34.376s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/rgb_candidate_crop__rosidl_typesupport_introspection_cpp.hpp
+[34.377s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/candidate_filter_result__rosidl_typesupport_introspection_cpp.hpp
+[34.377s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate_array__rosidl_typesupport_introspection_cpp.hpp
+[34.377s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_retrieval_result__rosidl_typesupport_introspection_cpp.hpp
+[34.378s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate__rosidl_typesupport_introspection_cpp.hpp
+[34.378s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/candidate_filter_result__type_support.cpp
+[34.378s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate__type_support.cpp
+[34.379s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/filtered_candidate_crop__rosidl_typesupport_introspection_cpp.hpp
+[34.380s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/temporal_confirmation_result__rosidl_typesupport_introspection_cpp.hpp
+[34.380s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_retrieval_result__type_support.cpp
+[34.381s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/rgb_candidate_crop__type_support.cpp
+[34.381s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/temporal_confirmation_result__type_support.cpp
+[34.381s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/embedding_matched_candidate__type_support.cpp
+[34.381s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/include/macrobot_interfaces/macrobot_interfaces/msg/detail/depth_candidate_array__type_support.cpp
+[34.382s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/libmacrobot_interfaces__rosidl_typesupport_introspection_cpp.so
+[34.382s] -- Set non-toolchain portion of runtime path of "/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/libmacrobot_interfaces__rosidl_typesupport_introspection_cpp.so" to ""
+[34.382s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/libmacrobot_interfaces__rosidl_typesupport_cpp.so
+[34.382s] -- Set non-toolchain portion of runtime path of "/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/libmacrobot_interfaces__rosidl_typesupport_cpp.so" to ""
+[34.382s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/environment/pythonpath.sh
+[34.382s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/environment/pythonpath.dsv
+[34.383s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces-0.3.0-py3.12.egg-info
+[34.383s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces-0.3.0-py3.12.egg-info/dependency_links.txt
+[34.383s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces-0.3.0-py3.12.egg-info/SOURCES.txt
+[34.383s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces-0.3.0-py3.12.egg-info/top_level.txt
+[34.383s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces-0.3.0-py3.12.egg-info/PKG-INFO
+[34.383s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces
+[34.383s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/macrobot_interfaces_s__rosidl_typesupport_c.so
+[34.384s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/macrobot_interfaces_s__rosidl_typesupport_fastrtps_c.so
+[34.384s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg
+[34.384s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_depth_candidate_s.c
+[34.384s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_embedding_matched_candidate_s.c
+[34.384s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/__init__.py
+[34.384s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_embedding_retrieval_result.py
+[34.384s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_temporal_confirmation_result_s.c
+[34.384s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_temporal_confirmation_result.py
+[34.385s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_candidate_filter_result.py
+[34.385s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_depth_candidate_array.py
+[34.385s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_depth_candidate.py
+[34.385s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_depth_candidate_array_s.c
+[34.385s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_rgb_candidate_crop.py
+[34.385s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_rgb_candidate_crop_s.c
+[34.385s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_filtered_candidate_crop_s.c
+[34.385s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_candidate_filter_result_s.c
+[34.385s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_filtered_candidate_crop.py
+[34.385s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_embedding_retrieval_result_s.c
+[34.385s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_embedding_matched_candidate.py
+[34.386s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/__init__.py
+[34.386s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/_macrobot_interfaces_s.ep.rosidl_typesupport_fastrtps_c.c
+[34.386s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/macrobot_interfaces_s__rosidl_typesupport_introspection_c.so
+[34.386s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/_macrobot_interfaces_s.ep.rosidl_typesupport_c.c
+[34.386s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/_macrobot_interfaces_s.ep.rosidl_typesupport_introspection_c.c
+[34.582s] Listing '/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces'...
+[34.582s] Compiling '/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/__init__.py'...
+[34.582s] Listing '/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg'...
+[34.582s] Compiling '/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/__init__.py'...
+[34.582s] Compiling '/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_candidate_filter_result.py'...
+[34.582s] Compiling '/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_depth_candidate.py'...
+[34.583s] Compiling '/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_depth_candidate_array.py'...
+[34.583s] Compiling '/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_embedding_matched_candidate.py'...
+[34.584s] Compiling '/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_embedding_retrieval_result.py'...
+[34.584s] Compiling '/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_filtered_candidate_crop.py'...
+[34.584s] Compiling '/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_rgb_candidate_crop.py'...
+[34.585s] Compiling '/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/msg/_temporal_confirmation_result.py'...
+[34.589s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/macrobot_interfaces_s__rosidl_typesupport_fastrtps_c.so
+[34.589s] -- Set non-toolchain portion of runtime path of "/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/macrobot_interfaces_s__rosidl_typesupport_fastrtps_c.so" to ""
+[34.590s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/macrobot_interfaces_s__rosidl_typesupport_introspection_c.so
+[34.590s] -- Set non-toolchain portion of runtime path of "/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/macrobot_interfaces_s__rosidl_typesupport_introspection_c.so" to ""
+[34.590s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/macrobot_interfaces_s__rosidl_typesupport_c.so
+[34.590s] -- Set non-toolchain portion of runtime path of "/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages/macrobot_interfaces/macrobot_interfaces_s__rosidl_typesupport_c.so" to ""
+[34.590s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/libmacrobot_interfaces__rosidl_generator_py.so
+[34.591s] -- Set non-toolchain portion of runtime path of "/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/libmacrobot_interfaces__rosidl_generator_py.so" to ""
+[34.593s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/ament_index/resource_index/rust_packages/macrobot_interfaces
+[34.593s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/rust
+[34.594s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/rust/Cargo.toml
+[34.594s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/rust/src
+[34.595s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/rust/src/msg
+[34.596s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/rust/src/msg/rmw.rs
+[34.597s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/rust/src/msg.rs
+[34.597s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/rust/src/lib.rs
+[34.597s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/rust/build.rs
+[34.598s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/DepthCandidate.idl
+[34.598s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/DepthCandidateArray.idl
+[34.599s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/RgbCandidateCrop.idl
+[34.599s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/CandidateFilterResult.idl
+[34.599s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/FilteredCandidateCrop.idl
+[34.600s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/EmbeddingRetrievalResult.idl
+[34.600s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/EmbeddingMatchedCandidate.idl
+[34.600s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/TemporalConfirmationResult.idl
+[34.600s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/DepthCandidate.msg
+[34.601s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/DepthCandidateArray.msg
+[34.601s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/RgbCandidateCrop.msg
+[34.601s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/CandidateFilterResult.msg
+[34.602s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/FilteredCandidateCrop.msg
+[34.604s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/EmbeddingRetrievalResult.msg
+[34.606s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/EmbeddingMatchedCandidate.msg
+[34.607s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/msg/TemporalConfirmationResult.msg
+[34.608s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/ament_index/resource_index/package_run_dependencies/macrobot_interfaces
+[34.610s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/ament_index/resource_index/parent_prefix_path/macrobot_interfaces
+[34.611s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/environment/ament_prefix_path.sh
+[34.612s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/environment/ament_prefix_path.dsv
+[34.614s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/environment/path.sh
+[34.616s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/environment/path.dsv
+[34.618s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/local_setup.bash
+[34.620s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/local_setup.sh
+[34.624s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/local_setup.zsh
+[34.625s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/local_setup.dsv
+[34.626s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/package.dsv
+[34.627s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/ament_index/resource_index/packages/macrobot_interfaces
+[34.628s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/export_macrobot_interfaces__rosidl_generator_cExport.cmake
+[34.628s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/export_macrobot_interfaces__rosidl_generator_cExport-noconfig.cmake
+[34.629s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/export_macrobot_interfaces__rosidl_typesupport_fastrtps_cExport.cmake
+[34.629s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/export_macrobot_interfaces__rosidl_typesupport_fastrtps_cExport-noconfig.cmake
+[34.629s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/macrobot_interfaces__rosidl_typesupport_introspection_cExport.cmake
+[34.630s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/macrobot_interfaces__rosidl_typesupport_introspection_cExport-noconfig.cmake
+[34.630s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/macrobot_interfaces__rosidl_typesupport_cExport.cmake
+[34.630s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/macrobot_interfaces__rosidl_typesupport_cExport-noconfig.cmake
+[34.631s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/export_macrobot_interfaces__rosidl_generator_cppExport.cmake
+[34.631s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/export_macrobot_interfaces__rosidl_typesupport_fastrtps_cppExport.cmake
+[34.631s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/export_macrobot_interfaces__rosidl_typesupport_fastrtps_cppExport-noconfig.cmake
+[34.632s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/macrobot_interfaces__rosidl_typesupport_introspection_cppExport.cmake
+[34.632s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/macrobot_interfaces__rosidl_typesupport_introspection_cppExport-noconfig.cmake
+[34.632s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/macrobot_interfaces__rosidl_typesupport_cppExport.cmake
+[34.632s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/macrobot_interfaces__rosidl_typesupport_cppExport-noconfig.cmake
+[34.632s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/export_macrobot_interfaces__rosidl_generator_pyExport.cmake
+[34.633s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/export_macrobot_interfaces__rosidl_generator_pyExport-noconfig.cmake
+[34.633s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/rosidl_cmake-extras.cmake
+[34.633s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/ament_cmake_export_dependencies-extras.cmake
+[34.633s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/ament_cmake_export_include_directories-extras.cmake
+[34.634s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/ament_cmake_export_libraries-extras.cmake
+[34.634s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/ament_cmake_export_targets-extras.cmake
+[34.634s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/rosidl_cmake_export_typesupport_targets-extras.cmake
+[34.634s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake
+[34.634s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/rosidl_cmake_aggregate_target-extras.cmake
+[34.634s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/macrobot_interfacesConfig.cmake
+[34.634s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/cmake/macrobot_interfacesConfig-version.cmake
+[34.634s] -- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_interfaces/share/macrobot_interfaces/package.xml
+[34.636s] Invoked command in '/home/dyddl2082/MacRobot/src/build/macrobot_interfaces' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/dyddl2082/MacRobot/install/macrobot_pick_pipeline:/home/dyddl2082/MacRobot/install/pico_debug:/home/dyddl2082/MacRobot/install/macrobot_teleop:/home/dyddl2082/MacRobot/install/macrobot_arm_commissioning:/home/dyddl2082/MacRobot/install/macrobot_arm_control:/home/dyddl2082/MacRobot/install/macrobot_object_finder:/home/dyddl2082/MacRobot/install/macrobot_perception:/home/dyddl2082/MacRobot/install/depth_candidate_proposal:/home/dyddl2082/MacRobot/install/macrobot_arm_kinematics:/home/dyddl2082/MacRobot/install/d435_capture_crop:/opt/ros/jazzy /usr/bin/cmake --install /home/dyddl2082/MacRobot/src/build/macrobot_interfaces

@@ -1,0 +1,45 @@
+[3.986s] Invoking command in '/home/dyddl2082/MacRobot/src/macrobot_arm_kinematics': PYTHONPATH=/home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../build/macrobot_arm_kinematics build --build-base /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build install --record /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/install.log --install-scripts $base/lib/macrobot_arm_kinematics --single-version-externally-managed install_data
+[4.589s] running egg_info
+[4.590s] creating ../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info
+[4.618s] writing ../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info/PKG-INFO
+[4.619s] writing dependency_links to ../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info/dependency_links.txt
+[4.621s] writing entry points to ../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info/entry_points.txt
+[4.622s] writing requirements to ../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info/requires.txt
+[4.622s] writing top-level names to ../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info/top_level.txt
+[4.624s] writing manifest file '../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info/SOURCES.txt'
+[4.713s] reading manifest file '../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info/SOURCES.txt'
+[4.714s] writing manifest file '../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info/SOURCES.txt'
+[4.714s] running build
+[4.714s] running build_py
+[4.715s] creating /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build
+[4.715s] creating /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib
+[4.715s] creating /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics
+[4.715s] copying macrobot_arm_kinematics/__init__.py -> /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics
+[4.716s] copying macrobot_arm_kinematics/linkage_state_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics
+[4.718s] copying macrobot_arm_kinematics/model.py -> /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics
+[4.719s] copying macrobot_arm_kinematics/ik_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics
+[4.719s] running install
+[4.733s] running install_lib
+[4.767s] creating /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics
+[4.768s] copying /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics/__init__.py -> /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics
+[4.768s] copying /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics/linkage_state_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics
+[4.769s] copying /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics/model.py -> /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics
+[4.771s] copying /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics/ik_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics
+[4.772s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics/__init__.py to __init__.cpython-312.pyc
+[4.772s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics/linkage_state_node.py to linkage_state_node.cpython-312.pyc
+[4.775s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics/model.py to model.cpython-312.pyc
+[4.777s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics/ik_node.py to ik_node.cpython-312.pyc
+[4.780s] running install_data
+[4.782s] creating /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/share/ament_index
+[4.783s] creating /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/share/ament_index/resource_index
+[4.784s] creating /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/share/ament_index/resource_index/packages
+[4.785s] copying resource/macrobot_arm_kinematics -> /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/share/ament_index/resource_index/packages
+[4.786s] copying package.xml -> /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/share/macrobot_arm_kinematics
+[4.788s] creating /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/share/macrobot_arm_kinematics/launch
+[4.788s] running install_egg_info
+[4.825s] Copying ../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info to /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics-0.3.0-py3.12.egg-info
+[4.828s] running install_scripts
+[5.114s] Installing ik_node script to /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/macrobot_arm_kinematics
+[5.115s] Installing linkage_state_node script to /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/macrobot_arm_kinematics
+[5.115s] writing list of installed files to '/home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/install.log'
+[5.176s] Invoked command in '/home/dyddl2082/MacRobot/src/macrobot_arm_kinematics' returned '0': PYTHONPATH=/home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../build/macrobot_arm_kinematics build --build-base /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build install --record /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/install.log --install-scripts $base/lib/macrobot_arm_kinematics --single-version-externally-managed install_data

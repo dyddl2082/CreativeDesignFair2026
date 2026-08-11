@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: depth-candidate-proposal
+Version: 0.2.0
+Summary: Aligned-depth object proposal node for the MacRobot Raspberry Pi edge computer.
+Maintainer: MacRobot
+Maintainer-email: macrobot@example.com
+License: Apache-2.0

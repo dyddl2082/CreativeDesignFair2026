@@ -1,0 +1,59 @@
+[3.640s] Invoking command in '/home/dyddl2082/MacRobot/src/macrobot_object_finder_stage/macrobot_object_finder': AMENT_PREFIX_PATH=/home/dyddl2082/MacRobot/src/install/macrobot_perception:/home/dyddl2082/MacRobot/src/install/macrobot_interfaces:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/dyddl2082/MacRobot/src/install/macrobot_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/dyddl2082/MacRobot/src/build/macrobot_object_finder/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dyddl2082/MacRobot/src/install/macrobot_object_finder/lib/python3.12/site-packages:/home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages:/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/macrobot_object_finder build --build-base /home/dyddl2082/MacRobot/src/build/macrobot_object_finder/build install --record /home/dyddl2082/MacRobot/src/build/macrobot_object_finder/install.log --install-scripts $base/lib/macrobot_object_finder --single-version-externally-managed install_data
+[4.339s] running egg_info
+[4.339s] creating ../../build/macrobot_object_finder/macrobot_object_finder.egg-info
+[4.382s] writing ../../build/macrobot_object_finder/macrobot_object_finder.egg-info/PKG-INFO
+[4.383s] writing dependency_links to ../../build/macrobot_object_finder/macrobot_object_finder.egg-info/dependency_links.txt
+[4.383s] writing entry points to ../../build/macrobot_object_finder/macrobot_object_finder.egg-info/entry_points.txt
+[4.383s] writing requirements to ../../build/macrobot_object_finder/macrobot_object_finder.egg-info/requires.txt
+[4.383s] writing top-level names to ../../build/macrobot_object_finder/macrobot_object_finder.egg-info/top_level.txt
+[4.384s] writing manifest file '../../build/macrobot_object_finder/macrobot_object_finder.egg-info/SOURCES.txt'
+[4.481s] reading manifest file '../../build/macrobot_object_finder/macrobot_object_finder.egg-info/SOURCES.txt'
+[4.482s] writing manifest file '../../build/macrobot_object_finder/macrobot_object_finder.egg-info/SOURCES.txt'
+[4.482s] running build
+[4.482s] running build_py
+[4.482s] creating /home/dyddl2082/MacRobot/src/build/macrobot_object_finder/build
+[4.482s] creating /home/dyddl2082/MacRobot/src/build/macrobot_object_finder/build/lib
+[4.483s] creating /home/dyddl2082/MacRobot/src/build/macrobot_object_finder/build/lib/macrobot_object_finder
+[4.483s] copying macrobot_object_finder/__init__.py -> /home/dyddl2082/MacRobot/src/build/macrobot_object_finder/build/lib/macrobot_object_finder
+[4.483s] copying macrobot_object_finder/finder_core.py -> /home/dyddl2082/MacRobot/src/build/macrobot_object_finder/build/lib/macrobot_object_finder
+[4.484s] copying macrobot_object_finder/object_finder_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_object_finder/build/lib/macrobot_object_finder
+[4.485s] copying macrobot_object_finder/object_finder_cli.py -> /home/dyddl2082/MacRobot/src/build/macrobot_object_finder/build/lib/macrobot_object_finder
+[4.485s] running install
+[4.492s] running install_lib
+[4.535s] creating /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/lib/python3.12/site-packages/macrobot_object_finder
+[4.535s] copying /home/dyddl2082/MacRobot/src/build/macrobot_object_finder/build/lib/macrobot_object_finder/__init__.py -> /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/lib/python3.12/site-packages/macrobot_object_finder
+[4.536s] copying /home/dyddl2082/MacRobot/src/build/macrobot_object_finder/build/lib/macrobot_object_finder/finder_core.py -> /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/lib/python3.12/site-packages/macrobot_object_finder
+[4.536s] copying /home/dyddl2082/MacRobot/src/build/macrobot_object_finder/build/lib/macrobot_object_finder/object_finder_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/lib/python3.12/site-packages/macrobot_object_finder
+[4.536s] copying /home/dyddl2082/MacRobot/src/build/macrobot_object_finder/build/lib/macrobot_object_finder/object_finder_cli.py -> /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/lib/python3.12/site-packages/macrobot_object_finder
+[4.536s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/lib/python3.12/site-packages/macrobot_object_finder/__init__.py to __init__.cpython-312.pyc
+[4.537s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/lib/python3.12/site-packages/macrobot_object_finder/finder_core.py to finder_core.cpython-312.pyc
+[4.540s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/lib/python3.12/site-packages/macrobot_object_finder/object_finder_node.py to object_finder_node.cpython-312.pyc
+[4.546s] byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/lib/python3.12/site-packages/macrobot_object_finder/object_finder_cli.py to object_finder_cli.cpython-312.pyc
+[4.554s] running install_data
+[4.555s] creating /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/ament_index
+[4.558s] creating /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/ament_index/resource_index
+[4.561s] creating /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/ament_index/resource_index/packages
+[4.563s] copying resource/macrobot_object_finder -> /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/ament_index/resource_index/packages
+[4.564s] copying package.xml -> /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/macrobot_object_finder
+[4.565s] copying README.md -> /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/macrobot_object_finder
+[4.566s] creating /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/macrobot_object_finder/launch
+[4.568s] copying launch/object_finder_manager.launch.py -> /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/macrobot_object_finder/launch
+[4.569s] copying launch/object_finder_wsl_legacy.launch.py -> /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/macrobot_object_finder/launch
+[4.570s] copying launch/object_finder_wsl.launch.py -> /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/macrobot_object_finder/launch
+[4.571s] creating /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/macrobot_object_finder/config
+[4.571s] copying config/object_finder.yaml -> /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/macrobot_object_finder/config
+[4.572s] creating /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/macrobot_object_finder/docs
+[4.573s] copying docs/PICK_INTEGRATION_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/macrobot_object_finder/docs
+[4.574s] copying docs/RESULT_CONTRACT_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/macrobot_object_finder/docs
+[4.574s] copying docs/TROUBLESHOOTING_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/macrobot_object_finder/docs
+[4.575s] copying docs/PIPELINE_KO.md -> /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/macrobot_object_finder/docs
+[4.575s] creating /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/macrobot_object_finder/scripts
+[4.576s] copying scripts/find_object.sh -> /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/macrobot_object_finder/scripts
+[4.576s] copying scripts/check_object_finder.sh -> /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/share/macrobot_object_finder/scripts
+[4.577s] running install_egg_info
+[4.613s] Copying ../../build/macrobot_object_finder/macrobot_object_finder.egg-info to /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/lib/python3.12/site-packages/macrobot_object_finder-0.1.0-py3.12.egg-info
+[4.620s] running install_scripts
+[4.898s] Installing object_finder_cli script to /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/lib/macrobot_object_finder
+[4.899s] Installing object_finder_node script to /home/dyddl2082/MacRobot/src/install/macrobot_object_finder/lib/macrobot_object_finder
+[4.900s] writing list of installed files to '/home/dyddl2082/MacRobot/src/build/macrobot_object_finder/install.log'
+[4.961s] Invoked command in '/home/dyddl2082/MacRobot/src/macrobot_object_finder_stage/macrobot_object_finder' returned '0': AMENT_PREFIX_PATH=/home/dyddl2082/MacRobot/src/install/macrobot_perception:/home/dyddl2082/MacRobot/src/install/macrobot_interfaces:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/dyddl2082/MacRobot/src/install/macrobot_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/dyddl2082/MacRobot/src/build/macrobot_object_finder/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/dyddl2082/MacRobot/src/install/macrobot_object_finder/lib/python3.12/site-packages:/home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages:/home/dyddl2082/MacRobot/src/install/macrobot_interfaces/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/macrobot_object_finder build --build-base /home/dyddl2082/MacRobot/src/build/macrobot_object_finder/build install --record /home/dyddl2082/MacRobot/src/build/macrobot_object_finder/install.log --install-scripts $base/lib/macrobot_object_finder --single-version-externally-managed install_data

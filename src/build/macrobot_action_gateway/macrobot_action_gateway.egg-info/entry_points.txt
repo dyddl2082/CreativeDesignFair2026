@@ -1,0 +1,4 @@
+[console_scripts]
+action_gateway_cli = macrobot_action_gateway.gateway_cli:main
+action_gateway_node = macrobot_action_gateway.gateway_node:main
+robot_code_runner = macrobot_action_gateway.code_runner:main

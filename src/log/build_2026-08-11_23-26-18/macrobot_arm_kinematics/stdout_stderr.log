@@ -1,0 +1,43 @@
+running egg_info
+creating ../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info
+writing ../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info/PKG-INFO
+writing dependency_links to ../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info/dependency_links.txt
+writing entry points to ../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info/entry_points.txt
+writing requirements to ../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info/requires.txt
+writing top-level names to ../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info/top_level.txt
+writing manifest file '../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info/SOURCES.txt'
+reading manifest file '../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info/SOURCES.txt'
+writing manifest file '../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build
+creating /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib
+creating /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics
+copying macrobot_arm_kinematics/__init__.py -> /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics
+copying macrobot_arm_kinematics/linkage_state_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics
+copying macrobot_arm_kinematics/model.py -> /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics
+copying macrobot_arm_kinematics/ik_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics
+running install
+running install_lib
+creating /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics
+copying /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics/__init__.py -> /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics
+copying /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics/linkage_state_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics
+copying /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics/model.py -> /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics
+copying /home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/build/lib/macrobot_arm_kinematics/ik_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics/linkage_state_node.py to linkage_state_node.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics/model.py to model.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics/ik_node.py to ik_node.cpython-312.pyc
+running install_data
+creating /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/share/ament_index
+creating /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/share/ament_index/resource_index
+creating /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/share/ament_index/resource_index/packages
+copying resource/macrobot_arm_kinematics -> /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/share/ament_index/resource_index/packages
+copying package.xml -> /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/share/macrobot_arm_kinematics
+creating /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/share/macrobot_arm_kinematics/launch
+running install_egg_info
+Copying ../build/macrobot_arm_kinematics/macrobot_arm_kinematics.egg-info to /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/python3.12/site-packages/macrobot_arm_kinematics-0.3.0-py3.12.egg-info
+running install_scripts
+Installing ik_node script to /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/macrobot_arm_kinematics
+Installing linkage_state_node script to /home/dyddl2082/MacRobot/src/install/macrobot_arm_kinematics/lib/macrobot_arm_kinematics
+writing list of installed files to '/home/dyddl2082/MacRobot/src/build/macrobot_arm_kinematics/install.log'

@@ -1,0 +1,14 @@
+[console_scripts]
+arm_demo_cli = macrobot_pick_pipeline.arm_demo_cli:main
+arm_demo_recorder_node = macrobot_pick_pipeline.arm_demo_recorder_node:main
+base_alignment_cli = macrobot_pick_pipeline.base_alignment_cli:main
+base_alignment_node = macrobot_pick_pipeline.base_alignment_node:main
+camera_teach_node = macrobot_pick_pipeline.camera_teach_node:main
+detection_localizer_node = macrobot_pick_pipeline.detection_localizer_node:main
+mock_perception_node = macrobot_pick_pipeline.mock_perception_node:main
+pick_coordinator_node = macrobot_pick_pipeline.pick_coordinator_node:main
+pick_teach_cli = macrobot_pick_pipeline.pick_teach_cli:main
+pick_teach_node = macrobot_pick_pipeline.pick_teach_node:main
+stored_object_pick_cli = macrobot_pick_pipeline.stored_object_pick_cli:main
+stored_object_pick_node = macrobot_pick_pipeline.stored_object_pick_node:main
+visible_pick_test_node = macrobot_pick_pipeline.visible_pick_test_node:main

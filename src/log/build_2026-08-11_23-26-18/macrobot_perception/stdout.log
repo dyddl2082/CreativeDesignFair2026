@@ -1,0 +1,81 @@
+running egg_info
+creating ../build/macrobot_perception/macrobot_perception.egg-info
+writing ../build/macrobot_perception/macrobot_perception.egg-info/PKG-INFO
+writing dependency_links to ../build/macrobot_perception/macrobot_perception.egg-info/dependency_links.txt
+writing entry points to ../build/macrobot_perception/macrobot_perception.egg-info/entry_points.txt
+writing requirements to ../build/macrobot_perception/macrobot_perception.egg-info/requires.txt
+writing top-level names to ../build/macrobot_perception/macrobot_perception.egg-info/top_level.txt
+writing manifest file '../build/macrobot_perception/macrobot_perception.egg-info/SOURCES.txt'
+reading manifest file '../build/macrobot_perception/macrobot_perception.egg-info/SOURCES.txt'
+writing manifest file '../build/macrobot_perception/macrobot_perception.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/dyddl2082/MacRobot/src/build/macrobot_perception/build
+creating /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib
+creating /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/temporal_confirmation
+copying temporal_confirmation/temporal_confirmation_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/temporal_confirmation
+copying temporal_confirmation/__init__.py -> /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/temporal_confirmation
+copying temporal_confirmation/temporal_core.py -> /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/temporal_confirmation
+creating /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/candidate_filter
+copying candidate_filter/__init__.py -> /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/candidate_filter
+copying candidate_filter/filter_core.py -> /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/candidate_filter
+copying candidate_filter/candidate_filter_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/candidate_filter
+creating /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/embedding_retrieval
+copying embedding_retrieval/__init__.py -> /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/embedding_retrieval
+copying embedding_retrieval/embedding_retrieval_node.py -> /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/embedding_retrieval
+copying embedding_retrieval/embedding_core.py -> /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/embedding_retrieval
+copying embedding_retrieval/dinov2_backend.py -> /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/embedding_retrieval
+running build_scripts
+creating /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/scripts-3.12
+copying scripts/embedding_retrieval_node -> /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/scripts-3.12
+running install
+running install_lib
+creating /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/temporal_confirmation
+copying /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/temporal_confirmation/temporal_confirmation_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/temporal_confirmation
+copying /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/temporal_confirmation/__init__.py -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/temporal_confirmation
+copying /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/temporal_confirmation/temporal_core.py -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/temporal_confirmation
+creating /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/candidate_filter
+copying /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/candidate_filter/__init__.py -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/candidate_filter
+copying /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/candidate_filter/filter_core.py -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/candidate_filter
+copying /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/candidate_filter/candidate_filter_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/candidate_filter
+creating /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/embedding_retrieval
+copying /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/embedding_retrieval/__init__.py -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/embedding_retrieval
+copying /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/embedding_retrieval/embedding_retrieval_node.py -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/embedding_retrieval
+copying /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/embedding_retrieval/embedding_core.py -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/embedding_retrieval
+copying /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/lib/embedding_retrieval/dinov2_backend.py -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/embedding_retrieval
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/temporal_confirmation/temporal_confirmation_node.py to temporal_confirmation_node.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/temporal_confirmation/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/temporal_confirmation/temporal_core.py to temporal_core.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/candidate_filter/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/candidate_filter/filter_core.py to filter_core.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/candidate_filter/candidate_filter_node.py to candidate_filter_node.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/embedding_retrieval/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/embedding_retrieval/embedding_retrieval_node.py to embedding_retrieval_node.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/embedding_retrieval/embedding_core.py to embedding_core.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/embedding_retrieval/dinov2_backend.py to dinov2_backend.cpython-312.pyc
+running install_data
+creating /home/dyddl2082/MacRobot/src/install/macrobot_perception/share/ament_index
+creating /home/dyddl2082/MacRobot/src/install/macrobot_perception/share/ament_index/resource_index
+creating /home/dyddl2082/MacRobot/src/install/macrobot_perception/share/ament_index/resource_index/packages
+copying resource/macrobot_perception -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/share/ament_index/resource_index/packages
+copying package.xml -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/share/macrobot_perception
+copying requirements.txt -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/share/macrobot_perception
+copying README.md -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/share/macrobot_perception
+creating /home/dyddl2082/MacRobot/src/install/macrobot_perception/share/macrobot_perception/launch
+copying launch/embedding_retrieval.launch.py -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/share/macrobot_perception/launch
+copying launch/temporal_confirmation.launch.py -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/share/macrobot_perception/launch
+copying launch/candidate_filter.launch.py -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/share/macrobot_perception/launch
+copying launch/pc_recognition_pipeline.launch.py -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/share/macrobot_perception/launch
+creating /home/dyddl2082/MacRobot/src/install/macrobot_perception/share/macrobot_perception/config
+copying config/embedding_retrieval.yaml -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/share/macrobot_perception/config
+copying config/candidate_filter.yaml -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/share/macrobot_perception/config
+copying config/temporal_confirmation.yaml -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/share/macrobot_perception/config
+running install_egg_info
+Copying ../build/macrobot_perception/macrobot_perception.egg-info to /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/python3.12/site-packages/macrobot_perception-0.2.0-py3.12.egg-info
+running install_scripts
+creating /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/macrobot_perception
+copying /home/dyddl2082/MacRobot/src/build/macrobot_perception/build/scripts-3.12/embedding_retrieval_node -> /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/macrobot_perception
+changing mode of /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/macrobot_perception/embedding_retrieval_node to 755
+Installing candidate_filter_node script to /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/macrobot_perception
+Installing temporal_confirmation_node script to /home/dyddl2082/MacRobot/src/install/macrobot_perception/lib/macrobot_perception
+writing list of installed files to '/home/dyddl2082/MacRobot/src/build/macrobot_perception/install.log'

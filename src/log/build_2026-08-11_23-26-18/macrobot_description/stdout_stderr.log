@@ -1,0 +1,91 @@
+-- The C compiler identification is GNU 13.3.0
+-- The CXX compiler identification is GNU 13.3.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+-- Configuring done (6.6s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/dyddl2082/MacRobot/src/build/macrobot_description
+-- Install configuration: ""
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/urdf
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/urdf/macrobot_full_collision.urdf.xacro
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/urdf/macrobot_arm_kinematic.urdf.xacro
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/urdf/original
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/urdf/original/fusion_collision_fixed.urdf
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/urdf/original/fusion_export.urdf
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/urdf/original/fusion_export.urdf.xacro
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/urdf/original/fusion_collision_fixed_assembly.urdf.xacro
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/urdf/original/fusion_collision_fixed.urdf.xacro
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/urdf/macrobot_full_visual.urdf.xacro
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/urdf/macrobot_full_exact_gripper.urdf.xacro
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/urdf/assemblies
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/urdf/assemblies/macrobot_full_visual.urdf.xacro
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/urdf/assemblies/macrobot_full_exact_gripper.urdf.xacro
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/ratio_left_gear.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/gripper_left_addition.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/gripper_right_gear.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/servo_left_gear.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/front_left_wheel.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/gripper_clamp_right.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/base_link.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/servo_right_gear.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/ratio_right_gear.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/back_link.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/gripper_servo_gear.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/back_right_wheel.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/gripper_left_gear.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/gripper_right_addition.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/front_right_wheel.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/camera_link.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/back_left_wheel.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/gripper_link.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/meshes/macrobot/gripper_clamp_left.dae
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/launch
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/launch/display.launch.py
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/launch/display_kinematic.launch.py
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/launch/display_full.launch.py
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/launch/display_full_exact_collision.launch.py
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/launch/rviz_only.launch.py
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/rviz
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/rviz/collision_only.rviz
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/rviz/display.rviz
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/config
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/config/collision_model_revision.txt
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/config/kinematics.yaml
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/config/servo_calibration.template.yaml
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/config/arm_semantics.yaml
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/docs
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/docs/fusion_collision_fixed_transforms.md
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/docs/fusion_collision_fixed_robot_data.yaml
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/docs/GRIPPER_CONSTRAINTS.md
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/docs/URDF_AUDIT.md
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/docs/fusion_robot_data_original.yaml
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/docs/fusion_transforms_original.md
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/images
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/images/robot.png
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/ament_index/resource_index/package_run_dependencies/macrobot_description
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/ament_index/resource_index/parent_prefix_path/macrobot_description
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/environment/ament_prefix_path.sh
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/environment/ament_prefix_path.dsv
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/environment/path.sh
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/environment/path.dsv
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/local_setup.bash
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/local_setup.sh
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/local_setup.zsh
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/local_setup.dsv
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/package.dsv
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/ament_index/resource_index/packages/macrobot_description
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/cmake/macrobot_descriptionConfig.cmake
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/cmake/macrobot_descriptionConfig-version.cmake
+-- Installing: /home/dyddl2082/MacRobot/src/install/macrobot_description/share/macrobot_description/package.xml

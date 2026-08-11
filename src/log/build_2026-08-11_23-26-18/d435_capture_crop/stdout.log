@@ -1,0 +1,54 @@
+running egg_info
+creating ../build/d435_capture_crop/d435_capture_crop.egg-info
+writing ../build/d435_capture_crop/d435_capture_crop.egg-info/PKG-INFO
+writing dependency_links to ../build/d435_capture_crop/d435_capture_crop.egg-info/dependency_links.txt
+writing entry points to ../build/d435_capture_crop/d435_capture_crop.egg-info/entry_points.txt
+writing requirements to ../build/d435_capture_crop/d435_capture_crop.egg-info/requires.txt
+writing top-level names to ../build/d435_capture_crop/d435_capture_crop.egg-info/top_level.txt
+writing manifest file '../build/d435_capture_crop/d435_capture_crop.egg-info/SOURCES.txt'
+reading manifest file '../build/d435_capture_crop/d435_capture_crop.egg-info/SOURCES.txt'
+writing manifest file '../build/d435_capture_crop/d435_capture_crop.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/dyddl2082/MacRobot/src/build/d435_capture_crop/build
+creating /home/dyddl2082/MacRobot/src/build/d435_capture_crop/build/lib
+creating /home/dyddl2082/MacRobot/src/build/d435_capture_crop/build/lib/d435_capture_crop
+copying d435_capture_crop/__init__.py -> /home/dyddl2082/MacRobot/src/build/d435_capture_crop/build/lib/d435_capture_crop
+copying d435_capture_crop/d435_capture_crop_node.py -> /home/dyddl2082/MacRobot/src/build/d435_capture_crop/build/lib/d435_capture_crop
+copying d435_capture_crop/web_server.py -> /home/dyddl2082/MacRobot/src/build/d435_capture_crop/build/lib/d435_capture_crop
+copying d435_capture_crop/negative_library.py -> /home/dyddl2082/MacRobot/src/build/d435_capture_crop/build/lib/d435_capture_crop
+copying d435_capture_crop/capture_core.py -> /home/dyddl2082/MacRobot/src/build/d435_capture_crop/build/lib/d435_capture_crop
+running install
+running install_lib
+creating /home/dyddl2082/MacRobot/src/install/d435_capture_crop/lib/python3.12/site-packages/d435_capture_crop
+copying /home/dyddl2082/MacRobot/src/build/d435_capture_crop/build/lib/d435_capture_crop/__init__.py -> /home/dyddl2082/MacRobot/src/install/d435_capture_crop/lib/python3.12/site-packages/d435_capture_crop
+copying /home/dyddl2082/MacRobot/src/build/d435_capture_crop/build/lib/d435_capture_crop/d435_capture_crop_node.py -> /home/dyddl2082/MacRobot/src/install/d435_capture_crop/lib/python3.12/site-packages/d435_capture_crop
+copying /home/dyddl2082/MacRobot/src/build/d435_capture_crop/build/lib/d435_capture_crop/web_server.py -> /home/dyddl2082/MacRobot/src/install/d435_capture_crop/lib/python3.12/site-packages/d435_capture_crop
+copying /home/dyddl2082/MacRobot/src/build/d435_capture_crop/build/lib/d435_capture_crop/negative_library.py -> /home/dyddl2082/MacRobot/src/install/d435_capture_crop/lib/python3.12/site-packages/d435_capture_crop
+copying /home/dyddl2082/MacRobot/src/build/d435_capture_crop/build/lib/d435_capture_crop/capture_core.py -> /home/dyddl2082/MacRobot/src/install/d435_capture_crop/lib/python3.12/site-packages/d435_capture_crop
+byte-compiling /home/dyddl2082/MacRobot/src/install/d435_capture_crop/lib/python3.12/site-packages/d435_capture_crop/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/d435_capture_crop/lib/python3.12/site-packages/d435_capture_crop/d435_capture_crop_node.py to d435_capture_crop_node.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/d435_capture_crop/lib/python3.12/site-packages/d435_capture_crop/web_server.py to web_server.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/d435_capture_crop/lib/python3.12/site-packages/d435_capture_crop/negative_library.py to negative_library.cpython-312.pyc
+byte-compiling /home/dyddl2082/MacRobot/src/install/d435_capture_crop/lib/python3.12/site-packages/d435_capture_crop/capture_core.py to capture_core.cpython-312.pyc
+running install_data
+creating /home/dyddl2082/MacRobot/src/install/d435_capture_crop/share/ament_index
+creating /home/dyddl2082/MacRobot/src/install/d435_capture_crop/share/ament_index/resource_index
+creating /home/dyddl2082/MacRobot/src/install/d435_capture_crop/share/ament_index/resource_index/packages
+copying resource/d435_capture_crop -> /home/dyddl2082/MacRobot/src/install/d435_capture_crop/share/ament_index/resource_index/packages
+copying package.xml -> /home/dyddl2082/MacRobot/src/install/d435_capture_crop/share/d435_capture_crop
+copying README.md -> /home/dyddl2082/MacRobot/src/install/d435_capture_crop/share/d435_capture_crop
+copying README_KO.md -> /home/dyddl2082/MacRobot/src/install/d435_capture_crop/share/d435_capture_crop
+creating /home/dyddl2082/MacRobot/src/install/d435_capture_crop/share/d435_capture_crop/launch
+copying launch/d435_capture_crop.launch.py -> /home/dyddl2082/MacRobot/src/install/d435_capture_crop/share/d435_capture_crop/launch
+creating /home/dyddl2082/MacRobot/src/install/d435_capture_crop/share/d435_capture_crop/config
+copying config/d435_capture_crop.yaml -> /home/dyddl2082/MacRobot/src/install/d435_capture_crop/share/d435_capture_crop/config
+creating /home/dyddl2082/MacRobot/src/install/d435_capture_crop/share/d435_capture_crop/web
+copying web/index.html -> /home/dyddl2082/MacRobot/src/install/d435_capture_crop/share/d435_capture_crop/web
+copying web/style.css -> /home/dyddl2082/MacRobot/src/install/d435_capture_crop/share/d435_capture_crop/web
+copying web/app.js -> /home/dyddl2082/MacRobot/src/install/d435_capture_crop/share/d435_capture_crop/web
+running install_egg_info
+Copying ../build/d435_capture_crop/d435_capture_crop.egg-info to /home/dyddl2082/MacRobot/src/install/d435_capture_crop/lib/python3.12/site-packages/d435_capture_crop-2.0.0-py3.12.egg-info
+running install_scripts
+Installing d435_capture_crop_node script to /home/dyddl2082/MacRobot/src/install/d435_capture_crop/lib/d435_capture_crop
+writing list of installed files to '/home/dyddl2082/MacRobot/src/build/d435_capture_crop/install.log'

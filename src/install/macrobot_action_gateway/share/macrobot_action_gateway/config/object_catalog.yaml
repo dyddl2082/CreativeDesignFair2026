@@ -1,0 +1,9 @@
+objects:
+  BUDS3:
+    runtime_name: Buds3
+    alignment_profile: Buds3
+    pick_profile: Buds3
+  CUP:
+    runtime_name: Cup
+    alignment_profile: Cup
+    pick_profile: Cup

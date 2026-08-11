@@ -1,0 +1,62 @@
+d435_capture_crop:
+  ros__parameters:
+    # Intel RealSense ROS 2 topics on the Raspberry Pi.
+    color_topic: /camera/camera/color/image_raw
+    depth_topic: /camera/camera/aligned_depth_to_color/image_raw
+    camera_info_topic: /camera/camera/color/camera_info
+
+    # Compatibility command: a plain string still starts a positive capture.
+    # JSON may also specify dataset_role, object_name, target_object, view_label.
+    capture_command_topic: /capture_object_name
+    status_topic: /object_camera_capture/status
+    result_topic: /object_camera_capture/result
+
+    base_dir: ~/MacRobot/data
+
+    # Positive dataset.
+    original_subdir: objects
+    curated_subdir: curated/objects
+    depth_subdir: curated/depth
+    metadata_subdir: curated/metadata
+
+    # Canonical negative dataset. A distractor is stored once in negative/library.
+    # The node creates relative links in negative/confusers/<target>/_auto so the
+    # existing embedding node can keep using its current negative_roots setting.
+    negative_library_subdir: negative/library
+    negative_backgrounds_subdir: negative/backgrounds
+    negative_confusers_subdir: negative/confusers
+    negative_originals_subdir: negative/originals
+    negative_depth_subdir: negative/depth
+    negative_metadata_subdir: negative/metadata
+    auto_negative_directory_name: _auto
+    auto_sync_negative_views: true
+
+    # Browser UI. Open http://<PI_IP>:8090 from the Windows PC.
+    host: 0.0.0.0
+    port: 8090
+    default_dataset_role: positive
+    default_object_name: Buds3
+    default_shared_negative_label: other_object
+    default_background_label: background
+
+    # Preview is throttled; saved captures retain the full ROS frame resolution.
+    preview_hz: 5.0
+    preview_max_width: 640
+    preview_jpeg_quality: 70
+    capture_jpeg_quality: 90
+    save_jpeg_quality: 95
+
+    # D435 aligned-depth matching and conversion.
+    depth_buffer_size: 30
+    depth_sync_tolerance_sec: 0.120
+    depth_scale_m: 0.001
+    depth_min_m: 0.05
+    depth_max_m: 10.0
+
+    # Browser editing session and crop validation.
+    session_timeout_sec: 600.0
+    min_crop_width_px: 24
+    min_crop_height_px: 24
+    save_original_default: true
+    save_depth_default: true
+    clear_session_after_save: true

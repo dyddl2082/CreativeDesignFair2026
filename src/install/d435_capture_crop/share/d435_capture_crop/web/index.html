@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MacRobot D435 Dataset Capture</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">MacRobot dataset tool</p>
+      <h1>D435 촬영·크롭·Negative 관리</h1>
+      <p class="subtitle">이미지는 저장 전에 크롭하며, 다른 물체는 한 번만 촬영해 모든 목표의 negative로 재사용합니다.</p>
+    </div>
+    <div class="top-actions">
+      <button id="syncNegativesBtn" class="button ghost" type="button">Negative 연결 새로고침</button>
+      <div id="connectionBadge" class="badge badge-warn">카메라 확인 중</div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel live-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="step">1</span>
+          <h2>저장 목적 선택 후 촬영</h2>
+        </div>
+        <button id="refreshStreamBtn" class="button ghost" type="button">화면 새로고침</button>
+      </div>
+
+      <div class="role-grid" role="radiogroup" aria-label="데이터 저장 목적">
+        <label class="role-card">
+          <input type="radio" name="datasetRole" value="positive" checked>
+          <span class="role-title">등록 물체</span>
+          <span class="role-description">목표 물체의 positive view</span>
+        </label>
+        <label class="role-card">
+          <input type="radio" name="datasetRole" value="shared_negative">
+          <span class="role-title">공용 방해물</span>
+          <span class="role-description">컵·마우스 등 한 번만 저장</span>
+        </label>
+        <label class="role-card">
+          <input type="radio" name="datasetRole" value="background">
+          <span class="role-title">배경·환경</span>
+          <span class="role-description">빈 책상·손·케이블 등</span>
+        </label>
+        <label class="role-card advanced-role">
+          <input type="radio" name="datasetRole" value="hard_negative">
+          <span class="role-title">목표 전용</span>
+          <span class="role-description">특정 목표에서만 혼동할 때</span>
+        </label>
+      </div>
+
+      <div id="roleHelp" class="role-help"></div>
+
+      <div class="form-grid three-column">
+        <label id="objectNameGroup">
+          <span id="objectNameLabel">물체 이름</span>
+          <input id="objectName" type="text" value="Buds3" maxlength="80" autocomplete="off">
+        </label>
+        <label id="targetObjectGroup" class="hidden">
+          <span>혼동되는 목표 물체</span>
+          <input id="targetObject" type="text" maxlength="80" autocomplete="off" list="registeredObjects" placeholder="예: Buds3">
+        </label>
+        <label>
+          <span>뷰 라벨</span>
+          <input id="viewLabel" type="text" value="front" maxlength="80" autocomplete="off" placeholder="front, left, tilted...">
+        </label>
+      </div>
+      <datalist id="registeredObjects"></datalist>
+      <div id="destinationHint" class="destination-hint mono"></div>
+
+      <div class="live-frame">
+        <img id="liveImage" src="/stream.mjpg" alt="D435 live preview">
+        <div id="livePlaceholder" class="placeholder">D435 color 토픽을 기다리는 중입니다.</div>
+      </div>
+
+      <div class="button-row">
+        <button id="captureBtn" class="button primary large" type="button">현재 프레임 촬영</button>
+      </div>
+      <p class="help">촬영하면 현재 RGB와 가장 가까운 aligned-depth 프레임이 함께 고정됩니다. 아직 디스크에는 저장되지 않습니다.</p>
+    </section>
+
+    <section id="editorPanel" class="panel editor-panel hidden">
+      <div class="panel-heading">
+        <div>
+          <span class="step">2</span>
+          <h2>저장 전에 크롭</h2>
+        </div>
+        <div id="sessionBadge" class="badge">세션 없음</div>
+      </div>
+
+      <div class="editor-grid">
+        <div>
+          <div class="canvas-shell">
+            <canvas id="editorCanvas"></canvas>
+            <div class="canvas-hint">저장할 영역을 마우스 또는 손가락으로 드래그하세요.</div>
+          </div>
+          <div class="toolbar">
+            <button id="fullFrameBtn" class="button ghost" type="button">전체 프레임</button>
+            <button id="centerSquareBtn" class="button ghost" type="button">중앙 정사각형</button>
+            <button id="clearCropBtn" class="button ghost" type="button">선택 지우기</button>
+          </div>
+        </div>
+
+        <aside class="crop-sidebar">
+          <div class="preview-card">
+            <h3>크롭 미리보기</h3>
+            <canvas id="cropPreviewCanvas"></canvas>
+            <p id="cropDimensions" class="mono">선택 없음</p>
+          </div>
+
+          <div class="stats-card">
+            <h3>선택 영역 Depth</h3>
+            <dl>
+              <div><dt>대표 거리</dt><dd id="depthMedian">-</dd></div>
+              <div><dt>근거리–원거리</dt><dd id="depthRange">-</dd></div>
+              <div><dt>유효 픽셀</dt><dd id="depthValid">-</dd></div>
+              <div><dt>RGB–Depth 시간차</dt><dd id="depthSync">-</dd></div>
+            </dl>
+          </div>
+        </aside>
+      </div>
+
+      <div class="save-options">
+        <label class="check-row"><input id="saveOriginal" type="checkbox" checked> 전체 RGB 원본도 보관</label>
+        <label class="check-row"><input id="saveDepth" type="checkbox" checked> 선택 영역 aligned depth를 PNG로 저장</label>
+        <label>
+          <span>메모</span>
+          <textarea id="notes" rows="2" maxlength="2000" placeholder="조명, 각도, 혼동 상황 등 선택 사항"></textarea>
+        </label>
+      </div>
+
+      <div class="button-row split">
+        <button id="discardBtn" class="button danger" type="button">버리고 다시 촬영</button>
+        <button id="saveBtn" class="button success large" type="button">등록 이미지 저장</button>
+      </div>
+    </section>
+
+    <section class="panel compact-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="step">3</span>
+          <h2>저장 결과</h2>
+        </div>
+      </div>
+      <div class="policy-note">
+        <strong>자동 재사용 규칙</strong>
+        <p>등록 물체는 다른 모든 목표의 negative가 되고, 공용 방해물은 모든 목표에 연결됩니다. 목표 전용 negative는 실제 혼동이 남을 때만 사용하세요.</p>
+      </div>
+      <pre id="resultBox" class="result-box">아직 저장한 이미지가 없습니다.</pre>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

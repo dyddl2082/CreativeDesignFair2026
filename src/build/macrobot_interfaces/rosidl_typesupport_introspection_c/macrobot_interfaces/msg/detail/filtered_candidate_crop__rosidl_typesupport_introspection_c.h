@@ -1,0 +1,26 @@
+// generated from rosidl_typesupport_introspection_c/resource/idl__rosidl_typesupport_introspection_c.h.em
+// with input from macrobot_interfaces:msg/FilteredCandidateCrop.idl
+// generated code does not contain a copyright notice
+
+#ifndef MACROBOT_INTERFACES__MSG__DETAIL__FILTERED_CANDIDATE_CROP__ROSIDL_TYPESUPPORT_INTROSPECTION_C_H_
+#define MACROBOT_INTERFACES__MSG__DETAIL__FILTERED_CANDIDATE_CROP__ROSIDL_TYPESUPPORT_INTROSPECTION_C_H_
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+
+#include "rosidl_runtime_c/message_type_support_struct.h"
+#include "rosidl_typesupport_interface/macros.h"
+#include "macrobot_interfaces/msg/rosidl_typesupport_introspection_c__visibility_control.h"
+
+ROSIDL_TYPESUPPORT_INTROSPECTION_C_PUBLIC_macrobot_interfaces
+const rosidl_message_type_support_t *
+ROSIDL_TYPESUPPORT_INTERFACE__MESSAGE_SYMBOL_NAME(rosidl_typesupport_introspection_c, macrobot_interfaces, msg, FilteredCandidateCrop)();
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif  // MACROBOT_INTERFACES__MSG__DETAIL__FILTERED_CANDIDATE_CROP__ROSIDL_TYPESUPPORT_INTROSPECTION_C_H_

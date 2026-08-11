@@ -1,0 +1,13 @@
+{
+  "package_name": "macrobot_interfaces",
+  "non_idl_tuples": [
+    "/home/dyddl2082/MacRobot/src/macrobot_interfaces:msg/DepthCandidate.msg",
+    "/home/dyddl2082/MacRobot/src/macrobot_interfaces:msg/DepthCandidateArray.msg",
+    "/home/dyddl2082/MacRobot/src/macrobot_interfaces:msg/RgbCandidateCrop.msg",
+    "/home/dyddl2082/MacRobot/src/macrobot_interfaces:msg/CandidateFilterResult.msg",
+    "/home/dyddl2082/MacRobot/src/macrobot_interfaces:msg/FilteredCandidateCrop.msg",
+    "/home/dyddl2082/MacRobot/src/macrobot_interfaces:msg/EmbeddingRetrievalResult.msg",
+    "/home/dyddl2082/MacRobot/src/macrobot_interfaces:msg/EmbeddingMatchedCandidate.msg",
+    "/home/dyddl2082/MacRobot/src/macrobot_interfaces:msg/TemporalConfirmationResult.msg"
+  ]
+}
