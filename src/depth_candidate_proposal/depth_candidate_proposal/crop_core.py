@@ -77,7 +77,8 @@ def map_and_pad_roi(
     extra_padding_px: int = 0,
     extra_padding_ratio: float = 0.0,
 ) -> PixelRoi:
-    """Map a proposal ROI into RGB coordinates and clamp it to the image."""
+    """Map a proposal ROI into RGB coordinates and clamp it."""
+
     dimensions = (
         proposal_width,
         proposal_height,
@@ -86,34 +87,70 @@ def map_and_pad_roi(
         roi_width,
         roi_height,
     )
+
     if any(value <= 0 for value in dimensions):
-        raise ValueError("Image dimensions and ROI size must be positive")
+        raise ValueError(
+            "Image dimensions and ROI size must be positive"
+        )
+
     if extra_padding_px < 0:
-        raise ValueError("extra_padding_px cannot be negative")
+        raise ValueError(
+            "extra_padding_px cannot be negative"
+        )
+
     if extra_padding_ratio < 0.0:
-        raise ValueError("extra_padding_ratio cannot be negative")
+        raise ValueError(
+            "extra_padding_ratio cannot be negative"
+        )
 
     scale_x = float(color_width) / float(proposal_width)
     scale_y = float(color_height) / float(proposal_height)
 
     x0 = int(math.floor(float(roi_x) * scale_x))
     y0 = int(math.floor(float(roi_y) * scale_y))
-    x1 = int(math.ceil(float(roi_x + roi_width) * scale_x))
-    y1 = int(math.ceil(float(roi_y + roi_height) * scale_y))
+
+    x1 = int(
+        math.ceil(
+            float(roi_x + roi_width) * scale_x
+        )
+    )
+
+    y1 = int(
+        math.ceil(
+            float(roi_y + roi_height) * scale_y
+        )
+    )
 
     mapped_width = max(x1 - x0, 1)
     mapped_height = max(y1 - y0, 1)
-    pad_x = extra_padding_px + int(round(mapped_width * extra_padding_ratio))
-    pad_y = extra_padding_px + int(round(mapped_height * extra_padding_ratio))
+
+    pad_x = (
+        int(extra_padding_px)
+        + int(round(mapped_width * extra_padding_ratio))
+    )
+
+    pad_y = (
+        int(extra_padding_px)
+        + int(round(mapped_height * extra_padding_ratio))
+    )
 
     x0 = max(0, x0 - pad_x)
     y0 = max(0, y0 - pad_y)
+
     x1 = min(color_width, x1 + pad_x)
     y1 = min(color_height, y1 + pad_y)
 
     if x1 <= x0 or y1 <= y0:
-        raise ValueError("Mapped ROI is empty after clamping")
-    return PixelRoi(x=x0, y=y0, width=x1 - x0, height=y1 - y0)
+        raise ValueError(
+            "Mapped ROI is empty after clamping"
+        )
+
+    return PixelRoi(
+        x=x0,
+        y=y0,
+        width=x1 - x0,
+        height=y1 - y0,
+    )
 
 
 def extract_crop(image_bgr: np.ndarray, roi: PixelRoi) -> np.ndarray:

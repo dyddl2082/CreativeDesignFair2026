@@ -25,8 +25,9 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-"aligned_depth_candidate_node = "
+            "aligned_depth_candidate_node = "
             "depth_candidate_proposal.aligned_depth_candidate_node:main",
+            
             "rgb_candidate_crop_node = "
             "depth_candidate_proposal.rgb_candidate_crop_node:main",
         ],
