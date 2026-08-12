@@ -257,12 +257,6 @@ class StoredObjectPickNode(Node):
         )
         self.create_subscription(
             String,
-            str(self.get_parameter("finder_result_topic").value),
-            self._finder_result_callback,
-            20,
-        )
-        self.create_subscription(
-            String,
             str(self.get_parameter("pico_response_topic").value),
             self._pico_response_callback,
             100,
@@ -327,7 +321,6 @@ class StoredObjectPickNode(Node):
         self.settle_until = 0.0
         self.finder_active = False
         self.start_finder_for_goal = True
-        self.rebuild_banks_for_goal = False
 
         self.pending_odom_purpose = ""
         self.pending_odom_sent = 0.0
@@ -413,7 +406,6 @@ class StoredObjectPickNode(Node):
             "localized_detection_topic": "/macrobot/perception/localized_detection",
             "finder_goal_topic": "/object_finder/goal",
             "finder_cancel_topic": "/object_finder/cancel",
-            "finder_result_topic": "/object_finder/result",
             "active_target_topic": "/macrobot/pick/active_target",
             "pico_command_topic": "/pico_debug/cmd",
             "pico_response_topic": "/pico_debug/response",
@@ -724,15 +716,6 @@ class StoredObjectPickNode(Node):
             )
             if not math.isfinite(graspable_max_range_m) or graspable_max_range_m <= 0.0:
                 raise ValueError("graspable_max_range_m must be positive and finite")
-            action_timeout_sec = float(
-                request.get(
-                    "timeout_sec",
-                    self.get_parameter("record_timeout_sec").value,
-                )
-            )
-            if not math.isfinite(action_timeout_sec) or action_timeout_sec <= 0.0:
-                raise ValueError("timeout_sec must be positive and finite")
-            rebuild_banks = _as_bool(request.get("rebuild_banks"), False)
         except Exception as exc:
             self._publish_command_rejection(
                 event="stored_object_record_rejected",
@@ -765,10 +748,11 @@ class StoredObjectPickNode(Node):
         self.mode = f"record_{record_stage}"
         self.execute_pick = False
         self.start_finder_for_goal = start_finder
-        self.rebuild_banks_for_goal = rebuild_banks
         self.state = "RUNNING"
         self.goal_started = time.monotonic()
-        self.goal_deadline = self.goal_started + action_timeout_sec
+        self.goal_deadline = self.goal_started + float(
+            self.get_parameter("record_timeout_sec").value
+        )
         self.filter.clear()
 
         if record_stage == "grasp":
@@ -826,15 +810,6 @@ class StoredObjectPickNode(Node):
             elif profile.grasp_executor == "arm_demo":
                 self._validate_grasp_trajectory(profile.grasp_trajectory)
             start_finder = _as_bool(request.get("start_finder"), mode == "full")
-            rebuild_banks = _as_bool(request.get("rebuild_banks"), False)
-            action_timeout_sec = float(
-                request.get(
-                    "timeout_sec",
-                    self.get_parameter("overall_timeout_sec").value,
-                )
-            )
-            if not math.isfinite(action_timeout_sec) or action_timeout_sec <= 0.0:
-                raise ValueError("timeout_sec must be positive and finite")
         except Exception as exc:
             error_code = "RESOURCE_BUSY" if isinstance(exc, RuntimeError) else (
                 "GRASP_PROFILE_NOT_FOUND" if isinstance(exc, KeyError) else "INVALID_ARGUMENT"
@@ -860,11 +835,13 @@ class StoredObjectPickNode(Node):
         self.mode = mode
         self.execute_pick = execute_pick
         self.start_finder_for_goal = start_finder
-        self.rebuild_banks_for_goal = rebuild_banks
         self.state = "RUNNING"
         self.phase = "starting"
         self.goal_started = time.monotonic()
-        self.goal_deadline = self.goal_started + action_timeout_sec
+        overall = float(
+            request.get("timeout_sec", self.get_parameter("overall_timeout_sec").value)
+        )
+        self.goal_deadline = self.goal_started + max(1.0, overall)
 
         if bool(self.get_parameter("stow_before_base_motion").value) and (
             not self.have_q or not _q_close(self.current_q, self.stow_q, 0.01)
@@ -958,38 +935,6 @@ class StoredObjectPickNode(Node):
                 orientation_quality=float(orientation.get("quality", 0.0) or 0.0),
             )
         )
-
-    def _finder_result_callback(self, msg: String) -> None:
-        if not self._is_busy() or not self.finder_active:
-            return
-        try:
-            payload = _json_object(msg.data)
-        except Exception:
-            return
-        request_id = str(payload.get("request_id", "")).strip()
-        if request_id and request_id != self.request_id:
-            return
-        object_name = str(payload.get("object_name", "")).strip()
-        if object_name and object_name.casefold() != self.object_name.casefold():
-            return
-        event = str(payload.get("event", "")).strip().lower()
-        reason = str(payload.get("reason", "")).strip()
-        if event in {"finder_configuration_error", "invalid_goal"}:
-            self._fail(
-                "PERCEPTION_UNAVAILABLE",
-                reason=reason or event,
-                finder_result=payload,
-            )
-        elif event == "object_not_found" and reason in {
-            "timeout",
-            "positive_bank_unavailable",
-            "target_switch_timeout",
-        }:
-            self._fail(
-                "OBJECT_NOT_FOUND" if reason == "timeout" else "PERCEPTION_UNAVAILABLE",
-                reason=reason,
-                finder_result=payload,
-            )
 
     def _pico_response_callback(self, msg: String) -> None:
         try:
@@ -2258,7 +2203,6 @@ class StoredObjectPickNode(Node):
                 "timeout_sec": max(1.0, timeout_sec),
                 "continuous": True,
                 "request_id": self.request_id,
-                "rebuild_banks": bool(self.rebuild_banks_for_goal),
             },
         )
 
@@ -2545,7 +2489,6 @@ class StoredObjectPickNode(Node):
         self.phase_deadline = 0.0
         self.settle_until = 0.0
         self.finder_active = False
-        self.rebuild_banks_for_goal = False
         self.pending_odom_purpose = ""
         self.record_point = None
         self.record_stable_detection = None

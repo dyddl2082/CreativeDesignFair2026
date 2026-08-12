@@ -350,10 +350,6 @@ class CandidateFilterNode(Node):
             return
         self._target_object = target
         self._reload_profile(log_result=True)
-        # Target switching is a cross-node transaction.  Publish an immediate
-        # acknowledgement instead of waiting for the next accepted crop.
-        self._last_status_monotonic = 0.0
-        self._publish_status_if_due(time.monotonic(), time.perf_counter())
 
     def _camera_info_callback(self, message: CameraInfo) -> None:
         self._camera_info = message

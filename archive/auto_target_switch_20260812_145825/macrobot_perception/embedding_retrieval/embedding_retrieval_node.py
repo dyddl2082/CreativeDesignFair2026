@@ -69,11 +69,6 @@ class EmbeddingRetrievalNode(Node):
         self._state_lock = threading.RLock()
         self._model_lock = threading.Lock()
         self._reload_lock = threading.Lock()
-        self._target_generation = 1
-        self._bank_target = ""
-        self._banks_loading = True
-        self._banks_ready = False
-        self._last_bank_error = ""
         self._stop_event = threading.Event()
         self._pending: queue.Queue[Optional[FilteredCandidateCrop]] = queue.Queue(
             maxsize=max(int(self.get_parameter("max_pending_messages").value), 1)
@@ -115,12 +110,7 @@ class EmbeddingRetrievalNode(Node):
         self._negative_bank = self._empty_bank("negative", self._target_object)
         self._positive_patch_bank = self._empty_patch_bank("positive", self._target_object)
         self._negative_patch_bank = self._empty_patch_bank("negative", self._target_object)
-        self._reload_banks(
-            force=False,
-            log_result=True,
-            target=self._target_object,
-            generation=self._target_generation,
-        )
+        self._reload_banks(force=False, log_result=True)
 
         input_qos = QoSProfile(depth=4)
         input_qos.reliability = ReliabilityPolicy.BEST_EFFORT
@@ -588,145 +578,84 @@ class EmbeddingRetrievalNode(Node):
                 self.get_logger().warning(f"Could not save {kind} cache: {error}")
         return bank
 
-    def _clear_banks_for_target_locked(self, target: str) -> None:
-        self._positive_bank = self._empty_bank("positive", target)
-        self._negative_bank = self._empty_bank("negative", target)
-        self._positive_patch_bank = self._empty_patch_bank("positive", target)
-        self._negative_patch_bank = self._empty_patch_bank("negative", target)
-        self._bank_target = ""
-        self._banks_ready = False
-
-    def _begin_reload_current_target(self, *, clear_banks: bool) -> tuple[str, int]:
-        with self._state_lock:
+    def _reload_banks(self, *, force: bool, log_result: bool) -> bool:
+        if not self._reload_lock.acquire(blocking=False):
+            if log_result:
+                self.get_logger().warning("A reference-bank reload is already running")
+            return False
+        try:
             target = self._target_object
-            if clear_banks:
-                self._target_generation += 1
-            generation = self._target_generation
-            self._banks_loading = True
-            self._last_bank_error = ""
-            if clear_banks:
-                self._clear_banks_for_target_locked(target)
-            return target, generation
-
-    def _reload_banks(
-        self,
-        *,
-        force: bool,
-        log_result: bool,
-        target: Optional[str] = None,
-        generation: Optional[int] = None,
-    ) -> bool:
-        # A target change must never be dropped merely because another reload
-        # is still running.  Reloads are serialized and tagged with a target
-        # generation; stale completions are discarded.
-        with self._reload_lock:
-            if target is None or generation is None:
-                with self._state_lock:
-                    target = self._target_object
-                    generation = self._target_generation
-            assert target is not None
-            assert generation is not None
             started = time.perf_counter()
-            try:
-                positive = self._load_or_build_bank(
-                    kind="positive",
-                    target=target,
-                    roots=self._positive_roots(target),
-                    max_images=int(self.get_parameter("max_positive_images").value),
-                    force=force,
-                )
-                negative = self._load_or_build_bank(
-                    kind="negative",
-                    target=target,
-                    roots=self._negative_roots(target),
-                    max_images=int(self.get_parameter("max_negative_images").value),
-                    force=force,
-                )
-                positive_patches = self._load_or_build_patch_bank(
-                    kind="positive",
-                    target=target,
-                    roots=self._positive_roots(target),
-                    max_images=int(
-                        self.get_parameter("max_positive_patch_reference_images").value
-                    ),
-                    max_prototypes=int(
-                        self.get_parameter("positive_patch_prototype_count").value
-                    ),
-                    force=force,
-                )
-                negative_patches = self._load_or_build_patch_bank(
-                    kind="negative",
-                    target=target,
-                    roots=self._negative_roots(target),
-                    max_images=int(
-                        self.get_parameter("max_negative_patch_reference_images").value
-                    ),
-                    max_prototypes=int(
-                        self.get_parameter("negative_patch_prototype_count").value
-                    ),
-                    force=force,
-                )
-            except Exception as error:
-                with self._state_lock:
-                    if (
-                        generation == self._target_generation
-                        and target.casefold() == self._target_object.casefold()
-                    ):
-                        self._banks_loading = False
-                        self._banks_ready = False
-                        self._last_bank_error = f"{type(error).__name__}: {error}"
-                if hasattr(self, "_status_publisher"):
-                    self._publish_status()
-                raise
-
-            installed = False
+            positive = self._load_or_build_bank(
+                kind="positive",
+                target=target,
+                roots=self._positive_roots(target),
+                max_images=int(self.get_parameter("max_positive_images").value),
+                force=force,
+            )
+            negative = self._load_or_build_bank(
+                kind="negative",
+                target=target,
+                roots=self._negative_roots(target),
+                max_images=int(self.get_parameter("max_negative_images").value),
+                force=force,
+            )
+            positive_patches = self._load_or_build_patch_bank(
+                kind="positive",
+                target=target,
+                roots=self._positive_roots(target),
+                max_images=int(
+                    self.get_parameter("max_positive_patch_reference_images").value
+                ),
+                max_prototypes=int(
+                    self.get_parameter("positive_patch_prototype_count").value
+                ),
+                force=force,
+            )
+            negative_patches = self._load_or_build_patch_bank(
+                kind="negative",
+                target=target,
+                roots=self._negative_roots(target),
+                max_images=int(
+                    self.get_parameter("max_negative_patch_reference_images").value
+                ),
+                max_prototypes=int(
+                    self.get_parameter("negative_patch_prototype_count").value
+                ),
+                force=force,
+            )
             with self._state_lock:
-                if (
-                    generation == self._target_generation
-                    and target.casefold() == self._target_object.casefold()
-                ):
-                    self._positive_bank = positive
-                    self._negative_bank = negative
-                    self._positive_patch_bank = positive_patches
-                    self._negative_patch_bank = negative_patches
-                    self._bank_target = target
-                    self._banks_loading = False
-                    self._banks_ready = positive.available
-                    self._last_bank_error = ""
-                    self._bank_reload_count += 1
-                    installed = True
+                self._positive_bank = positive
+                self._negative_bank = negative
+                self._positive_patch_bank = positive_patches
+                self._negative_patch_bank = negative_patches
+                self._bank_reload_count += 1
             elapsed = (time.perf_counter() - started) * 1000.0
             if log_result:
-                if installed:
-                    self.get_logger().info(
-                        "Reference banks ready: "
-                        f"target='{target}', positive={positive.count} "
-                        f"(cache={positive.cache_hit}, skipped={positive.skipped_images}), "
-                        f"negative={negative.count} "
-                        f"(cache={negative.cache_hit}, skipped={negative.skipped_images}), "
-                        f"positive_patch_prototypes={positive_patches.count} "
-                        f"(cache={positive_patches.cache_hit}), "
-                        f"negative_patch_prototypes={negative_patches.count} "
-                        f"(cache={negative_patches.cache_hit}), "
-                        f"elapsed={elapsed:.1f} ms"
+                self.get_logger().info(
+                    "Reference banks ready: "
+                    f"target='{target}', positive={positive.count} "
+                    f"(cache={positive.cache_hit}, skipped={positive.skipped_images}), "
+                    f"negative={negative.count} "
+                    f"(cache={negative.cache_hit}, skipped={negative.skipped_images}), "
+                    f"positive_patch_prototypes={positive_patches.count} "
+                    f"(cache={positive_patches.cache_hit}), "
+                    f"negative_patch_prototypes={negative_patches.count} "
+                    f"(cache={negative_patches.cache_hit}), "
+                    f"elapsed={elapsed:.1f} ms"
+                )
+                if not positive.available:
+                    self.get_logger().error(
+                        f"No positive reference images found for target '{target}'"
                     )
-                    if not positive.available:
-                        self.get_logger().error(
-                            f"No positive reference images found for target '{target}'"
-                        )
-                    if not negative.available:
-                        self.get_logger().warning(
-                            f"No negative references found for target '{target}'. "
-                            "Negative-margin decisions will be unavailable."
-                        )
-                else:
-                    self.get_logger().info(
-                        f"Discarded stale bank reload for target '{target}' "
-                        f"generation={generation}"
+                if not negative.available:
+                    self.get_logger().warning(
+                        f"No negative references found for target '{target}'. "
+                        "Negative-margin decisions will be unavailable."
                     )
-            if hasattr(self, "_status_publisher"):
-                self._publish_status()
-            return installed and positive.available
+            return positive.available
+        finally:
+            self._reload_lock.release()
 
     def _drain_pending(self) -> None:
         while True:
@@ -745,33 +674,13 @@ class EmbeddingRetrievalNode(Node):
             self.get_logger().warning(f"Ignoring unsafe target name: '{target}'")
             return
         with self._state_lock:
-            same_target = target.casefold() == self._target_object.casefold()
-            if same_target and self._banks_loading:
+            if target == self._target_object:
                 return
-            if (
-                same_target
-                and self._banks_ready
-                and self._bank_target.casefold() == target.casefold()
-                and not self._banks_loading
-            ):
-                return
-            if not same_target:
-                self._target_object = target
-                self._target_generation += 1
-            generation = self._target_generation
-            self._banks_loading = True
-            self._last_bank_error = ""
-            self._clear_banks_for_target_locked(target)
+            self._target_object = target
         self._drain_pending()
-        self._publish_status()
         threading.Thread(
-            target=lambda: self._reload_banks(
-                force=False,
-                log_result=True,
-                target=target,
-                generation=generation,
-            ),
-            name=f"embedding_bank_reload_{generation}",
+            target=lambda: self._reload_banks(force=False, log_result=True),
+            name="embedding_bank_reload",
             daemon=True,
         ).start()
 
@@ -779,14 +688,7 @@ class EmbeddingRetrievalNode(Node):
         self, request: Trigger.Request, response: Trigger.Response
     ) -> Trigger.Response:
         del request
-        target, generation = self._begin_reload_current_target(clear_banks=True)
-        self._publish_status()
-        success = self._reload_banks(
-            force=False,
-            log_result=True,
-            target=target,
-            generation=generation,
-        )
+        success = self._reload_banks(force=False, log_result=True)
         response.success = success
         response.message = self._bank_summary_text()
         return response
@@ -795,14 +697,7 @@ class EmbeddingRetrievalNode(Node):
         self, request: Trigger.Request, response: Trigger.Response
     ) -> Trigger.Response:
         del request
-        target, generation = self._begin_reload_current_target(clear_banks=True)
-        self._publish_status()
-        success = self._reload_banks(
-            force=True,
-            log_result=True,
-            target=target,
-            generation=generation,
-        )
+        success = self._reload_banks(force=True, log_result=True)
         response.success = success
         response.message = self._bank_summary_text()
         return response
@@ -879,24 +774,6 @@ class EmbeddingRetrievalNode(Node):
         crop_message = message.crop
         filter_result = message.result
 
-        with self._state_lock:
-            processing_generation = self._target_generation
-            processing_target = self._target_object
-            banks_ready = (
-                self._banks_ready
-                and not self._banks_loading
-                and self._bank_target.casefold() == processing_target.casefold()
-            )
-        if not banks_ready:
-            with self._state_lock:
-                self._processed += 1
-                self._rejected += 1
-                self._reject_reasons["target_bank_loading"] += 1
-                self._last_result = (
-                    f"reject target_bank_loading target='{processing_target}'"
-                )
-            return
-
         preprocess_started = time.perf_counter()
         try:
             image_bgr = decode_compressed_image(crop_message.image.data)
@@ -944,18 +821,6 @@ class EmbeddingRetrievalNode(Node):
         inference_ms = (time.perf_counter() - inference_started) * 1000.0
 
         with self._state_lock:
-            if (
-                processing_generation != self._target_generation
-                or processing_target.casefold() != self._target_object.casefold()
-                or not self._banks_ready
-                or self._banks_loading
-                or self._bank_target.casefold() != self._target_object.casefold()
-            ):
-                self._processed += 1
-                self._rejected += 1
-                self._reject_reasons["target_changed_during_inference"] += 1
-                self._last_result = "reject target_changed_during_inference"
-                return
             positive_bank = self._positive_bank
             negative_bank = self._negative_bank
             positive_patch_bank = self._positive_patch_bank
@@ -1409,14 +1274,6 @@ class EmbeddingRetrievalNode(Node):
             )
             payload = {
                 "target_object": self._target_object,
-                "bank_target": self._bank_target,
-                "bank_ready": bool(self._banks_ready),
-                "banks_loading": bool(self._banks_loading),
-                "target_generation": int(self._target_generation),
-                "last_bank_error": self._last_bank_error,
-                "require_negative_bank_for_accept": bool(
-                    self.get_parameter("require_negative_bank_for_accept").value
-                ),
                 "model_id": self._encoder.model_id,
                 "pooling": self._encoder.pooling,
                 "device": str(self._encoder.device),

@@ -31,7 +31,6 @@ from .finder_core import (
     temporal_message_is_usable,
     temporal_to_result_payload,
 )
-from .target_switch_core import TargetReadiness, evaluate_target_readiness
 
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
@@ -59,15 +58,6 @@ class ObjectFinderNode(Node):
         self.target_repeat_remaining = 0
         self.last_target_publish = 0.0
         self.last_found_publish = 0.0
-        self.target_ready = False
-        self.target_prepare_started = 0.0
-        self.target_prepare_deadline = 0.0
-        self.target_readiness: Optional[TargetReadiness] = None
-        self.target_ready_reset_sent = False
-        self.force_rebuild_requested = False
-        self.force_rebuild_started = False
-        self.force_rebuild_baseline_count = 0
-        self.force_rebuild_error = ""
 
         reliable = QoSProfile(depth=20)
         reliable.reliability = ReliabilityPolicy.RELIABLE
@@ -196,11 +186,6 @@ class ObjectFinderNode(Node):
             "reset_temporal_on_goal": True,
             "reload_candidate_on_goal": False,
             "reload_embedding_on_goal": False,
-            "require_target_ready_before_results": True,
-            "target_prepare_timeout_sec": 90.0,
-            "require_candidate_target_ready": True,
-            "require_temporal_target_ready": True,
-            "require_patch_bank_when_enabled": True,
             "timeout_after_first_found": False,
             "timer_hz": 10.0,
         }
@@ -262,23 +247,7 @@ class ObjectFinderNode(Node):
             )
             return
 
-        now = self._now()
-        self.session.start(goal, now)
-        self.target_ready = not bool(
-            self.get_parameter("require_target_ready_before_results").value
-        )
-        self.target_prepare_started = now
-        prepare_timeout = min(
-            goal.timeout_sec,
-            max(float(self.get_parameter("target_prepare_timeout_sec").value), 1.0),
-        )
-        self.target_prepare_deadline = now + prepare_timeout
-        self.target_readiness = None
-        self.target_ready_reset_sent = False
-        self.force_rebuild_requested = bool(goal.rebuild_banks)
-        self.force_rebuild_started = False
-        self.force_rebuild_baseline_count = 0
-        self.force_rebuild_error = ""
+        self.session.start(goal, self._now())
         self.target_repeat_remaining = max(
             1, int(self.get_parameter("target_repeat_count").value)
         )
@@ -289,15 +258,12 @@ class ObjectFinderNode(Node):
             self._call_trigger(self.temporal_reset_client, "temporal_reset")
         if bool(self.get_parameter("reload_candidate_on_goal").value):
             self._call_trigger(self.candidate_reload_client, "candidate_reload")
-        if bool(self.get_parameter("reload_embedding_on_goal").value):
+        if goal.rebuild_banks:
+            self._call_trigger(self.embedding_rebuild_client, "embedding_rebuild")
+        elif bool(self.get_parameter("reload_embedding_on_goal").value):
             self._call_trigger(self.embedding_reload_client, "embedding_reload")
 
-        self._publish_status(
-            "search_started",
-            positive_image_count=image_count,
-            target_ready=self.target_ready,
-            target_prepare_timeout_sec=prepare_timeout,
-        )
+        self._publish_status("search_started", positive_image_count=image_count)
 
     def _cancel_callback(self, msg: String) -> None:
         reason = msg.data.strip() or "user_cancel"
@@ -306,12 +272,6 @@ class ObjectFinderNode(Node):
             self._publish_status("cancel_ignored", reason="no_active_goal")
             return
         self.session.cancel()
-        self.target_ready = False
-        self.target_readiness = None
-        self.target_prepare_deadline = 0.0
-        self.force_rebuild_requested = False
-        self.force_rebuild_started = False
-        self.force_rebuild_error = ""
         self.target_repeat_remaining = 0
         self._clear_active_target()
         self._call_trigger(self.temporal_reset_client, "temporal_reset")
@@ -361,8 +321,6 @@ class ObjectFinderNode(Node):
             return
         if not bool(response.success):
             self.get_logger().warning(f"{label} rejected: {response.message}")
-            if label == "embedding_rebuild":
-                self.force_rebuild_error = str(response.message)
 
     def _camera_info_callback(self, msg: CameraInfo) -> None:
         if len(msg.k) >= 9 and msg.k[0] > 0.0 and msg.k[4] > 0.0:
@@ -384,91 +342,10 @@ class ObjectFinderNode(Node):
             self.last_embedding_status = now
         elif source == "temporal":
             self.last_temporal_status = now
-        self._refresh_target_readiness()
-
-    def _refresh_target_readiness(self) -> None:
-        goal = self.session.goal
-        if goal is None or self.session.state not in {"SEARCHING", "TRACKING", "FOUND"}:
-            return
-        if not bool(self.get_parameter("require_target_ready_before_results").value):
-            self.target_ready = True
-            return
-        readiness = evaluate_target_readiness(
-            goal.object_name,
-            self.status_payloads,
-            require_candidate_target=bool(
-                self.get_parameter("require_candidate_target_ready").value
-            ),
-            require_temporal_target=bool(
-                self.get_parameter("require_temporal_target_ready").value
-            ),
-            require_patch_bank_when_enabled=bool(
-                self.get_parameter("require_patch_bank_when_enabled").value
-            ),
-        )
-        self.target_readiness = readiness
-        if readiness.ready and self.force_rebuild_requested:
-            embedding = self.status_payloads.get("embedding", {})
-            reload_count = int(embedding.get("bank_reload_count", 0) or 0)
-            if not self.force_rebuild_started:
-                self.force_rebuild_started = True
-                self.force_rebuild_baseline_count = reload_count
-                self._call_trigger(self.embedding_rebuild_client, "embedding_rebuild")
-                self._publish_status(
-                    "target_rebuild_started",
-                    target_ready=False,
-                    target_readiness=readiness.details,
-                )
-                return
-            if self.force_rebuild_error:
-                return
-            if reload_count <= self.force_rebuild_baseline_count:
-                return
-            self.force_rebuild_requested = False
-        if readiness.ready and not self.target_ready:
-            self.target_ready = True
-            # Transitional frames may have been produced while the old bank was
-            # being replaced.  Clear them once, after every component confirms
-            # the new target, then repeat the target publication.
-            if not self.target_ready_reset_sent:
-                self._call_trigger(self.temporal_reset_client, "temporal_reset_after_target_ready")
-                self.target_ready_reset_sent = True
-            self.target_repeat_remaining = max(
-                self.target_repeat_remaining,
-                max(1, int(self.get_parameter("target_repeat_count").value)),
-            )
-            self._publish_targets(force=True)
-            self._publish_status(
-                "target_ready",
-                target_ready=True,
-                target_readiness=readiness.details,
-            )
-
-    def _target_readiness_payload(self) -> dict[str, Any]:
-        readiness = self.target_readiness
-        if readiness is None:
-            return {
-                "ready": self.target_ready,
-                "reasons": ["component_status_not_received"],
-                "checks": {},
-                "details": {},
-            }
-        return {
-            "ready": self.target_ready,
-            "component_ready": readiness.ready,
-            "force_rebuild_requested": self.force_rebuild_requested,
-            "force_rebuild_started": self.force_rebuild_started,
-            "force_rebuild_error": self.force_rebuild_error,
-            "reasons": list(readiness.reasons),
-            "checks": readiness.checks,
-            "details": readiness.details,
-        }
 
     def _confirmed_callback(self, msg: TemporalConfirmationResult) -> None:
         goal = self.session.goal
         if goal is None or self.session.state not in {"SEARCHING", "TRACKING", "FOUND"}:
-            return
-        if not self.target_ready:
             return
         if not temporal_message_is_usable(
             msg,
@@ -502,8 +379,6 @@ class ObjectFinderNode(Node):
     def _temporal_event_callback(self, msg: TemporalConfirmationResult) -> None:
         goal = self.session.goal
         if goal is None or not goal.continuous:
-            return
-        if not self.target_ready:
             return
         if str(msg.target_object).strip().casefold() != goal.object_name.casefold():
             return
@@ -583,8 +458,6 @@ class ObjectFinderNode(Node):
             "ok": True,
             "event": event,
             **self.session.snapshot(),
-            "target_ready": self.target_ready,
-            "target_readiness": self._target_readiness_payload(),
             "health": self._health_snapshot(),
             **details,
         }
@@ -593,38 +466,10 @@ class ObjectFinderNode(Node):
     def _timer_callback(self) -> None:
         if self.target_repeat_remaining > 0:
             self._publish_targets()
-        self._refresh_target_readiness()
-        now = self._now()
-        if (
-            self.session.goal is not None
-            and not self.target_ready
-            and bool(self.get_parameter("require_target_ready_before_results").value)
-            and now >= self.target_prepare_deadline > 0.0
-        ):
-            goal = self.session.goal
-            readiness = self._target_readiness_payload()
-            self.session.mark_timeout()
-            self.target_repeat_remaining = 0
-            self._clear_active_target()
-            self._publish_result(
-                not_found_payload(
-                    goal=goal,
-                    reason="target_switch_timeout",
-                    event="finder_configuration_error",
-                    details={"target_readiness": readiness},
-                )
-            )
-            self._publish_status(
-                "target_switch_failed",
-                reason="target_switch_timeout",
-                target_readiness=readiness,
-            )
-            self.target_prepare_deadline = 0.0
-            return
         timeout_after_found = bool(
             self.get_parameter("timeout_after_first_found").value
         )
-        if self.session.timeout_due(now) and (
+        if self.session.timeout_due(self._now()) and (
             self.session.found_count == 0 or timeout_after_found
         ):
             goal = self.session.goal

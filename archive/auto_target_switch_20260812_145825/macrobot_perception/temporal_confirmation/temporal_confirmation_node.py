@@ -324,19 +324,8 @@ class TemporalConfirmationNode(Node):
 
         with self._lock:
             self._received_messages += 1
-            # The explicit target topic is authoritative.  A result can arrive
-            # after an asynchronous DINO bank switch; letting that stale result
-            # change the active target causes Eraser/Buds3 target flapping.
-            if target:
-                if self._active_target and target.casefold() != self._active_target.casefold():
-                    self._late_result_drops += 1
-                    self._last_event = (
-                        f"dropped_stale_target_result result='{target}' "
-                        f"active='{self._active_target}'"
-                    )
-                    return
-                if not self._active_target:
-                    self._switch_target_locked(target, reason="initial_result_target")
+            if target and target != self._active_target:
+                self._switch_target_locked(target, reason="result_target_changed")
             if stamp_ns <= self._last_finalized_stamp_ns:
                 self._late_result_drops += 1
                 return
@@ -376,14 +365,9 @@ class TemporalConfirmationNode(Node):
         target = message.data.strip()
         if not target:
             return
-        changed = False
         with self._lock:
-            if target.casefold() != self._active_target.casefold():
+            if target != self._active_target:
                 self._switch_target_locked(target, reason="target_topic_changed")
-                changed = True
-        if changed:
-            # Finder waits for this acknowledgement before accepting detections.
-            self._publish_status()
 
     def _switch_target_locked(self, target: str, *, reason: str) -> None:
         events = self._tracker.reset(frame_index=self._frame_index, event="expired")

@@ -90,11 +90,6 @@ def _parser() -> argparse.ArgumentParser:
     search.add_argument("object_name")
     search.add_argument("--profile", default="")
     search.add_argument("--no-finder", action="store_true")
-    search.add_argument(
-        "--rebuild-banks",
-        action="store_true",
-        help="Force global and patch reference banks to be rebuilt after switching target",
-    )
     search.add_argument("--timeout", type=float, default=40.0)
 
     grasp = sub.add_parser(
@@ -141,7 +136,6 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("object_name")
     run.add_argument("--profile", default="")
     run.add_argument("--align-only", action="store_true")
-    run.add_argument("--rebuild-banks", action="store_true")
     run.add_argument("--timeout", type=float, default=180.0)
 
     sub.add_parser("list", help="List stored runtime profiles")
@@ -170,8 +164,6 @@ def main(argv=None) -> None:
                     "object_name": args.object_name,
                     "profile": args.profile or args.object_name,
                     "start_finder": not args.no_finder,
-                    "rebuild_banks": bool(args.rebuild_banks),
-                    "timeout_sec": timeout,
                 },
             )
         elif args.command == "record-grasp":
@@ -192,7 +184,6 @@ def main(argv=None) -> None:
                             False if args.ignore_orientation else None
                         )
                     ),
-                    "timeout_sec": timeout,
                 },
             )
         elif args.command == "record":
@@ -212,7 +203,6 @@ def main(argv=None) -> None:
                             False if args.ignore_orientation else None
                         )
                     ),
-                    "timeout_sec": timeout,
                 },
             )
         elif args.command == "visible-test":
@@ -236,7 +226,6 @@ def main(argv=None) -> None:
                     "mode": "full",
                     "start_finder": True,
                     "execute_pick": not args.align_only,
-                    "rebuild_banks": bool(args.rebuild_banks),
                     "timeout_sec": timeout,
                 },
             )
