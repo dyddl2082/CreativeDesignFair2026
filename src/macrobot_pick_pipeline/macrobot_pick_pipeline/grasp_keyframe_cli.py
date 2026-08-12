@@ -111,6 +111,8 @@ class Client(Node):
         super().__init__("grasp_keyframe_cli")
         self.pub = self.create_publisher(String, "/macrobot/grasp_keyframes/command", 10)
         self.result = None
+        self.expected_command_id = ""
+        self.accept_any_command_id = False
         self.create_subscription(
             String, "/macrobot/grasp_keyframes/result", self._callback, 10
         )
@@ -118,23 +120,102 @@ class Client(Node):
 
     def _callback(self, message: String) -> None:
         try:
-            self.result = json.loads(message.data)
+            payload = json.loads(message.data)
         except Exception:
-            self.result = {"ok": False, "event": "invalid_result", "raw": message.data}
+            return
+
+        if not isinstance(payload, dict):
+            return
+
+        result_command_id = str(
+            payload.get("command_id", "")
+        ).strip()
+
+        # 일반 명령에서는 자신이 보낸 command_id의 결과만 받는다.
+        #
+        # cancel/stop은 active execution의 command_id로 terminal 결과가
+        # 돌아올 수 있으므로 accept_any_command_id를 사용한다.
+        if (
+            not self.accept_any_command_id
+            and self.expected_command_id
+            and result_command_id != self.expected_command_id
+        ):
+            return
+
+        self.result = payload
 
     def call(self, payload: dict) -> dict:
+        self.result = None
+        self.expected_command_id = str(
+            payload.get("command_id", "")
+        ).strip()
+
+        action = str(
+            payload.get("action", "")
+        ).strip().lower()
+
+        self.accept_any_command_id = action in {
+            "cancel",
+            "stop",
+        }
+
         message = String()
-        message.data = json.dumps(payload, ensure_ascii=False)
-        # Give discovery a small chance and make the command resilient to the
-        # short-lived CLI publisher.  The node side treats repeated command_id
-        # results as idempotent enough for these sync commands.
-        for _ in range(3):
-            self.pub.publish(message)
-            rclpy.spin_once(self, timeout_sec=0.2)
+        message.data = json.dumps(
+            payload,
+            ensure_ascii=False,
+        )
+
+        # 짧게 실행되는 CLI가 DDS discovery 전에 명령을 보내지 않도록
+        # 실제 subscriber가 발견될 때까지 기다린다.
+        discovery_deadline = time.monotonic() + 5.0
+
+        while (
+            rclpy.ok()
+            and self.pub.get_subscription_count() == 0
+            and time.monotonic() < discovery_deadline
+        ):
+            rclpy.spin_once(
+                self,
+                timeout_sec=0.1,
+            )
+
+        if self.pub.get_subscription_count() == 0:
+            return {
+                "ok": False,
+                "event": "grasp_keyframe_cli_no_subscriber",
+                "state": "FAILED",
+                "command_id": self.expected_command_id,
+                "reason": (
+                    "no subscriber discovered on "
+                    "/macrobot/grasp_keyframes/command"
+                ),
+            }
+
+        # 같은 명령을 3번 보내지 않고 한 번만 보낸다.
+        self.pub.publish(message)
+
         deadline = time.monotonic() + self.timeout
-        while rclpy.ok() and self.result is None and time.monotonic() < deadline:
-            rclpy.spin_once(self, timeout_sec=0.2)
-        return self.result or {"ok": False, "event": "cli_timeout"}
+
+        while (
+            rclpy.ok()
+            and self.result is None
+            and time.monotonic() < deadline
+        ):
+            rclpy.spin_once(
+                self,
+                timeout_sec=0.2,
+            )
+
+        if self.result is not None:
+            return self.result
+
+        return {
+            "ok": False,
+            "event": "grasp_keyframe_cli_timeout",
+            "state": "TIMED_OUT",
+            "command_id": self.expected_command_id,
+            "reason": "terminal result was not received before timeout",
+        }
 
 
 def build_parser() -> argparse.ArgumentParser:

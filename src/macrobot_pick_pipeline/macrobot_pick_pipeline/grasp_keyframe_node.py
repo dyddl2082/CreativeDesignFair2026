@@ -225,16 +225,45 @@ class GraspKeyframeNode(Node):
             },
         )
 
-    def _result(self, event: str, ok: bool, **details: Any) -> None:
-        self._json_publish(
-            self.result_pub,
-            {
-                "ok": ok,
-                "event": event,
-                "state": self.state,
-                "command_id": self.command_id,
-                **details,
-            },
+    def _result_for(
+        self,
+        command_id: str,
+        event: str,
+        ok: bool,
+        *,
+        state: Optional[str] = None,
+        **details: Any,
+    ) -> None:
+        """
+        특정 command_id에 대한 결과를 발행한다.
+
+        active command와 새로 거부된 command를 구분하기 위해
+        command_id를 명시적으로 받는다.
+        """
+        payload = {
+            "ok": bool(ok),
+            "event": str(event),
+            "state": self.state if state is None else str(state),
+            "command_id": str(command_id),
+            **details,
+        }
+        self._json_publish(self.result_pub, payload)
+
+
+    def _result(
+        self,
+        event: str,
+        ok: bool,
+        **details: Any,
+    ) -> None:
+        """
+        현재 active command에 대한 결과를 발행한다.
+        """
+        self._result_for(
+            self.command_id,
+            event,
+            ok,
+            **details,
         )
 
     def _state_callback(self, message: JointState) -> None:
@@ -281,33 +310,134 @@ class GraspKeyframeNode(Node):
 
     def _command_callback(self, message: String) -> None:
         action = ""
+        incoming_command_id = ""
+
         try:
             data = json.loads(message.data)
+
             if not isinstance(data, dict):
                 raise ValueError("command must be a JSON object")
+
             action = str(data.get("action", "")).strip().lower()
+
+            incoming_command_id = (
+                str(data.get("command_id", "")).strip()
+                or f"grasp-keyframes-{int(time.time() * 1000)}"
+            )
+            data["command_id"] = incoming_command_id
+
+            # 읽기 전용 list는 실행 중에도 허용한다.
+            # active command_id를 변경하지 않는다.
+            if action == "list":
+                self._result_for(
+                    incoming_command_id,
+                    "grasp_keyframe_profiles",
+                    True,
+                    state=self.state,
+                    profiles=self.store.mappings(),
+                    active_command_id=self.command_id,
+                )
+                return
+
+            # 취소/정지는 executor가 busy여도 항상 전달되어야 한다.
+            if action in {"stop", "cancel"}:
+                reason = (
+                    str(data.get("reason", "")).strip()
+                    or "user_cancel"
+                )
+                self._stop(reason)
+                return
+
+            executor_active = self.state in {
+                "PREFLIGHT",
+                "RUNNING",
+                "CANCEL_REQUESTED",
+            }
+
+            if executor_active:
+                # 같은 command_id의 재전송:
+                # 새 실행으로 취급하지 않고 기존 실행이 살아 있음을 알린다.
+                if incoming_command_id == self.command_id:
+                    self._status(
+                        "grasp_keyframe_command_duplicate_running",
+                        duplicate=True,
+                        duplicate_action=action,
+                        active_command_id=self.command_id,
+                    )
+                    return
+
+                # 실제로 다른 command_id가 들어온 경우에만 busy reject.
+                # 거부된 새 command_id로 FAILED 결과를 발행한다.
+                self._result_for(
+                    incoming_command_id,
+                    "grasp_keyframe_command_rejected",
+                    False,
+                    state="FAILED",
+                    reason="grasp_keyframe_executor_busy",
+                    executor_state=self.state,
+                    active_command_id=self.command_id,
+                    rejected_action=action,
+                )
+                return
+
+            # 이 지점부터는 새 명령을 실제로 받아들인다.
+            self.command_id = incoming_command_id
+
+            self._status(
+                "grasp_keyframe_command_acknowledged",
+                action=action,
+            )
+
             if action == "capture":
                 self._capture(data)
+
             elif action == "finalize":
                 self._finalize(data)
+
             elif action in {"play", "preflight"}:
-                self._start_plan(data, execute=action == "play")
-            elif action == "list":
-                self._result("grasp_keyframe_profiles", True, profiles=self.store.mappings())
+                self._start_plan(
+                    data,
+                    execute=(action == "play"),
+                )
+
             elif action == "delete":
-                deleted = self.store.delete(str(data.get("profile", "")))
-                self._result("grasp_keyframe_profile_deleted", deleted)
+                deleted = self.store.delete(
+                    str(data.get("profile", ""))
+                )
+                self._result(
+                    "grasp_keyframe_profile_deleted",
+                    deleted,
+                )
+
             elif action == "reload":
                 self.store.reload()
-                self._result("grasp_keyframe_profiles_reloaded", True)
-            elif action in {"stop", "cancel"}:
-                self._stop("user_cancel")
+                self._result(
+                    "grasp_keyframe_profiles_reloaded",
+                    True,
+                )
+
             else:
                 raise ValueError("unsupported action")
+
         except Exception as error:
-            if action in {"play", "preflight"} and self.state == "PREFLIGHT":
+            executor_state = self.state
+
+            # preflight 도중 발생한 오류는 executor terminal 실패로 전환한다.
+            if (
+                action in {"play", "preflight"}
+                and self.state == "PREFLIGHT"
+            ):
                 self.state = "FAILED"
-            self._result("grasp_keyframe_command_rejected", False, reason=str(error))
+
+            self._result_for(
+                incoming_command_id or self.command_id,
+                "grasp_keyframe_command_rejected",
+                False,
+                state="FAILED",
+                reason=str(error),
+                executor_state=executor_state,
+                rejected_action=action,
+            )
 
     def _capture(self, data: dict[str, Any]) -> None:
         profile_name = str(data.get("profile", "")).strip()
@@ -357,11 +487,6 @@ class GraspKeyframeNode(Node):
         )
 
     def _start_plan(self, data: dict[str, Any], *, execute: bool) -> None:
-        if self.state not in {"IDLE", "SUCCEEDED", "FAILED", "CANCELED"}:
-            raise ValueError("grasp_keyframe_executor_busy")
-        self.command_id = str(data.get("command_id", "")).strip() or (
-            f"grasp-keyframes-{int(time.time() * 1000)}"
-        )
         self.state = "PREFLIGHT"
         profile = self.store.get(str(data.get("profile", "")))
         profile.validate()
