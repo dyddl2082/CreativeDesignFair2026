@@ -1,0 +1,20 @@
+schema: macrobot.grasp_keyframes/v2
+updated_at: '2026-08-12T01:40:28.754843+00:00'
+profiles:
+  Eraser:
+    object_name: Eraser
+    recorded_at: '2026-08-12T01:40:28.753983+00:00'
+    reference_orientation_deg: 0.0
+    reference_orientation_class: unknown
+    reference_orientation_quality: 0.0
+    stages:
+      OPEN:
+        representation: gripper_only
+        q:
+        - 0.15000000000000002
+        - 0.0
+        - 0.0
+        object_offset: null
+        seed_q: null
+        gripper_q: 0.0
+        settle_sec: 0.1
