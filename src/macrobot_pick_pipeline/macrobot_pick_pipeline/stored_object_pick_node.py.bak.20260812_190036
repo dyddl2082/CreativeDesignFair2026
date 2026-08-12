@@ -997,28 +997,12 @@ class StoredObjectPickNode(Node):
         point = _point_from_payload(payload.get("point_base"))
         if point is None:
             return
-        now_sec = time.time()
         try:
             score = float(payload.get("score", 0.0))
-            source_stamp = float(payload.get("stamp_sec", now_sec))
-            published_stamp = float(payload.get("published_at_sec", now_sec))
+            stamp = float(payload.get("stamp_sec", time.time()))
         except (TypeError, ValueError):
             return
-
-        # ``stamp_sec`` is the original camera/result timestamp.  After DINOv2,
-        # patch heatmap, temporal confirmation, DDS transport, and Pi-side depth
-        # refinement, it can already be older than the short record stability
-        # window when the localized message arrives.  The stability filter is
-        # intended to group recently *published/received* localized observations,
-        # so use ``published_at_sec`` when available and fall back to local receipt
-        # time.  Keep rejecting non-finite source timestamps, but do not prune a
-        # valid localized observation merely because the original camera frame is
-        # old.
-        stamp = published_stamp
-        if not math.isfinite(stamp) or stamp <= 0.0 or stamp > now_sec + 1.0:
-            stamp = now_sec
-
-        if not all(math.isfinite(value) for value in (*point, score, source_stamp, stamp)):
+        if not all(math.isfinite(value) for value in (*point, score, stamp)):
             return
         self.last_object_point = point
         localization = payload.get("localization", {})
