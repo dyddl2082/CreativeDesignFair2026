@@ -1,30 +1,30 @@
 schema: macrobot.stored_object_runtime/v1
-updated_at: '2026-08-12T16:41:29.053871+00:00'
+updated_at: '2026-08-12T17:54:13.476766+00:00'
 profiles:
   Eraser:
     object_name: Eraser
-    recorded_at: '2026-08-12T16:41:29.053453+00:00'
-    recording_state: search_only
+    recorded_at: '2026-08-12T17:54:13.471497+00:00'
+    recording_state: complete
     position_scope: pico_odom_session
     search_pose_odom:
-      x_m: -0.170753852
-      y_m: -0.00015865094
-      yaw_deg: 0.106469352
+      x_m: -0.17109759
+      y_m: -0.0005667878
+      yaw_deg: 0.3796012
       reliable: true
-      pico_time_ms: 377661
+      pico_time_ms: 2895944
     object_point_odom:
-      x: -0.5115048690918542
-      y: -0.05043086077687703
-      z: 0.03869362881043427
+      x: 0.17307712295103833
+      y: -0.04233802308034939
+      z: 0.04086366406689969
     alignment:
       object_name: Eraser
       pick_profile: Eraser
       frame_id: base_link
       reference_point_base:
-        x: -0.2
-        y: 0.06
-        z: 0.1
-      recorded_at: ''
+        x: 0.17486080457461436
+        y: -0.04938636818897906
+        z: 0.04086366406689969
+      recorded_at: '2026-08-12T17:54:13.471563+00:00'
       minimum_score: 0.0
       stability_count: 5
       stability_window_sec: 1.5
@@ -52,16 +52,16 @@ profiles:
       orientation_tolerance_deg: 25.0
     recognition:
       point_base:
-        x: 0.3408438465902876
-        y: -0.04963892598105413
-        z: 0.03869362881043427
-      score: 0.7741330862045288
+        x: 0.3438904147384317
+        y: -0.04405055939264982
+        z: 0.04086366406689969
+      score: 0.8769193887710571
       minimum_range_m: 0.32
       maximum_range_m: 1.2
     grasp:
       executor: keyframes
       trajectory: ''
-      keyframe_profile: ''
+      keyframe_profile: Eraser
       pick_profile: Eraser
     search:
       max_yaw_deg: 35.0
@@ -88,3 +88,9 @@ profiles:
       turn_translation_drift_m_per_360: 0.01
       maximum_uncertainty_m: 0.025
       maximum_object_relocation_m: 1.0
+    grasp_pose_odom:
+      x_m: -0.00306198
+      y_m: 0.0022751
+      yaw_deg: 1.5582337
+      reliable: true
+      pico_time_ms: 2948144

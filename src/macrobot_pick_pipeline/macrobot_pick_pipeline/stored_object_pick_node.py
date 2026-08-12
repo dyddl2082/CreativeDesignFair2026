@@ -459,7 +459,7 @@ class StoredObjectPickNode(Node):
             ),
             "recordings_dir": str(Path.home() / "MacRobot" / "data" / "arm_primitives"),
             "base_frame": "base_link",
-            "forward_axis_sign": -1.0,
+            "forward_axis_sign": 1.0,
             "lateral_axis_sign": 1.0,
             "pico_turn_positive_is_right": True,
             "pico_move_positive_is_forward": True,
