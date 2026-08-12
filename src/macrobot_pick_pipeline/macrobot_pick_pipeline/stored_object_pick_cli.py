@@ -78,9 +78,14 @@ def _parser() -> argparse.ArgumentParser:
     record = sub.add_parser("record", help="Record current graspable camera/base pose")
     record.add_argument("object_name")
     record.add_argument("--profile", default="")
-    record.add_argument("--grasp-trajectory", required=True)
+    grasp_group = record.add_mutually_exclusive_group(required=True)
+    grasp_group.add_argument("--grasp-keyframes", default="")
+    grasp_group.add_argument("--grasp-trajectory", default="")
     record.add_argument("--pick-profile", default="")
     record.add_argument("--no-finder", action="store_true")
+    orientation = record.add_mutually_exclusive_group()
+    orientation.add_argument("--require-orientation", action="store_true")
+    orientation.add_argument("--ignore-orientation", action="store_true")
     record.add_argument("--timeout", type=float, default=40.0)
 
     visible = sub.add_parser("visible-test", help="Assume object is already localized; align and grasp")
@@ -119,9 +124,15 @@ def main(argv=None) -> None:
                     "request_id": request_id,
                     "object_name": args.object_name,
                     "profile": args.profile or args.object_name,
+                    "grasp_keyframe_profile": args.grasp_keyframes,
                     "grasp_trajectory": args.grasp_trajectory,
                     "pick_profile": args.pick_profile or args.object_name,
                     "start_finder": not args.no_finder,
+                    "require_orientation_match": (
+                        True if args.require_orientation else (
+                            False if args.ignore_orientation else None
+                        )
+                    ),
                 },
             )
         elif args.command == "visible-test":

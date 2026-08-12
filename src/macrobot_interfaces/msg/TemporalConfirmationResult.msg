@@ -38,9 +38,13 @@ float32 depth_m
 float32 center_std_px
 float32 depth_std_m
 
-# Normalized horizontal displacement from the image center, approximately [-1, 1].
-float32 horizontal_error_norm
-string suggested_turn
+# Localization metadata. Alignment must use the base_link 3D point created by
+# detection_localizer_node; no turn-left/turn-right image-center suggestion is exposed.
+string localization_method
+float32 localization_quality
+float32 orientation_deg
+string orientation_class
+float32 orientation_quality
 
 # Most recent per-candidate retrieval result associated with this track.
 EmbeddingRetrievalResult latest_result

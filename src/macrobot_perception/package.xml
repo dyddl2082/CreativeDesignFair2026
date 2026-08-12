@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>macrobot_perception</name>
-  <version>0.2.0</version>
+  <version>0.3.0</version>
   <description>Candidate filtering, DINOv2 retrieval, and temporal confirmation for MacRobot.</description>
   <maintainer email="dyddl2082@snu.ac.kr">MacRobot Team</maintainer>
   <license>Apache-2.0</license>

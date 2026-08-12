@@ -1,0 +1,43 @@
+schema: macrobot.grasp_keyframes/v2
+profiles:
+  Eraser:
+    object_name: Eraser
+    reference_orientation_deg: 5.0
+    reference_orientation_class: horizontal
+    reference_orientation_quality: 0.8
+    stages:
+      OPEN:
+        representation: gripper_only
+        q: [0.0, 0.0, 0.0]
+        object_offset: null
+        seed_q: null
+        gripper_q: 0.0
+        settle_sec: 0.10
+      PRE_GRASP:
+        representation: object_relative_cartesian
+        q: [0.1, 0.0, 0.0]
+        object_offset: [0.0, 0.0, 0.035]
+        seed_q: [0.1, 0.0, 0.0]
+        gripper_q: 0.0
+        settle_sec: 0.10
+      GRASP_OPEN:
+        representation: object_relative_cartesian
+        q: [0.15, 0.05, 0.0]
+        object_offset: [0.0, 0.0, 0.0]
+        seed_q: [0.15, 0.05, 0.0]
+        gripper_q: 0.0
+        settle_sec: 0.10
+      CLOSE:
+        representation: gripper_only
+        q: [0.15, 0.05, 0.8]
+        object_offset: null
+        seed_q: null
+        gripper_q: 0.8
+        settle_sec: 0.10
+      LIFT:
+        representation: object_relative_cartesian
+        q: [0.05, 0.0, 0.8]
+        object_offset: [0.0, 0.0, 0.05]
+        seed_q: [0.05, 0.0, 0.8]
+        gripper_q: 0.8
+        settle_sec: 0.10

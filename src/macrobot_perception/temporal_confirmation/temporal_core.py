@@ -169,6 +169,11 @@ class Observation:
     negative_similarity: Optional[float]
     margin: Optional[float]
     objectness_score: Optional[float]
+    localization_method: str = ""
+    localization_quality: float = 0.0
+    orientation_deg: float = 0.0
+    orientation_class: str = "unknown"
+    orientation_quality: float = 0.0
     payload: Any = None
 
 
@@ -213,6 +218,11 @@ class TrackSnapshot:
     depth_m: Optional[float]
     center_std_px: float
     depth_std_m: float
+    localization_method: str
+    localization_quality: float
+    orientation_deg: float
+    orientation_class: str
+    orientation_quality: float
     last_seen_monotonic: float
     latest_observation: Observation
 
@@ -546,6 +556,28 @@ class TemporalTracker:
             self.expiration_events += 1
         return events
 
+    @staticmethod
+    def _axial_orientation(observations: Sequence[Observation]) -> tuple[float, str, float]:
+        usable = [
+            item for item in observations
+            if item.orientation_quality > 0.0 and math.isfinite(item.orientation_deg)
+        ]
+        if not usable:
+            return 0.0, "unknown", 0.0
+        weights = [max(float(item.orientation_quality), 1e-6) for item in usable]
+        x = sum(weight * math.cos(math.radians(2.0 * item.orientation_deg)) for item, weight in zip(usable, weights))
+        y = sum(weight * math.sin(math.radians(2.0 * item.orientation_deg)) for item, weight in zip(usable, weights))
+        angle = (0.5 * math.degrees(math.atan2(y, x))) % 180.0
+        resultant = math.hypot(x, y) / max(sum(weights), 1e-9)
+        quality = max(0.0, min(1.0, resultant * statistics.median(weights)))
+        if angle <= 25.0 or angle >= 155.0:
+            label = "horizontal"
+        elif 65.0 <= angle <= 115.0:
+            label = "vertical"
+        else:
+            label = "diagonal"
+        return angle, label, quality
+
     def _metrics(self, track: _Track) -> dict[str, Any]:
         evidence = list(track.history)
         matched = [item for item in evidence if item.matched and item.observation is not None]
@@ -654,6 +686,30 @@ class TemporalTracker:
             + self.config.temporal_margin_weight * margin_score
         ) / score_weight_sum
 
+        localization_quality_values = [
+            float(item.localization_quality)
+            for item in position_observations
+            if math.isfinite(float(item.localization_quality))
+            and float(item.localization_quality) > 0.0
+        ]
+        localization_quality = (
+            float(statistics.median(localization_quality_values))
+            if localization_quality_values
+            else 0.0
+        )
+        localized = [item for item in position_observations if item.localization_method]
+        localization_method = (
+            max(
+                {item.localization_method for item in localized},
+                key=lambda value: sum(1 for item in localized if item.localization_method == value),
+            )
+            if localized
+            else "candidate_bbox"
+        )
+        orientation_deg, orientation_class, orientation_quality = self._axial_orientation(
+            position_observations
+        )
+
         return {
             "samples_in_window": samples,
             "matched_frames_in_window": len(matched),
@@ -674,6 +730,11 @@ class TemporalTracker:
             "depth_m": depth_value,
             "center_std_px": center_std,
             "depth_std_m": depth_std,
+            "localization_method": localization_method,
+            "localization_quality": localization_quality,
+            "orientation_deg": orientation_deg,
+            "orientation_class": orientation_class,
+            "orientation_quality": orientation_quality,
         }
 
     def _snapshot(
@@ -716,6 +777,11 @@ class TemporalTracker:
             depth_m=metrics["depth_m"],
             center_std_px=metrics["center_std_px"],
             depth_std_m=metrics["depth_std_m"],
+            localization_method=metrics["localization_method"],
+            localization_quality=metrics["localization_quality"],
+            orientation_deg=metrics["orientation_deg"],
+            orientation_class=metrics["orientation_class"],
+            orientation_quality=metrics["orientation_quality"],
             last_seen_monotonic=track.last_seen_monotonic,
             latest_observation=track.latest_observation,
         )

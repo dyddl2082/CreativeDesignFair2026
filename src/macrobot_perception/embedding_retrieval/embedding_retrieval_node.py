@@ -42,6 +42,19 @@ from .embedding_core import (
     save_reference_cache,
     summarize_retrieval,
 )
+from .patch_localization_core import (
+    PatchLocalization,
+    localize_patch_tokens,
+    source_to_color_coordinates,
+)
+from .patch_reference_core import (
+    PATCH_PREPROCESSING_VERSION,
+    PatchPrototypeBank,
+    diverse_prototypes,
+    load_patch_bank,
+    salient_patch_rows,
+    save_patch_bank,
+)
 
 
 class EmbeddingRetrievalNode(Node):
@@ -95,6 +108,8 @@ class EmbeddingRetrievalNode(Node):
 
         self._positive_bank = self._empty_bank("positive", self._target_object)
         self._negative_bank = self._empty_bank("negative", self._target_object)
+        self._positive_patch_bank = self._empty_patch_bank("positive", self._target_object)
+        self._negative_patch_bank = self._empty_patch_bank("negative", self._target_object)
         self._reload_banks(force=False, log_result=True)
 
         input_qos = QoSProfile(depth=4)
@@ -157,18 +172,12 @@ class EmbeddingRetrievalNode(Node):
 
         self.get_logger().info(
             "Embedding retrieval ready: "
-            f"input='{input_topic}', "
-            f"results='{result_topic}', "
-            f"matched='{matched_topic}', "
-            f"target='{self._target_object}', "
-            f"device='{self._encoder.device}', "
-            f"device_name='{self._encoder.device_name}', "
-            f"amp={self._encoder.use_amp}, "
-            f"amp_dtype='{self._encoder.amp_dtype_name}', "
-            f"positive={self._positive_bank.count}, "
-            f"negative={self._negative_bank.count}, "
-            f"thresholds_enforced="
-            f"{bool(self.get_parameter('enforce_thresholds').value)}"
+            f"input='{input_topic}', results='{result_topic}', matched='{matched_topic}', "
+            f"target='{self._target_object}', device='{self._encoder.device}', "
+            f"positive={self._positive_bank.count}, negative={self._negative_bank.count}, "
+            f"positive_patch_prototypes={self._positive_patch_bank.count}, "
+            f"negative_patch_prototypes={self._negative_patch_bank.count}, "
+            f"thresholds_enforced={bool(self.get_parameter('enforce_thresholds').value)}"
         )
 
     def _declare_parameters(self) -> None:
@@ -191,6 +200,7 @@ class EmbeddingRetrievalNode(Node):
             "positive_root_template": "~/MacRobot/data/curated/objects/{target}",
             "negative_roots": [
                 "~/MacRobot/data/negative/confusers/{target}",
+                "~/MacRobot/data/negative/library",
                 "~/MacRobot/data/negative/backgrounds",
             ],
             "embedding_cache_dir": "~/MacRobot/data/embeddings",
@@ -208,10 +218,30 @@ class EmbeddingRetrievalNode(Node):
             "square_padding_ratio": 0.06,
             "square_padding_mode": "mean",
             "square_padding_neutral_value": 127,
-            "enforce_thresholds": False,
-            "min_positive_similarity": 0.70,
+            "enforce_thresholds": True,
+            "min_positive_similarity": 0.45,
             "min_margin": 0.05,
             "require_negative_bank_for_accept": True,
+            # Patch-token localization. This refines the object centre inside a
+            # large/contaminated candidate crop without sending full RGB/depth.
+            "enable_patch_localization": True,
+            # Build same-token reference prototype banks for patch heatmaps.
+            "use_patch_reference_bank": True,
+            "use_patch_reference_cache": True,
+            "max_positive_patch_reference_images": 32,
+            "max_negative_patch_reference_images": 64,
+            "reference_patch_selection_quantile": 0.65,
+            "reference_patch_max_per_image": 32,
+            "positive_patch_prototype_count": 192,
+            "negative_patch_prototype_count": 256,
+            "patch_localization_min_global_similarity": 0.0,
+            "patch_localization_selection_quantile": 0.80,
+            "patch_localization_min_patch_margin": -0.10,
+            "patch_localization_min_component_patches": 2,
+            "patch_localization_max_component_area_ratio": 0.70,
+            "patch_localization_negative_weight": 1.0,
+            "patch_localization_foreground_prior_weight": 0.12,
+            "patch_localization_min_quality": 0.15,
             "publish_matched_crops": True,
             "reliable_matched_output": False,
             "max_pending_messages": 8,
@@ -240,6 +270,26 @@ class EmbeddingRetrievalNode(Node):
         for name in ("positive_top_k", "negative_top_k", "reference_batch_size"):
             if int(self.get_parameter(name).value) <= 0:
                 raise ValueError(f"{name} must be positive")
+        quantile = float(self.get_parameter("patch_localization_selection_quantile").value)
+        if not 0.0 <= quantile <= 1.0:
+            raise ValueError("patch_localization_selection_quantile must be in [0, 1]")
+        quality = float(self.get_parameter("patch_localization_min_quality").value)
+        if not 0.0 <= quality <= 1.0:
+            raise ValueError("patch_localization_min_quality must be in [0, 1]")
+        reference_quantile = float(
+            self.get_parameter("reference_patch_selection_quantile").value
+        )
+        if not 0.0 <= reference_quantile <= 1.0:
+            raise ValueError("reference_patch_selection_quantile must be in [0, 1]")
+        for name in (
+            "max_positive_patch_reference_images",
+            "max_negative_patch_reference_images",
+            "reference_patch_max_per_image",
+            "positive_patch_prototype_count",
+            "negative_patch_prototype_count",
+        ):
+            if int(self.get_parameter(name).value) <= 0:
+                raise ValueError(f"{name} must be positive")
 
     def _empty_bank(self, kind: str, target: str) -> ReferenceBank:
         return ReferenceBank(
@@ -255,21 +305,148 @@ class EmbeddingRetrievalNode(Node):
             skipped_images=0,
         )
 
+    def _empty_patch_bank(self, kind: str, target: str) -> PatchPrototypeBank:
+        dimension = max(self._encoder.embedding_dim, 0) if hasattr(self, "_encoder") else 0
+        return PatchPrototypeBank(
+            kind=kind,
+            target_object=target,
+            embeddings=np.empty((0, dimension), dtype=np.float32),
+            signature="",
+            cache_path="",
+            cache_hit=False,
+            source_image_count=0,
+            skipped_images=0,
+        )
+
+    def _patch_preprocessing_key(self) -> str:
+        return "|".join(
+            [
+                PATCH_PREPROCESSING_VERSION,
+                self._preprocessing_key(),
+                f"patch_size={int(self._encoder.patch_size)}",
+                f"quantile={float(self.get_parameter('reference_patch_selection_quantile').value):.5f}",
+                f"max_per_image={int(self.get_parameter('reference_patch_max_per_image').value)}",
+            ]
+        )
+
+    def _load_or_build_patch_bank(
+        self,
+        *,
+        kind: str,
+        target: str,
+        roots: Sequence[Path],
+        max_images: int,
+        max_prototypes: int,
+        force: bool,
+    ) -> PatchPrototypeBank:
+        if not bool(self.get_parameter("use_patch_reference_bank").value):
+            return self._empty_patch_bank(kind, target)
+        paths = discover_images(roots, max_images=max_images)
+        signature = compute_file_signature(paths) if paths else "empty"
+        cache_root = render_target_path(
+            str(self.get_parameter("embedding_cache_dir").value), target
+        )
+        cache_path = cache_path_for_bank(
+            cache_root,
+            target_object=target,
+            kind=f"{kind}_patch_prototypes",
+            model_id=self._encoder.model_id,
+            pooling=self._encoder.pooling,
+        )
+        metadata = {
+            "model_id": self._encoder.model_id,
+            "pooling": self._encoder.pooling,
+            "preprocessing_version": self._patch_preprocessing_key(),
+            "signature": signature,
+            "target_object": target,
+            "kind": kind,
+            "max_images": int(max_images),
+            "max_prototypes": int(max_prototypes),
+        }
+        if (
+            not force
+            and bool(self.get_parameter("use_patch_reference_cache").value)
+            and paths
+        ):
+            cached = load_patch_bank(
+                cache_path,
+                metadata,
+                kind=kind,
+                target_object=target,
+                signature=signature,
+                source_image_count=len(paths),
+            )
+            if cached is not None:
+                return cached
+        if not paths:
+            bank = self._empty_patch_bank(kind, target)
+            return PatchPrototypeBank(
+                kind=bank.kind, target_object=bank.target_object, embeddings=bank.embeddings,
+                signature=signature, cache_path=str(cache_path), cache_hit=False,
+                source_image_count=0, skipped_images=0,
+            )
+
+        selected_rows: list[np.ndarray] = []
+        skipped = 0
+        valid_images = 0
+        for path in paths:
+            image = cv2.imread(str(path), cv2.IMREAD_COLOR)
+            if image is None or image.size == 0:
+                skipped += 1
+                continue
+            try:
+                prepared = self._prepare_reference(image)
+                with self._model_lock:
+                    output = self._encoder.encode_bgr_with_patches(prepared)
+                selected_rows.append(
+                    salient_patch_rows(
+                        output.patch_embeddings,
+                        output.global_embedding,
+                        selection_quantile=float(
+                            self.get_parameter("reference_patch_selection_quantile").value
+                        ),
+                        max_patches=int(
+                            self.get_parameter("reference_patch_max_per_image").value
+                        ),
+                    )
+                )
+                valid_images += 1
+            except (ValueError, RuntimeError, cv2.error):
+                skipped += 1
+        if not selected_rows:
+            bank = self._empty_patch_bank(kind, target)
+            return PatchPrototypeBank(
+                kind=bank.kind, target_object=bank.target_object, embeddings=bank.embeddings,
+                signature=signature, cache_path=str(cache_path), cache_hit=False,
+                source_image_count=0, skipped_images=skipped,
+            )
+        prototypes = diverse_prototypes(
+            np.concatenate(selected_rows, axis=0),
+            max_count=int(max_prototypes),
+        )
+        bank = PatchPrototypeBank(
+            kind=kind,
+            target_object=target,
+            embeddings=prototypes,
+            signature=signature,
+            cache_path=str(cache_path),
+            cache_hit=False,
+            source_image_count=valid_images,
+            skipped_images=skipped,
+        )
+        if bool(self.get_parameter("use_patch_reference_cache").value):
+            try:
+                save_patch_bank(cache_path, bank, metadata)
+            except OSError as error:
+                self.get_logger().warning(f"Could not save {kind} patch cache: {error}")
+        return bank
+
     def _preprocessing_key(self) -> str:
         return "|".join(
             [
                 PREPROCESSING_VERSION,
-                (
-                    "square_ratio="
-                    f"{float(self.get_parameter('square_padding_ratio').value):.5f}"
-                ),
-                (
-                    "square_mode="
-                    f"{str(self.get_parameter('square_padding_mode').value)}"
-                ),
-                f"device_type={self._encoder.device.type}",
-                f"amp={int(self._encoder.use_amp)}",
-                f"amp_dtype={self._encoder.amp_dtype_name}",
+                f"square_ratio={float(self.get_parameter('square_padding_ratio').value):.5f}",
+                f"square_mode={str(self.get_parameter('square_padding_mode').value)}",
             ]
         )
 
@@ -423,9 +600,35 @@ class EmbeddingRetrievalNode(Node):
                 max_images=int(self.get_parameter("max_negative_images").value),
                 force=force,
             )
+            positive_patches = self._load_or_build_patch_bank(
+                kind="positive",
+                target=target,
+                roots=self._positive_roots(target),
+                max_images=int(
+                    self.get_parameter("max_positive_patch_reference_images").value
+                ),
+                max_prototypes=int(
+                    self.get_parameter("positive_patch_prototype_count").value
+                ),
+                force=force,
+            )
+            negative_patches = self._load_or_build_patch_bank(
+                kind="negative",
+                target=target,
+                roots=self._negative_roots(target),
+                max_images=int(
+                    self.get_parameter("max_negative_patch_reference_images").value
+                ),
+                max_prototypes=int(
+                    self.get_parameter("negative_patch_prototype_count").value
+                ),
+                force=force,
+            )
             with self._state_lock:
                 self._positive_bank = positive
                 self._negative_bank = negative
+                self._positive_patch_bank = positive_patches
+                self._negative_patch_bank = negative_patches
                 self._bank_reload_count += 1
             elapsed = (time.perf_counter() - started) * 1000.0
             if log_result:
@@ -435,6 +638,10 @@ class EmbeddingRetrievalNode(Node):
                     f"(cache={positive.cache_hit}, skipped={positive.skipped_images}), "
                     f"negative={negative.count} "
                     f"(cache={negative.cache_hit}, skipped={negative.skipped_images}), "
+                    f"positive_patch_prototypes={positive_patches.count} "
+                    f"(cache={positive_patches.cache_hit}), "
+                    f"negative_patch_prototypes={negative_patches.count} "
+                    f"(cache={negative_patches.cache_hit}), "
                     f"elapsed={elapsed:.1f} ms"
                 )
                 if not positive.available:
@@ -499,7 +706,10 @@ class EmbeddingRetrievalNode(Node):
         with self._state_lock:
             return (
                 f"target={self._target_object}, positive={self._positive_bank.count}, "
-                f"negative={self._negative_bank.count}, model={self._encoder.model_id}"
+                f"negative={self._negative_bank.count}, "
+                f"positive_patch_prototypes={self._positive_patch_bank.count}, "
+                f"negative_patch_prototypes={self._negative_patch_bank.count}, "
+                f"model={self._encoder.model_id}"
             )
 
     def _input_callback(self, message: FilteredCandidateCrop) -> None:
@@ -601,13 +811,20 @@ class EmbeddingRetrievalNode(Node):
         preprocessing_ms = (time.perf_counter() - preprocess_started) * 1000.0
 
         inference_started = time.perf_counter()
+        patch_output = None
         with self._model_lock:
-            query_embedding = self._encoder.encode_bgr([prepared_bgr], batch_size=1)[0]
+            if bool(self.get_parameter("enable_patch_localization").value):
+                patch_output = self._encoder.encode_bgr_with_patches(prepared_bgr)
+                query_embedding = patch_output.global_embedding
+            else:
+                query_embedding = self._encoder.encode_bgr([prepared_bgr], batch_size=1)[0]
         inference_ms = (time.perf_counter() - inference_started) * 1000.0
 
         with self._state_lock:
             positive_bank = self._positive_bank
             negative_bank = self._negative_bank
+            positive_patch_bank = self._positive_patch_bank
+            negative_patch_bank = self._negative_patch_bank
             target_object = self._target_object
 
         matching_started = time.perf_counter()
@@ -619,6 +836,70 @@ class EmbeddingRetrievalNode(Node):
             negative_top_k=int(self.get_parameter("negative_top_k").value),
         )
         matching_ms = (time.perf_counter() - matching_started) * 1000.0
+
+        localization_started = time.perf_counter()
+        localization = PatchLocalization(False, reason="disabled_or_not_eligible")
+        if (
+            patch_output is not None
+            and positive_bank.available
+            and summary.positive.mean_score
+            >= float(self.get_parameter("patch_localization_min_global_similarity").value)
+        ):
+            localization = localize_patch_tokens(
+                patch_embeddings=patch_output.patch_embeddings,
+                positive_embeddings=(
+                    positive_patch_bank.embeddings
+                    if positive_patch_bank.available
+                    else positive_bank.embeddings
+                ),
+                negative_embeddings=(
+                    negative_patch_bank.embeddings
+                    if negative_patch_bank.available
+                    else (negative_bank.embeddings if negative_bank.available else None)
+                ),
+                source_width=int(image_bgr.shape[1]),
+                source_height=int(image_bgr.shape[0]),
+                square_padding_ratio=float(
+                    self.get_parameter("square_padding_ratio").value
+                ),
+                foreground_mask_source=mask,
+                selection_quantile=float(
+                    self.get_parameter("patch_localization_selection_quantile").value
+                ),
+                minimum_patch_margin=float(
+                    self.get_parameter("patch_localization_min_patch_margin").value
+                ),
+                minimum_component_patches=int(
+                    self.get_parameter("patch_localization_min_component_patches").value
+                ),
+                maximum_component_area_ratio=float(
+                    self.get_parameter("patch_localization_max_component_area_ratio").value
+                ),
+                negative_weight=float(
+                    self.get_parameter("patch_localization_negative_weight").value
+                ),
+                foreground_prior_weight=float(
+                    self.get_parameter("patch_localization_foreground_prior_weight").value
+                ),
+            )
+            if localization.available:
+                localization = source_to_color_coordinates(
+                    localization,
+                    source_width=int(image_bgr.shape[1]),
+                    source_height=int(image_bgr.shape[0]),
+                    crop_x=int(crop_message.crop_roi.x_offset),
+                    crop_y=int(crop_message.crop_roi.y_offset),
+                    crop_width=int(crop_message.crop_roi.width),
+                    crop_height=int(crop_message.crop_roi.height),
+                )
+                if localization.quality < float(
+                    self.get_parameter("patch_localization_min_quality").value
+                ):
+                    localization = PatchLocalization(
+                        False,
+                        reason="patch_localization_quality_below_threshold",
+                    )
+        localization_ms = (time.perf_counter() - localization_started) * 1000.0
 
         positive_score = summary.positive.mean_score
         negative_score = summary.negative.mean_score
@@ -668,6 +949,8 @@ class EmbeddingRetrievalNode(Node):
             preprocessing_ms=preprocessing_ms,
             inference_ms=inference_ms,
             matching_ms=matching_ms,
+            localization=localization,
+            localization_ms=localization_ms,
         )
         self._result_publisher.publish(result)
 
@@ -751,7 +1034,65 @@ class EmbeddingRetrievalNode(Node):
         result.preprocessing_ms = float(preprocessing_ms)
         result.inference_ms = 0.0
         result.matching_ms = 0.0
+        result.localization_ms = 0.0
+        self._assign_localization(result, PatchLocalization(False, reason=reject_reason))
         return result
+
+    @staticmethod
+    def _assign_localization(
+        result: EmbeddingRetrievalResult,
+        localization: PatchLocalization,
+    ) -> None:
+        result.localization_available = bool(localization.available)
+        result.localization_method = str(localization.method if localization.available else "")
+        result.localization_quality = float(localization.quality if localization.available else 0.0)
+        result.localization_peak_positive = float(
+            localization.peak_positive if localization.available else -1.0
+        )
+        result.localization_peak_margin = float(
+            localization.peak_margin if localization.available else -1.0
+        )
+        result.localized_center_x = float(
+            localization.center_x_source if localization.available else -1.0
+        )
+        result.localized_center_y = float(
+            localization.center_y_source if localization.available else -1.0
+        )
+        if localization.available and int(result.crop_roi.width) > 0 and int(result.crop_roi.height) > 0:
+            result.localized_center_x_crop = float(
+                localization.center_x_source - float(result.crop_roi.x_offset)
+            )
+            result.localized_center_y_crop = float(
+                localization.center_y_source - float(result.crop_roi.y_offset)
+            )
+        else:
+            result.localized_center_x_crop = -1.0
+            result.localized_center_y_crop = -1.0
+        roi = result.localized_roi
+        if localization.available:
+            roi.x_offset = max(0, int(round(localization.bbox_x_source)))
+            roi.y_offset = max(0, int(round(localization.bbox_y_source)))
+            roi.width = max(1, int(round(localization.bbox_width_source)))
+            roi.height = max(1, int(round(localization.bbox_height_source)))
+            roi.do_rectify = False
+        else:
+            roi.x_offset = 0
+            roi.y_offset = 0
+            roi.width = 0
+            roi.height = 0
+            roi.do_rectify = False
+        result.localization_mask_area_px = int(
+            localization.mask_area_source_px if localization.available else 0
+        )
+        result.orientation_deg = float(
+            localization.orientation_deg if localization.available else 0.0
+        )
+        result.orientation_class = str(
+            localization.orientation_class if localization.available else "unknown"
+        )
+        result.orientation_quality = float(
+            localization.orientation_quality if localization.available else 0.0
+        )
 
     def _build_result(
         self,
@@ -769,6 +1110,8 @@ class EmbeddingRetrievalNode(Node):
         preprocessing_ms: float,
         inference_ms: float,
         matching_ms: float,
+        localization: PatchLocalization,
+        localization_ms: float,
     ) -> EmbeddingRetrievalResult:
         result = self._base_result(message)
         result.target_object = target_object
@@ -795,9 +1138,11 @@ class EmbeddingRetrievalNode(Node):
         result.passed_margin_threshold = bool(passed_margin)
         result.accepted = bool(accepted)
         result.reject_reason = reject_reason
+        self._assign_localization(result, localization)
         result.preprocessing_ms = float(preprocessing_ms)
         result.inference_ms = float(inference_ms)
         result.matching_ms = float(matching_ms)
+        result.localization_ms = float(localization_ms)
         return result
 
     def _publish_debug_if_due(
@@ -825,6 +1170,43 @@ class EmbeddingRetrievalNode(Node):
             border_color,
             3,
         )
+        if result.localization_available:
+            crop_x = int(result.crop_roi.x_offset)
+            crop_y = int(result.crop_roi.y_offset)
+            x0 = int(result.localized_roi.x_offset) - crop_x
+            y0 = int(result.localized_roi.y_offset) - crop_y
+            x1 = x0 + int(result.localized_roi.width)
+            y1 = y0 + int(result.localized_roi.height)
+            x0 = int(np.clip(x0, 0, max(preview.shape[1] - 1, 0)))
+            y0 = int(np.clip(y0, 0, max(preview.shape[0] - 1, 0)))
+            x1 = int(np.clip(x1, x0 + 1, max(preview.shape[1], x0 + 1)))
+            y1 = int(np.clip(y1, y0 + 1, max(preview.shape[0], y0 + 1)))
+            center = (
+                int(np.clip(round(result.localized_center_x_crop), 0, max(preview.shape[1] - 1, 0))),
+                int(np.clip(round(result.localized_center_y_crop), 0, max(preview.shape[0] - 1, 0))),
+            )
+            cv2.rectangle(preview, (x0, y0), (x1 - 1, y1 - 1), (0, 220, 255), 2)
+            cv2.drawMarker(
+                preview,
+                center,
+                (255, 255, 0),
+                markerType=cv2.MARKER_CROSS,
+                markerSize=18,
+                thickness=2,
+            )
+            if result.orientation_quality > 0.0:
+                angle_rad = math.radians(float(result.orientation_deg))
+                half_length = max(12, int(round(0.25 * max(x1 - x0, y1 - y0))))
+                dx = int(round(math.cos(angle_rad) * half_length))
+                dy = int(round(math.sin(angle_rad) * half_length))
+                cv2.line(
+                    preview,
+                    (center[0] - dx, center[1] - dy),
+                    (center[0] + dx, center[1] + dy),
+                    (255, 0, 255),
+                    2,
+                    cv2.LINE_AA,
+                )
         decision = "PASS" if result.accepted else "REJECT"
         margin_text = f"{result.margin:.3f}" if result.margin >= -0.5 else "n/a"
         negative_text = (
@@ -837,7 +1219,7 @@ class EmbeddingRetrievalNode(Node):
             f"pos={result.positive_similarity:.3f} neg={negative_text} margin={margin_text}",
             f"best+={Path(result.best_positive_path).name or 'n/a'}",
             f"best-={Path(result.best_negative_path).name or 'n/a'}",
-            f"infer={result.inference_ms:.1f}ms mask={int(result.foreground_mask_used)}",
+            f"infer={result.inference_ms:.1f}ms mask={int(result.foreground_mask_used)} loc={int(result.localization_available)} q={result.localization_quality:.2f}",
         ]
         if result.reject_reason:
             lines.append(result.reject_reason)
@@ -880,6 +1262,8 @@ class EmbeddingRetrievalNode(Node):
         with self._state_lock:
             positive = self._positive_bank
             negative = self._negative_bank
+            positive_patches = self._positive_patch_bank
+            negative_patches = self._negative_patch_bank
             inference_mean = (
                 float(np.mean(self._recent_inference_ms))
                 if self._recent_inference_ms
@@ -893,18 +1277,22 @@ class EmbeddingRetrievalNode(Node):
                 "model_id": self._encoder.model_id,
                 "pooling": self._encoder.pooling,
                 "device": str(self._encoder.device),
-                "device_name": self._encoder.device_name,
-                "amp_enabled": bool(
-                    self._encoder.use_amp
+                "device_name": str(getattr(self._encoder, "device_name", "")),
+                "amp_enabled": bool(getattr(self._encoder, "use_amp", False)),
+                "amp_dtype": (
+                    str(getattr(self._encoder, "amp_dtype", ""))
+                    if getattr(self._encoder, "amp_dtype", None) is not None
+                    else ""
                 ),
-                "amp_dtype": self._encoder.amp_dtype_name,
-                "embedding_dim": int(
-                    self._encoder.embedding_dim
-                ),
+                "embedding_dim": int(self._encoder.embedding_dim),
                 "positive_reference_count": positive.count,
                 "positive_cache_hit": positive.cache_hit,
                 "negative_reference_count": negative.count,
                 "negative_cache_hit": negative.cache_hit,
+                "positive_patch_prototype_count": positive_patches.count,
+                "positive_patch_cache_hit": positive_patches.cache_hit,
+                "negative_patch_prototype_count": negative_patches.count,
+                "negative_patch_cache_hit": negative_patches.cache_hit,
                 "received": self._received,
                 "processed": self._processed,
                 "accepted": self._accepted,
@@ -920,11 +1308,18 @@ class EmbeddingRetrievalNode(Node):
                     self.get_parameter("min_positive_similarity").value
                 ),
                 "min_margin": float(self.get_parameter("min_margin").value),
+                "patch_localization_enabled": bool(
+                    self.get_parameter("enable_patch_localization").value
+                ),
+                "patch_localization_min_quality": float(
+                    self.get_parameter("patch_localization_min_quality").value
+                ),
                 "mean_inference_ms_last_100": inference_mean,
                 "mean_total_ms_last_100": total_mean,
                 "top_reject_reasons": self._reject_reasons.most_common(8),
                 "last_result": self._last_result,
                 "cache_format_version": CACHE_FORMAT_VERSION,
+                "patch_preprocessing_version": PATCH_PREPROCESSING_VERSION,
             }
         message = String()
         message.data = json.dumps(payload, ensure_ascii=False, sort_keys=True)

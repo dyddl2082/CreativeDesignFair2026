@@ -19,6 +19,13 @@ class DetectionSample:
     score: float
     point_base: Vector3
     source: str = ""
+    localization_method: str = ""
+    localization_quality: float = 0.0
+    center_std_px: float = 0.0
+    depth_std_m: float = 0.0
+    orientation_deg: float = 0.0
+    orientation_class: str = "unknown"
+    orientation_quality: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -28,6 +35,13 @@ class StableDetection:
     point_base: Vector3
     sample_count: int
     radius_m: float
+    localization_method: str = ""
+    localization_quality: float = 0.0
+    center_std_px: float = 0.0
+    depth_std_m: float = 0.0
+    orientation_deg: float = 0.0
+    orientation_class: str = "unknown"
+    orientation_quality: float = 0.0
 
 
 class StablePointFilter:
@@ -49,6 +63,11 @@ class StablePointFilter:
         minimum_count: int,
         window_sec: float,
         radius_m: float,
+        minimum_localization_quality: float = 0.0,
+        maximum_depth_std_m: float = math.inf,
+        maximum_center_std_px: float = math.inf,
+        required_orientation_class: str = "",
+        minimum_orientation_quality: float = 0.0,
     ) -> Optional[StableDetection]:
         cutoff = now_sec - window_sec
         while self.samples and self.samples[0].stamp_sec < cutoff:
@@ -60,6 +79,17 @@ class StablePointFilter:
             for item in self.samples
             if item.object_name.strip().casefold() == target_key
             and item.score >= minimum_score
+            and float(item.localization_quality) >= float(minimum_localization_quality)
+            and float(item.depth_std_m) <= float(maximum_depth_std_m)
+            and float(item.center_std_px) <= float(maximum_center_std_px)
+            and (
+                not required_orientation_class.strip()
+                or (
+                    item.orientation_class.strip().casefold()
+                    == required_orientation_class.strip().casefold()
+                    and float(item.orientation_quality) >= float(minimum_orientation_quality)
+                )
+            )
         ]
         if len(eligible) < minimum_count:
             return None
@@ -78,12 +108,58 @@ class StablePointFilter:
         cluster_radius = max(distances, default=0.0)
         if cluster_radius > radius_m:
             return None
+        methods = [item.localization_method for item in eligible if item.localization_method]
+        localization_method = (
+            max(set(methods), key=methods.count) if methods else "candidate_bbox"
+        )
+        orientation_usable = [
+            item for item in eligible
+            if item.orientation_quality > 0.0 and math.isfinite(item.orientation_deg)
+        ]
+        if orientation_usable:
+            weights = [max(item.orientation_quality, 1e-6) for item in orientation_usable]
+            axis_x = sum(
+                weight * math.cos(math.radians(2.0 * item.orientation_deg))
+                for item, weight in zip(orientation_usable, weights)
+            )
+            axis_y = sum(
+                weight * math.sin(math.radians(2.0 * item.orientation_deg))
+                for item, weight in zip(orientation_usable, weights)
+            )
+            orientation_deg = (0.5 * math.degrees(math.atan2(axis_y, axis_x))) % 180.0
+            orientation_quality = min(
+                1.0,
+                math.hypot(axis_x, axis_y) / max(sum(weights), 1e-9),
+            )
+            if orientation_deg <= 25.0 or orientation_deg >= 155.0:
+                orientation_class = "horizontal"
+            elif 65.0 <= orientation_deg <= 115.0:
+                orientation_class = "vertical"
+            else:
+                orientation_class = "diagonal"
+        else:
+            orientation_deg = 0.0
+            orientation_quality = 0.0
+            orientation_class = "unknown"
         return StableDetection(
             object_name=object_name,
             score=float(statistics.median(item.score for item in eligible)),
             point_base=median_point,
             sample_count=len(eligible),
             radius_m=cluster_radius,
+            localization_method=localization_method,
+            localization_quality=float(
+                statistics.median(item.localization_quality for item in eligible)
+            ),
+            center_std_px=float(
+                statistics.median(item.center_std_px for item in eligible)
+            ),
+            depth_std_m=float(
+                statistics.median(item.depth_std_m for item in eligible)
+            ),
+            orientation_deg=orientation_deg,
+            orientation_class=orientation_class,
+            orientation_quality=orientation_quality,
         )
 
 

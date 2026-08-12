@@ -1,4 +1,4 @@
-# Per-candidate DINOv2 retrieval and negative-margin result.
+# Per-candidate DINOv2 retrieval, negative-margin scoring, and patch localization.
 
 std_msgs/Header proposal_header
 std_msgs/Header image_header
@@ -44,9 +44,30 @@ bool passed_margin_threshold
 bool accepted
 string reject_reason
 
+# DINOv2 patch-token localization inside the candidate crop.
+# localized_center_* are in the original color-image pixel coordinate system.
+bool localization_available
+string localization_method
+float32 localization_quality
+float32 localization_peak_positive
+float32 localization_peak_margin
+float32 localized_center_x
+float32 localized_center_y
+float32 localized_center_x_crop
+float32 localized_center_y_crop
+sensor_msgs/RegionOfInterest localized_roi
+uint32 localization_mask_area_px
+
+# Principal-axis orientation in the image plane, [0, 180) degrees.
+# 0 is horizontal image direction and 90 is vertical image direction.
+float32 orientation_deg
+string orientation_class
+float32 orientation_quality
+
 float32 preprocessing_ms
 float32 inference_ms
 float32 matching_ms
+float32 localization_ms
 
 DepthCandidate candidate
 sensor_msgs/RegionOfInterest crop_roi

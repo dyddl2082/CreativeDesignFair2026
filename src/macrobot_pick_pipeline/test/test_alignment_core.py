@@ -140,3 +140,47 @@ def test_iterative_turn_move_alignment_converges():
     )
     assert abs(final_errors.bearing_error_deg) <= item.bearing_tolerance_deg
     assert abs(final_errors.range_error_m) <= item.range_tolerance_m
+
+
+def test_observation_constraints_reject_low_quality_and_orientation_mismatch():
+    from macrobot_pick_pipeline.alignment_core import observation_constraint_decision
+
+    item = AlignmentProfile(
+        name="Eraser",
+        object_name="Eraser",
+        pick_profile="Eraser",
+        reference_point_base=(-0.30, 0.05, 0.10),
+        recorded_at="test",
+        minimum_localization_quality=0.4,
+        maximum_depth_std_m=0.02,
+        maximum_center_std_px=8.0,
+        require_orientation_match=True,
+        reference_orientation_deg=0.0,
+        reference_orientation_class="horizontal",
+        reference_orientation_quality=0.8,
+        minimum_orientation_quality=0.5,
+        orientation_tolerance_deg=15.0,
+    )
+    low = observation_constraint_decision(
+        item,
+        localization_quality=0.2,
+        depth_std_m=0.01,
+        center_std_px=3.0,
+        orientation_deg=0.0,
+        orientation_class="horizontal",
+        orientation_quality=0.8,
+    )
+    assert low.action == "reject"
+    assert low.reason == "localization_quality_below_threshold"
+
+    mismatch = observation_constraint_decision(
+        item,
+        localization_quality=0.9,
+        depth_std_m=0.01,
+        center_std_px=3.0,
+        orientation_deg=90.0,
+        orientation_class="vertical",
+        orientation_quality=0.8,
+    )
+    assert mismatch.action == "reject"
+    assert mismatch.reason == "object_orientation_class_mismatch"

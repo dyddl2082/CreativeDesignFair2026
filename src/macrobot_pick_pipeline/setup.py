@@ -7,7 +7,7 @@ package_name = "macrobot_pick_pipeline"
 
 setup(
     name=package_name,
-    version="0.5.0",
+    version="0.6.0",
     packages=find_packages(exclude=["test"]),
     data_files=[
         (
@@ -26,7 +26,6 @@ setup(
     maintainer_email="dyddl2082@snu.ac.kr",
     description="Stored-object search pose recovery, cancellable visual alignment, validated recorded-grasp execution, camera localization and arm demonstration recording for MacRobot",
     license="MIT",
-    tests_require=["pytest"],
     entry_points={
         "console_scripts": [
             "detection_localizer_node = macrobot_pick_pipeline.detection_localizer_node:main",
@@ -37,6 +36,8 @@ setup(
             "pick_teach_cli = macrobot_pick_pipeline.pick_teach_cli:main",
             "arm_demo_recorder_node = macrobot_pick_pipeline.arm_demo_recorder_node:main",
             "arm_demo_cli = macrobot_pick_pipeline.arm_demo_cli:main",
+            "grasp_keyframe_node = macrobot_pick_pipeline.grasp_keyframe_node:main",
+            "grasp_keyframe_cli = macrobot_pick_pipeline.grasp_keyframe_cli:main",
             "stored_object_pick_node = macrobot_pick_pipeline.stored_object_pick_node:main",
             "visible_pick_test_node = macrobot_pick_pipeline.visible_pick_test_node:main",
             "stored_object_pick_cli = macrobot_pick_pipeline.stored_object_pick_cli:main",

@@ -1,0 +1,26 @@
+macrobot_threshold_calibrator:
+  ros__parameters:
+    command_topic: /object_finder/calibration/command
+    status_topic: /object_finder/calibration/status
+    result_topic: /object_finder/calibration/result
+    embedding_result_topic: /embedding_retrieval/results
+    active_target_topic: /macrobot/pick/active_target
+    candidate_filter_target_topic: /candidate_filter/target
+    embedding_target_topic: /embedding_retrieval/target
+    embedding_set_parameters_service: /embedding_retrieval/set_parameters
+    profile_file: ~/MacRobot/data/perception/threshold_profiles.yaml
+    active_environment_id: default
+    default_duration_sec: 8.0
+    minimum_duration_sec: 3.0
+    maximum_duration_sec: 30.0
+    minimum_target_samples: 12
+    target_low_quantile: 0.10
+    negative_high_quantile: 0.99
+    minimum_positive_separation: 0.03
+    minimum_margin_separation: 0.02
+    association_max_distance: 160.0
+    association_score_slack: 0.18
+    negative_exclusion_distance: 80.0
+    auto_apply_profile_on_target: true
+    require_localization_quality: true
+    minimum_localization_quality: 0.15

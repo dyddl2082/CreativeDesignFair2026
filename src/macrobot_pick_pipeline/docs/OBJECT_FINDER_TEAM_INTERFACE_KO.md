@@ -234,7 +234,7 @@ macrobot_interfaces/msg/TemporalConfirmationResult
 ```text
 header.stamp
 header.frame_id
- target_object
+target_object
 track_id
 state = confirmed
 event = confirmed 또는 update
@@ -246,8 +246,11 @@ center_y
 depth_m
 center_std_px
 depth_std_m
-horizontal_error_norm
-suggested_turn
+localization_method
+localization_quality
+orientation_deg
+orientation_class
+orientation_quality
 ```
 
 `macrobot_pick_pipeline/config/perception.yaml`에서 다음으로 변경한다.
@@ -265,7 +268,9 @@ input_mode: typed
 - `score` 또는 `temporal_score`는 0~1 범위의 단조로운 신뢰도 값으로 사용한다.
 - 확률 calibration까지 요구하지는 않지만, 더 확실한 결과가 더 높은 값을 가져야 한다.
 - 한 frame의 raw detection보다 여러 frame의 동일 track을 확인한 결과가 권장된다.
-- `center_px`와 `depth_m`는 동일한 object instance/track의 값이어야 한다.
+- `center_px`는 DINOv2 patch heatmap으로 정제된 물체 내부 중심을 사용한다.
+- `depth_m`는 같은 중심에서 Pi의 aligned depth를 재표본화한 값을 사용한다.
+- 이미지 중심 기반 `turn_left`/`turn_right` 힌트는 정렬 제어에 사용하지 않는다.
 - 오래된 결과를 반복 publish하지 말고 sensor timestamp를 유지한다.
 
 차체 정렬과 pick은 기본적으로 최근 1.5초 안의 5개 표본이 약 12 mm 이내로 모일 때만 움직인다. 이 값은 alignment/pick profile에서 조정된다.

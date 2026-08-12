@@ -45,3 +45,37 @@ def test_invalid_or_busy_goal_gets_terminal_result_with_same_request_id():
     assert '"action_state": "FAILED"' in text
     assert 'event="stored_pick_rejected"' in text
     assert 'error_code=error_code' in text
+
+
+def test_semantic_alignment_requires_preflight_before_success():
+    text = _source("stored_object_pick_node.py")
+    assert "def _alignment_complete" in text
+    assert 'self.profile.grasp_executor == "keyframes"' in text
+    assert "self._start_grasp_preflight()" in text
+    assert "self.arm_active = True" in text
+    assert '"action": "preflight"' in text
+
+
+def test_keyframe_executor_assigns_command_id_before_preflight():
+    text = _source("grasp_keyframe_node.py")
+    start = text.index("def _start_plan")
+    section = text[start:text.index("def _preflight", start)]
+    assert section.index("self.command_id =") < section.index('self.state = "PREFLIGHT"')
+    assert '"grasp_keyframe_preflight_succeeded"' in section
+
+
+def test_keyframe_cancel_requires_trajectory_stopped_confirmation():
+    text = _source("grasp_keyframe_node.py")
+    assert '"cancel_confirm_timeout_sec": 4.0' in text
+    assert 'if event == "trajectory_stopped"' in text
+    assert 'waiting_for="trajectory_stopped"' in text
+    assert '"grasp_keyframe_cancel_failed"' in text
+    assert 'reason="SAFE_STOP_UNCONFIRMED"' in text
+
+
+def test_localizer_strict_depth_mode_does_not_silently_use_candidate_depth():
+    text = _source("detection_localizer_node.py")
+    assert '"allow_candidate_depth_fallback": False' in text
+    assert 'reason="aligned_depth_frame_not_synchronized"' in text
+    assert 'source="unavailable"' in text
+    assert 'source="finder_candidate_depth_fallback"' in text

@@ -7,7 +7,7 @@ package_name = "macrobot_perception"
 
 setup(
     name=package_name,
-    version="0.2.0",
+    version="0.3.0",
     packages=find_packages(exclude=("test",)),
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
@@ -24,11 +24,10 @@ setup(
         "retrieval, and temporal confirmation."
     ),
     license="Apache-2.0",
-    tests_require=["pytest"],
-    scripts=["scripts/embedding_retrieval_node"],
     entry_points={
         "console_scripts": [
             "candidate_filter_node = candidate_filter.candidate_filter_node:main",
+            "embedding_retrieval_node = embedding_retrieval.embedding_retrieval_node:main",
             "temporal_confirmation_node = temporal_confirmation.temporal_confirmation_node:main",
         ],
     },

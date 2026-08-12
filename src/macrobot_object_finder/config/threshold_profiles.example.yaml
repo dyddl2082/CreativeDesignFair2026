@@ -1,0 +1,20 @@
+schema: macrobot.perception_threshold/v1
+profiles:
+  Eraser:
+    environments:
+      competition_arena_1:
+        embedding:
+          min_positive_similarity: 0.43
+          min_margin: 0.06
+          enforce_thresholds: true
+        calibration:
+          target_count: 64
+          negative_count: 220
+          target_positive_p10: 0.47
+          negative_positive_p99: 0.39
+          target_margin_p10: 0.09
+          negative_margin_p99: 0.03
+          positive_separation: 0.08
+          margin_separation: 0.06
+          safe_to_apply: true
+          applied: true

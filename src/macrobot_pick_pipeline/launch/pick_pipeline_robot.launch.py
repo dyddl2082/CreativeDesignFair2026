@@ -28,6 +28,8 @@ def generate_launch_description():
     recordings_dir = LaunchConfiguration("recordings_dir")
     start_base_alignment = LaunchConfiguration("start_base_alignment")
     start_visible_pick_test = LaunchConfiguration("start_visible_pick_test")
+    start_grasp_keyframes = LaunchConfiguration("start_grasp_keyframes")
+    grasp_keyframe_profile_file = LaunchConfiguration("grasp_keyframe_profile_file")
     stored_object_profile_file = LaunchConfiguration("stored_object_profile_file")
     alignment_dry_run = LaunchConfiguration("alignment_dry_run")
     perception_input_mode = LaunchConfiguration("perception_input_mode")
@@ -48,6 +50,7 @@ def generate_launch_description():
         DeclareLaunchArgument("start_arm_demo_recorder", default_value="true"),
         DeclareLaunchArgument("start_base_alignment", default_value="true"),
         DeclareLaunchArgument("start_visible_pick_test", default_value="true"),
+        DeclareLaunchArgument("start_grasp_keyframes", default_value="true"),
         DeclareLaunchArgument("alignment_dry_run", default_value="false"),
         DeclareLaunchArgument("perception_input_mode", default_value="legacy"),
         DeclareLaunchArgument("allow_teach_motion", default_value="true"),
@@ -78,6 +81,12 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "recordings_dir",
             default_value=str(Path.home() / "MacRobot" / "data" / "arm_primitives"),
+        ),
+        DeclareLaunchArgument(
+            "grasp_keyframe_profile_file",
+            default_value=str(
+                Path.home() / "MacRobot" / "data" / "grasp_keyframes" / "profiles.yaml"
+            ),
         ),
         DeclareLaunchArgument(
             "stored_object_profile_file",
@@ -140,6 +149,21 @@ def generate_launch_description():
         ),
         Node(
             package="macrobot_pick_pipeline",
+            executable="grasp_keyframe_node",
+            name="macrobot_grasp_keyframes",
+            output="screen",
+            condition=IfCondition(start_grasp_keyframes),
+            parameters=[
+                str(package / "config" / "grasp_keyframes.yaml"),
+                {
+                    "profile_file": grasp_keyframe_profile_file,
+                    "safe_region_csv": safe_region_csv,
+                    "require_safe_region_preflight": True,
+                },
+            ],
+        ),
+        Node(
+            package="macrobot_pick_pipeline",
             executable="stored_object_pick_node",
             name="macrobot_stored_object_pick",
             output="screen",
@@ -149,6 +173,7 @@ def generate_launch_description():
                 {
                     "profile_file": stored_object_profile_file,
                     "recordings_dir": recordings_dir,
+                    "grasp_keyframe_profile_file": grasp_keyframe_profile_file,
                     "dry_run_base": ParameterValue(
                         alignment_dry_run, value_type=bool
                     ),

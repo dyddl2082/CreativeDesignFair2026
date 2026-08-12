@@ -1,0 +1,30 @@
+macrobot_grasp_keyframes:
+  ros__parameters:
+    command_topic: /macrobot/grasp_keyframes/command
+    cancel_topic: /macrobot/grasp_keyframes/cancel
+    status_topic: /macrobot/grasp_keyframes/status
+    result_topic: /macrobot/grasp_keyframes/result
+    localized_detection_topic: /macrobot/perception/localized_detection
+    logical_state_topic: /macrobot/arm/logical_joint_states
+    joint_goal_topic: /macrobot/arm/joint_goal
+    validation_status_topic: /macrobot/arm/validation_status
+    bridge_status_topic: /macrobot/arm/servo_bridge/status
+    arm_stop_topic: /macrobot/arm/stop
+    profile_file: ~/MacRobot/data/grasp_keyframes/profiles.yaml
+    safe_region_csv: ""
+    require_safe_region_preflight: true
+    safe_region_max_distance_rad: 0.06
+    preflight_interpolation_step_rad: 0.025
+    detection_max_age_sec: 1.0
+    minimum_localization_quality: 0.15
+    maximum_depth_std_m: 0.035
+    maximum_center_std_px: 20.0
+    lateral_tolerance_m: 0.020
+    require_orientation_match: false
+    auto_require_orientation_quality: 0.65
+    minimum_orientation_quality: 0.25
+    orientation_tolerance_deg: 25.0
+    motion_timeout_sec: 20.0
+    cancel_confirm_timeout_sec: 4.0
+    default_settle_sec: 0.10
+    timer_hz: 20.0

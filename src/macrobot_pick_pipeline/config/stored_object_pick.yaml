@@ -4,6 +4,7 @@ macrobot_stored_object_pick:
     # this file through an adapter without changing the ROS goal/result API.
     profile_file: ~/MacRobot/data/stored_objects/runtime_profiles.yaml
     recordings_dir: ~/MacRobot/data/arm_primitives
+    grasp_keyframe_profile_file: ~/MacRobot/data/grasp_keyframes/profiles.yaml
 
     base_frame: base_link
     forward_axis_sign: -1.0
@@ -21,12 +22,19 @@ macrobot_stored_object_pick:
     stow_q: [0.0, 0.0, 0.0]
     stow_timeout_sec: 20.0
 
-    # DINOv2 / temporal result acceptance. 0.45 is the current provisional
-    # threshold measured for Buds3; collect more positive/negative data later.
-    minimum_score: 0.45
+    # Finder only emits temporally confirmed results. Keep this separate from
+    # the per-object DINO similarity threshold managed by threshold profiles.
+    minimum_score: 0.0
     stability_count: 5
     stability_window_sec: 1.5
     stability_radius_m: 0.012
+    minimum_localization_quality: 0.15
+    maximum_depth_std_m: 0.035
+    maximum_center_std_px: 20.0
+    require_orientation_match: false
+    minimum_orientation_quality: 0.25
+    auto_require_orientation_quality: 0.65
+    orientation_tolerance_deg: 25.0
 
     # Reproduce the camera-relative pose that was recorded as graspable.
     bearing_tolerance_deg: 2.0

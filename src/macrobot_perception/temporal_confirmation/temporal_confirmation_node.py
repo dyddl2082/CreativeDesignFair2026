@@ -182,7 +182,7 @@ class TemporalConfirmationNode(Node):
             "decision_source": "threshold_flags",  # threshold_flags, accepted, custom
             "require_positive_bank_for_hit": True,
             "require_negative_bank_for_hit": True,
-            "custom_min_positive_similarity": 0.70,
+            "custom_min_positive_similarity": 0.45,
             "custom_min_margin": 0.05,
             "min_objectness_score": -1.0,
             # Temporal K-of-N confirmation and hysteresis.
@@ -216,9 +216,10 @@ class TemporalConfirmationNode(Node):
             "margin_reference_low": 0.05,
             "margin_reference_good": 0.20,
             # Image geometry and steering suggestion.
-            "image_width": 640,
-            "image_height": 480,
-            "turn_deadband_norm": 0.12,
+            # Patch-localization quality below this value falls back to the
+            # original depth-candidate centre.
+            "minimum_localization_quality": 0.25,
+            "require_localization_for_confirm": False,
             # Output behavior.
             "publish_tentative_results": True,
             "publish_confirmed_updates": True,
@@ -242,12 +243,6 @@ class TemporalConfirmationNode(Node):
                 raise ValueError(f"{name} must be positive")
         if int(self.get_parameter("max_pending_frames").value) <= 0:
             raise ValueError("max_pending_frames must be positive")
-        if int(self.get_parameter("image_width").value) <= 0:
-            raise ValueError("image_width must be positive")
-        if int(self.get_parameter("image_height").value) <= 0:
-            raise ValueError("image_height must be positive")
-        if not 0.0 <= float(self.get_parameter("turn_deadband_norm").value) < 1.0:
-            raise ValueError("turn_deadband_norm must be in [0, 1)")
         self._tracker_config().validate()
 
     def _tracker_config(self) -> TemporalConfig:
@@ -515,8 +510,24 @@ class TemporalConfirmationNode(Node):
         frame_index: int,
         stamp_ns: int,
     ) -> Optional[Observation]:
+        localization_quality = float(getattr(message, "localization_quality", 0.0))
+        localization_available = bool(getattr(message, "localization_available", False))
+        localization_available = (
+            localization_available
+            and math.isfinite(localization_quality)
+            and localization_quality
+            >= float(self.get_parameter("minimum_localization_quality").value)
+        )
+        localized_roi = getattr(message, "localized_roi", None)
         candidate_roi = message.candidate.roi
-        if int(candidate_roi.width) > 0 and int(candidate_roi.height) > 0:
+        if (
+            localization_available
+            and localized_roi is not None
+            and int(localized_roi.width) > 0
+            and int(localized_roi.height) > 0
+        ):
+            roi = localized_roi
+        elif int(candidate_roi.width) > 0 and int(candidate_roi.height) > 0:
             roi = candidate_roi
         else:
             roi = message.crop_roi
@@ -529,8 +540,12 @@ class TemporalConfirmationNode(Node):
         if not bbox.valid():
             return None
 
-        center_x = float(message.candidate.center_x)
-        center_y = float(message.candidate.center_y)
+        if localization_available:
+            center_x = float(getattr(message, "localized_center_x", bbox.center_x))
+            center_y = float(getattr(message, "localized_center_y", bbox.center_y))
+        else:
+            center_x = float(message.candidate.center_x)
+            center_y = float(message.candidate.center_y)
         if not math.isfinite(center_x) or not math.isfinite(center_y):
             center_x = bbox.center_x
             center_y = bbox.center_y
@@ -580,6 +595,15 @@ class TemporalConfirmationNode(Node):
             negative_similarity=negative,
             margin=margin,
             objectness_score=objectness_score,
+            localization_method=(
+                str(getattr(message, "localization_method", ""))
+                if localization_available
+                else "candidate_bbox"
+            ),
+            localization_quality=(localization_quality if localization_available else 0.0),
+            orientation_deg=float(getattr(message, "orientation_deg", 0.0)),
+            orientation_class=str(getattr(message, "orientation_class", "unknown")),
+            orientation_quality=float(getattr(message, "orientation_quality", 0.0)),
             payload=message,
         )
 
@@ -593,6 +617,14 @@ class TemporalConfirmationNode(Node):
                 return False
         if bool(self.get_parameter("require_negative_bank_for_hit").value):
             if not message.negative_bank_available:
+                return False
+
+        if bool(self.get_parameter("require_localization_for_confirm").value):
+            if not bool(getattr(message, "localization_available", False)):
+                return False
+            if float(getattr(message, "localization_quality", 0.0)) < float(
+                self.get_parameter("minimum_localization_quality").value
+            ):
                 return False
 
         minimum_objectness = float(self.get_parameter("min_objectness_score").value)
@@ -698,9 +730,11 @@ class TemporalConfirmationNode(Node):
         output.depth_m = self._or_unavailable(snapshot.depth_m)
         output.center_std_px = float(snapshot.center_std_px)
         output.depth_std_m = float(snapshot.depth_std_m)
-        error, turn = self._turn_suggestion(snapshot.center_x)
-        output.horizontal_error_norm = float(error)
-        output.suggested_turn = turn
+        output.localization_method = str(snapshot.localization_method)
+        output.localization_quality = float(snapshot.localization_quality)
+        output.orientation_deg = float(snapshot.orientation_deg)
+        output.orientation_class = str(snapshot.orientation_class)
+        output.orientation_quality = float(snapshot.orientation_quality)
         output.latest_result = latest
         return output
 
@@ -717,17 +751,6 @@ class TemporalConfirmationNode(Node):
         roi.height = max(1, int(round(bbox.height)))
         roi.do_rectify = False
         return roi
-
-    def _turn_suggestion(self, center_x: float) -> Tuple[float, str]:
-        width = max(float(self.get_parameter("image_width").value), 1.0)
-        error = (center_x - width * 0.5) / (width * 0.5)
-        error = max(-1.0, min(1.0, error))
-        deadband = float(self.get_parameter("turn_deadband_norm").value)
-        if error < -deadband:
-            return error, "turn_left"
-        if error > deadband:
-            return error, "turn_right"
-        return error, "centered"
 
     def _publish_legacy_locked(
         self,
@@ -766,7 +789,6 @@ class TemporalConfirmationNode(Node):
         if not force and now - self._last_legacy_publish_monotonic < 1.0 / rate:
             return
 
-        error, turn = self._turn_suggestion(best.center_x)
         latest = best.latest_observation.payload
         payload = {
             "found": True,
@@ -791,8 +813,13 @@ class TemporalConfirmationNode(Node):
                 "width": int(round(best.bbox.width)),
                 "height": int(round(best.bbox.height)),
             },
-            "horizontal_error_norm": round(error, 6),
-            "suggested_turn": turn,
+            "localization": {
+                "method": best.localization_method,
+                "quality": round(best.localization_quality, 6),
+                "orientation_deg": round(best.orientation_deg, 3),
+                "orientation_class": best.orientation_class,
+                "orientation_quality": round(best.orientation_quality, 6),
+            },
             "positive_similarity": round(
                 best.mean_positive_similarity
                 if best.mean_positive_similarity is not None
@@ -861,6 +888,12 @@ class TemporalConfirmationNode(Node):
                 "min_consecutive_hits": config.min_consecutive_hits,
                 "deconfirm_after_misses": config.deconfirm_after_misses,
                 "track_timeout_sec": config.track_timeout_sec,
+                "minimum_localization_quality": float(
+                    self.get_parameter("minimum_localization_quality").value
+                ),
+                "require_localization_for_confirm": bool(
+                    self.get_parameter("require_localization_for_confirm").value
+                ),
                 "frame_completion_delay_sec": float(
                     self.get_parameter("frame_completion_delay_sec").value
                 ),

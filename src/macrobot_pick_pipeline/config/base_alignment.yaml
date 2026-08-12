@@ -1,46 +1,35 @@
 macrobot_base_alignment:
   ros__parameters:
-    # Current MacRobot base convention: forward=-base_link.x, left=+base_link.y.
     forward_axis_sign: -1.0
     lateral_axis_sign: 1.0
-
-    # Current Pico firmware convention from TURN_DEG / MOVE_CM.
     pico_turn_positive_is_right: true
     pico_move_positive_is_forward: true
-
-    # Use false on the real robot. Set true to inspect decisions without moving.
     dry_run_base: false
-    dry_run_motion_sec: 0.60
-
-    # Stow the arm before rotating / translating the chassis.
+    dry_run_motion_sec: 0.6
     stow_before_alignment: true
-    stow_q: [0.0, 0.0, 0.0]
+    stow_q:
+    - 0.0
+    - 0.0
+    - 0.0
     stow_timeout_sec: 20.0
-
     profile_file: ~/MacRobot/data/alignment/base_alignment_profiles.yaml
     base_frame: base_link
-
-    # Defaults copied into a newly recorded alignment profile.
-    default_minimum_score: 0.55
+    default_minimum_score: 0.0
     default_stability_count: 5
     default_stability_window_sec: 1.5
     default_stability_radius_m: 0.012
-
     default_bearing_tolerance_deg: 2.0
     default_range_tolerance_m: 0.015
-    default_height_tolerance_m: 0.030
-
-    # Visual-servo commands are deliberately small and re-evaluated after each step.
+    default_height_tolerance_m: 0.03
     default_max_turn_step_deg: 8.0
-    default_max_move_step_m: 0.040
+    default_max_move_step_m: 0.04
     default_turn_speed: 150
     default_move_speed: 80
     default_motion_timeout_sec: 8.0
     default_settle_sec: 0.45
-
     default_max_iterations: 20
     default_max_total_turn_deg: 90.0
-    default_max_total_move_m: 0.50
+    default_max_total_move_m: 0.5
     default_search_timeout_sec: 60.0
     record_timeout_sec: 20.0
     alignment_confirmation_count: 2

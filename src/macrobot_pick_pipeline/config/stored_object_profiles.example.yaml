@@ -21,7 +21,7 @@ profiles:
       frame_id: base_link
       reference_point_base: {x: -0.30, y: 0.05, z: 0.10}
       recorded_at: "example"
-      minimum_score: 0.45
+      minimum_score: 0.0
       stability_count: 5
       stability_window_sec: 1.5
       stability_radius_m: 0.012

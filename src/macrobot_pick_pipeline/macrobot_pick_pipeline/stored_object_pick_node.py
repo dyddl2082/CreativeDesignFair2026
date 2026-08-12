@@ -16,11 +16,13 @@ from .alignment_core import (
     AlignmentProfile,
     alignment_errors,
     choose_alignment_action,
+    observation_constraint_decision,
     pico_move_command_cm,
     pico_turn_command_deg,
 )
-from .planner import DetectionSample, StablePointFilter
+from .planner import DetectionSample, StableDetection, StablePointFilter
 from .profiles import Q, Vector3
+from .grasp_keyframe_store import GraspKeyframeStore
 from .stored_object_core import (
     OdomPose,
     StoredObjectProfileStore,
@@ -92,10 +94,10 @@ class StoredObjectPickNode(Node):
     Public behavior:
       * record a runtime object profile while the object is visible and graspable;
       * visible-test mode: assume finding already succeeded, align from the live
-        localized point, then execute the recorded grasp demonstration;
+        localized point, then execute the recorded semantic grasp keyframes;
       * full mode: use Pico encoder odometry to return near the recording pose,
         run a bounded finder scan, visually align to the recorded camera-relative
-        point, then execute the recorded grasp demonstration.
+        point, then execute the recorded semantic grasp keyframes.
 
     The persistent profile is an internal runtime adapter.  The LLM team owns the
     final public object structure; only the goal/cancel/result contract is meant
@@ -129,6 +131,22 @@ class StoredObjectPickNode(Node):
             max_iterations=int(self.get_parameter("max_alignment_iterations").value),
             max_total_turn_deg=float(self.get_parameter("max_alignment_total_turn_deg").value),
             max_total_move_m=float(self.get_parameter("max_alignment_total_move_m").value),
+            minimum_localization_quality=float(
+                self.get_parameter("minimum_localization_quality").value
+            ),
+            maximum_depth_std_m=float(self.get_parameter("maximum_depth_std_m").value),
+            maximum_center_std_px=float(
+                self.get_parameter("maximum_center_std_px").value
+            ),
+            require_orientation_match=bool(
+                self.get_parameter("require_orientation_match").value
+            ),
+            minimum_orientation_quality=float(
+                self.get_parameter("minimum_orientation_quality").value
+            ),
+            orientation_tolerance_deg=float(
+                self.get_parameter("orientation_tolerance_deg").value
+            ),
         )
         default_alignment.validate()
         self.profile_store = StoredObjectProfileStore(
@@ -151,6 +169,9 @@ class StoredObjectPickNode(Node):
         self.recordings_dir = Path(
             str(self.get_parameter("recordings_dir").value)
         ).expanduser().resolve()
+        self.keyframe_store = GraspKeyframeStore(
+            str(self.get_parameter("grasp_keyframe_profile_file").value)
+        )
 
         # Publishers: new API and legacy compatibility for existing Gateway.
         self.status_pub = self.create_publisher(
@@ -185,6 +206,12 @@ class StoredObjectPickNode(Node):
         )
         self.arm_demo_command_pub = self.create_publisher(
             String, str(self.get_parameter("arm_demo_command_topic").value), 20
+        )
+        self.keyframe_command_pub = self.create_publisher(
+            String, str(self.get_parameter("grasp_keyframe_command_topic").value), 20
+        )
+        self.keyframe_cancel_pub = self.create_publisher(
+            String, str(self.get_parameter("grasp_keyframe_cancel_topic").value), 20
         )
         self.pick_goal_pub = self.create_publisher(
             String, str(self.get_parameter("pick_goal_topic").value), 10
@@ -257,6 +284,12 @@ class StoredObjectPickNode(Node):
         )
         self.create_subscription(
             String,
+            str(self.get_parameter("grasp_keyframe_result_topic").value),
+            self._keyframe_result_callback,
+            50,
+        )
+        self.create_subscription(
+            String,
             str(self.get_parameter("pick_result_topic").value),
             self._pick_result_callback,
             20,
@@ -289,7 +322,11 @@ class StoredObjectPickNode(Node):
         self.pending_odom_purpose = ""
         self.pending_odom_sent = 0.0
         self.record_point: Optional[Vector3] = None
+        self.record_grasp_executor = "keyframes"
         self.record_grasp_trajectory = ""
+        self.record_grasp_keyframe_profile = ""
+        self.record_require_orientation_match: Optional[bool] = None
+        self.record_stable_detection: Optional[StableDetection] = None
         self.record_pick_profile = ""
 
         self.coarse_steps: List[Tuple[str, float]] = []
@@ -306,6 +343,8 @@ class StoredObjectPickNode(Node):
         self.arm_active = False
         self.pending_arm_q: Optional[Q] = None
         self.arm_demo_command_id = ""
+        self.keyframe_command_id = ""
+        self.keyframe_preflight_only = False
         self.pick_waiting = False
 
         self.alignment_iterations = 0
@@ -360,6 +399,12 @@ class StoredObjectPickNode(Node):
             "arm_stop_topic": "/macrobot/arm/stop",
             "arm_demo_command_topic": "/macrobot/arm/demo/command",
             "arm_demo_result_topic": "/macrobot/arm/demo/result",
+            "grasp_keyframe_command_topic": "/macrobot/grasp_keyframes/command",
+            "grasp_keyframe_cancel_topic": "/macrobot/grasp_keyframes/cancel",
+            "grasp_keyframe_result_topic": "/macrobot/grasp_keyframes/result",
+            "grasp_keyframe_profile_file": str(
+                Path.home() / "MacRobot" / "data" / "grasp_keyframes" / "profiles.yaml"
+            ),
             "pick_goal_topic": "/macrobot/pick/goal",
             "pick_cancel_topic": "/macrobot/pick/cancel",
             "pick_result_topic": "/macrobot/pick/result",
@@ -376,10 +421,17 @@ class StoredObjectPickNode(Node):
             "stow_before_base_motion": True,
             "stow_q": [0.0, 0.0, 0.0],
             "stow_timeout_sec": 20.0,
-            "minimum_score": 0.45,
+            "minimum_score": 0.0,
             "stability_count": 5,
             "stability_window_sec": 1.5,
             "stability_radius_m": 0.012,
+            "minimum_localization_quality": 0.15,
+            "maximum_depth_std_m": 0.035,
+            "maximum_center_std_px": 20.0,
+            "require_orientation_match": False,
+            "minimum_orientation_quality": 0.25,
+            "auto_require_orientation_quality": 0.65,
+            "orientation_tolerance_deg": 25.0,
             "bearing_tolerance_deg": 2.0,
             "range_tolerance_m": 0.015,
             "height_tolerance_m": 0.030,
@@ -559,14 +611,29 @@ class StoredObjectPickNode(Node):
                 raise RuntimeError("another stored-object action is active")
             if not object_name:
                 raise ValueError("object_name is required")
-            grasp_trajectory = str(
-                request.get("grasp_trajectory", f"{object_name}_FIXED_PICK_V1")
+            grasp_keyframe_profile = str(
+                request.get("grasp_keyframe_profile", "")
             ).strip()
+            grasp_trajectory = str(request.get("grasp_trajectory", "")).strip()
             pick_profile = str(request.get("pick_profile", object_name)).strip()
             start_finder = _as_bool(request.get("start_finder"), True)
-            if not grasp_trajectory:
-                raise ValueError("grasp_trajectory is required")
-            self._validate_grasp_trajectory(grasp_trajectory)
+            raw_require_orientation = request.get("require_orientation_match")
+            require_orientation_match = (
+                None
+                if raw_require_orientation is None
+                else _as_bool(raw_require_orientation, False)
+            )
+            if grasp_keyframe_profile:
+                grasp_executor = "keyframes"
+                self.keyframe_store.reload()
+                self.keyframe_store.get(grasp_keyframe_profile).validate()
+            elif grasp_trajectory:
+                grasp_executor = "arm_demo"
+                self._validate_grasp_trajectory(grasp_trajectory)
+            else:
+                raise ValueError(
+                    "grasp_keyframe_profile or grasp_trajectory is required"
+                )
         except Exception as exc:
             self._publish_command_rejection(
                 event="stored_object_record_rejected",
@@ -587,7 +654,10 @@ class StoredObjectPickNode(Node):
         self.request_id = request_id
         self.object_name = object_name
         self.profile_name = profile_name
+        self.record_grasp_executor = grasp_executor
         self.record_grasp_trajectory = grasp_trajectory
+        self.record_grasp_keyframe_profile = grasp_keyframe_profile
+        self.record_require_orientation_match = require_orientation_match
         self.record_pick_profile = pick_profile
         self.mode = "record"
         self.execute_pick = False
@@ -605,7 +675,9 @@ class StoredObjectPickNode(Node):
             self._set_active_target(object_name)
         self._publish_status(
             "stored_object_record_started",
+            grasp_executor=grasp_executor,
             grasp_trajectory=grasp_trajectory,
+            grasp_keyframe_profile=grasp_keyframe_profile,
             pick_profile=pick_profile,
             position_scope="pico_odom_session",
         )
@@ -738,6 +810,12 @@ class StoredObjectPickNode(Node):
         if not all(math.isfinite(value) for value in (*point, score, stamp)):
             return
         self.last_object_point = point
+        localization = payload.get("localization", {})
+        orientation = payload.get("orientation", {})
+        if not isinstance(localization, Mapping):
+            localization = {}
+        if not isinstance(orientation, Mapping):
+            orientation = {}
         self.filter.add(
             DetectionSample(
                 stamp_sec=stamp,
@@ -745,6 +823,13 @@ class StoredObjectPickNode(Node):
                 score=score,
                 point_base=point,
                 source=str(payload.get("source", "")),
+                localization_method=str(localization.get("method", "")),
+                localization_quality=float(localization.get("quality", 0.0) or 0.0),
+                center_std_px=float(payload.get("center_std_px", 0.0) or 0.0),
+                depth_std_m=float(payload.get("depth_std_m", 0.0) or 0.0),
+                orientation_deg=float(orientation.get("angle_deg", 0.0) or 0.0),
+                orientation_class=str(orientation.get("class", "unknown")),
+                orientation_quality=float(orientation.get("quality", 0.0) or 0.0),
             )
         )
 
@@ -903,6 +988,72 @@ class StoredObjectPickNode(Node):
             self.arm_active = False
             self.arm_demo_command_id = ""
             self._fail("GRIPPER_EXECUTION_FAILED", reason=event or "arm demo failed", arm_demo=payload)
+
+    def _keyframe_result_callback(self, msg: String) -> None:
+        if not self.keyframe_command_id or self.state in TERMINAL_STATES:
+            return
+        try:
+            payload = json.loads(msg.data)
+        except Exception:
+            return
+        if not isinstance(payload, dict):
+            return
+        if str(payload.get("command_id", "")) != self.keyframe_command_id:
+            return
+        event = str(payload.get("event", ""))
+        if self.state == "CANCEL_REQUESTED":
+            if event in {
+                "grasp_keyframe_cancel_failed",
+                "grasp_keyframe_execution_failed",
+            }:
+                self.cancel_terminal = "FAILED"
+                self.cancel_error_code = "SAFE_STOP_UNCONFIRMED"
+                self.cancel_details["keyframe_cancel_result"] = dict(payload)
+            if event in {
+                "grasp_keyframe_execution_cancelled",
+                "grasp_keyframe_cancel_failed",
+                "grasp_keyframe_execution_failed",
+                "grasp_keyframe_preflight_succeeded",
+                "grasp_keyframe_preflight_failed",
+                "grasp_keyframe_command_rejected",
+            }:
+                self.cancel_wait_arm = False
+                self.arm_active = False
+                self.keyframe_command_id = ""
+                self.keyframe_preflight_only = False
+                self._try_finish_cancel()
+            return
+        if event == "grasp_keyframe_preflight_succeeded" and payload.get("ok") is True:
+            preflight_only = self.keyframe_preflight_only
+            self.keyframe_preflight_only = False
+            self.arm_active = False
+            self.keyframe_command_id = ""
+            self.steps["grasp_preflight"] = dict(payload)
+            if preflight_only and self.execute_pick:
+                self._start_grasp()
+            else:
+                self._succeed()
+            return
+        if event == "grasp_keyframe_execution_completed" and payload.get("ok") is True:
+            self.arm_active = False
+            self.keyframe_command_id = ""
+            self.keyframe_preflight_only = False
+            self.steps["grasp"] = dict(payload)
+            self._succeed()
+            return
+        if event in {
+            "grasp_keyframe_execution_failed",
+            "grasp_keyframe_preflight_failed",
+            "grasp_keyframe_command_rejected",
+        } or payload.get("ok") is False:
+            self.arm_active = False
+            self.keyframe_command_id = ""
+            self.keyframe_preflight_only = False
+            self._fail(
+                "ARM_PATH_UNSAFE" if "preflight" in event else "GRASP_FAILED",
+                reason=event or "semantic grasp failed",
+                keyframe_result=payload,
+            )
 
     def _pick_result_callback(self, msg: String) -> None:
         if not self.pick_waiting:
@@ -1076,6 +1227,18 @@ class StoredObjectPickNode(Node):
         if stable is None:
             return
         self.last_object_point = stable.point_base
+        constraint = observation_constraint_decision(
+            self.profile.alignment,
+            localization_quality=stable.localization_quality,
+            depth_std_m=stable.depth_std_m,
+            center_std_px=stable.center_std_px,
+            orientation_deg=stable.orientation_deg,
+            orientation_class=stable.orientation_class,
+            orientation_quality=stable.orientation_quality,
+        )
+        if constraint.action == "reject":
+            self._fail("TARGET_NOT_GRASPABLE", reason=constraint.reason)
+            return
         try:
             errors = alignment_errors(
                 stable.point_base,
@@ -1136,14 +1299,70 @@ class StoredObjectPickNode(Node):
             "errors": self._error_mapping(self.last_errors),
             "point_base": list(self.last_object_point) if self.last_object_point else None,
         }
+        # ALIGN_WITH_OBJECT must mean more than geometric tolerance. For the
+        # default semantic-keyframe executor, prove that the current object
+        # point has an IK solution and every segment is inside the sampled
+        # safe region before reporting ALIGN success or starting physical grasp.
+        if self.profile is not None and self.profile.grasp_executor == "keyframes":
+            self._start_grasp_preflight()
+            return
         if not self.execute_pick:
             self._succeed()
             return
         self._start_grasp()
 
+    def _start_grasp_preflight(self) -> None:
+        assert self.profile is not None
+        if self.last_object_point is None:
+            self._fail("OBJECT_LOST", reason="object point unavailable before grasp preflight")
+            return
+        self.phase = "grasp_preflight"
+        self.keyframe_command_id = f"stored-pick-preflight-{self.request_id}"
+        self.keyframe_preflight_only = True
+        self.arm_active = True
+        self.phase_deadline = self.goal_deadline
+        self._publish_json(
+            self.keyframe_command_pub,
+            {
+                "action": "preflight",
+                "command_id": self.keyframe_command_id,
+                "profile": self.profile.grasp_keyframe_profile,
+                "object_name": self.object_name,
+                "object_point_base": list(self.last_object_point),
+            },
+        )
+        self._publish_status(
+            "semantic_grasp_preflight_started",
+            grasp_keyframe_profile=self.profile.grasp_keyframe_profile,
+            align_only=not self.execute_pick,
+        )
+
     def _start_grasp(self) -> None:
         assert self.profile is not None
         self.phase = "grasp"
+        if self.profile.grasp_executor == "keyframes":
+            if self.last_object_point is None:
+                self._fail("OBJECT_LOST", reason="object point unavailable before grasp")
+                return
+            self.keyframe_command_id = f"stored-pick-keyframes-{self.request_id}"
+            self.keyframe_preflight_only = False
+            self.arm_active = True
+            self.phase_deadline = self.goal_deadline
+            self._publish_json(
+                self.keyframe_command_pub,
+                {
+                    "action": "play",
+                    "command_id": self.keyframe_command_id,
+                    "profile": self.profile.grasp_keyframe_profile,
+                    "object_name": self.object_name,
+                    "object_point_base": list(self.last_object_point),
+                },
+            )
+            self._publish_status(
+                "semantic_grasp_started",
+                grasp_keyframe_profile=self.profile.grasp_keyframe_profile,
+            )
+            return
         if self.profile.grasp_executor == "arm_demo":
             self.arm_demo_command_id = f"stored-pick-grasp-{self.request_id}"
             self.arm_active = True
@@ -1195,13 +1414,37 @@ class StoredObjectPickNode(Node):
                 existing = self.profile_store.get(self.profile_name, self.object_name)
             except KeyError:
                 existing = self._new_profile_template()
+            recorded_orientation_quality = (
+                self.record_stable_detection.orientation_quality
+                if self.record_stable_detection is not None else 0.0
+            )
+            require_orientation_match = self.record_require_orientation_match
+            if require_orientation_match is None:
+                require_orientation_match = (
+                    recorded_orientation_quality
+                    >= float(self.get_parameter("auto_require_orientation_quality").value)
+                )
             stored = existing.with_recording(
                 point_base=self.record_point,
                 search_pose=odom,
                 object_point_odom=object_odom,
                 object_name=self.object_name,
+                grasp_executor=self.record_grasp_executor,
                 grasp_trajectory=self.record_grasp_trajectory,
+                grasp_keyframe_profile=self.record_grasp_keyframe_profile,
                 pick_profile=self.record_pick_profile,
+                orientation_deg=(
+                    self.record_stable_detection.orientation_deg
+                    if self.record_stable_detection is not None else 0.0
+                ),
+                orientation_class=(
+                    self.record_stable_detection.orientation_class
+                    if self.record_stable_detection is not None else "unknown"
+                ),
+                orientation_quality=(
+                    self.record_stable_detection.orientation_quality
+                    if self.record_stable_detection is not None else 0.0
+                ),
             )
             self.profile_store.upsert(stored)
         except Exception as exc:
@@ -1237,8 +1480,9 @@ class StoredObjectPickNode(Node):
             search_pose_odom=OdomPose(0.0, 0.0, 0.0, True, None),
             object_point_odom=(0.0, 0.0, 0.0),
             alignment=alignment,
-            grasp_executor="arm_demo",
+            grasp_executor=self.record_grasp_executor,
             grasp_trajectory=self.record_grasp_trajectory,
+            grasp_keyframe_profile=self.record_grasp_keyframe_profile,
             pick_profile=self.record_pick_profile,
         )
 
@@ -1432,6 +1676,10 @@ class StoredObjectPickNode(Node):
                         "command_id": self.arm_demo_command_id,
                     },
                 )
+            if self.keyframe_command_id:
+                cancel = String()
+                cancel.data = self.keyframe_command_id
+                self.keyframe_cancel_pub.publish(cancel)
         self._publish_status(
             "cancel_requested",
             False,
@@ -1536,6 +1784,7 @@ class StoredObjectPickNode(Node):
             stable = self._stable_detection()
             if stable is not None:
                 self.record_point = stable.point_base
+                self.record_stable_detection = stable
                 self.filter.clear()
                 self._request_odom("record")
             return
@@ -1577,6 +1826,14 @@ class StoredObjectPickNode(Node):
             minimum_count=alignment.stability_count,
             window_sec=alignment.stability_window_sec,
             radius_m=alignment.stability_radius_m,
+            minimum_localization_quality=alignment.minimum_localization_quality,
+            maximum_depth_std_m=alignment.maximum_depth_std_m,
+            maximum_center_std_px=alignment.maximum_center_std_px,
+            required_orientation_class=(
+                alignment.reference_orientation_class
+                if alignment.require_orientation_match else ""
+            ),
+            minimum_orientation_quality=alignment.minimum_orientation_quality,
         )
 
     @staticmethod
@@ -1614,6 +1871,11 @@ class StoredObjectPickNode(Node):
         self.finder_active = False
         self.pending_odom_purpose = ""
         self.record_point = None
+        self.record_stable_detection = None
+        self.record_grasp_executor = "keyframes"
+        self.record_grasp_trajectory = ""
+        self.record_grasp_keyframe_profile = ""
+        self.record_require_orientation_match = None
         self.coarse_steps = []
         self.search_relative_turns = []
         self.search_index = 0
@@ -1624,6 +1886,8 @@ class StoredObjectPickNode(Node):
         self.arm_active = False
         self.pending_arm_q = None
         self.arm_demo_command_id = ""
+        self.keyframe_command_id = ""
+        self.keyframe_preflight_only = False
         self.pick_waiting = False
         self.alignment_iterations = 0
         self.total_turn_deg = 0.0

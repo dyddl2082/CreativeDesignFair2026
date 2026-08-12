@@ -32,7 +32,6 @@ from .filter_core import (
     decode_compressed_image,
     evaluate_candidate,
     load_reference_profile,
-    decode_compressed_mask,
 )
 
 
@@ -130,7 +129,7 @@ class CandidateFilterNode(Node):
             f"input='{input_topic}', results='{result_topic}', "
             f"accepted='{accepted_topic}' ({accepted_reliability}), "
             f"target='{self._target_object}', "
-            f"soft_enforcement={initial_config.enforce_objectness_score}"
+            f"soft_enforcement={initial_config.enforce_soft_score}"
         )
 
     def _declare_parameters(self) -> None:
@@ -164,7 +163,7 @@ class CandidateFilterNode(Node):
             "valid_depth_good_ratio": 0.85,
             "max_depth_std_m": 0.20,
             "depth_std_good_m": 0.035,
-            "min_foreground_height_m": 0.010,
+            "min_foreground_height_m": 0.0,
             "max_foreground_height_m": 0.50,
             "preferred_foreground_min_m": 0.012,
             "preferred_foreground_max_m": 0.18,
@@ -197,16 +196,15 @@ class CandidateFilterNode(Node):
             "physical_short_side_preferred_max_m": 0.10,
             "physical_long_side_preferred_min_m": 0.035,
             "physical_long_side_preferred_max_m": 0.15,
-            "require_plane_for_objectness": True,
-            "enforce_objectness_score": False,
-            "min_objectness_score": 0.45,
-
-            "objectness_depth_weight": 0.40,
-            "objectness_quality_weight": 0.25,
-            "objectness_shape_weight": 0.35,
-
-            "target_color_weight": 0.80,
-            "target_physical_size_weight": 0.20,
+            "enable_color_hard_reject": False,
+            "min_color_score": 0.18,
+            "enforce_soft_score": False,
+            "min_filter_score": 0.45,
+            "depth_weight": 0.30,
+            "quality_weight": 0.20,
+            "color_weight": 0.25,
+            "shape_weight": 0.20,
+            "physical_size_weight": 0.05,
             "reliable_accepted_output": False,
             "publish_accepted_crops": True,
             "publish_debug": True,
@@ -214,13 +212,6 @@ class CandidateFilterNode(Node):
             "debug_hz": 2.0,
             "debug_jpeg_quality": 78,
             "status_log_period_sec": 5.0,
-            "require_plane_for_objectness": True,
-            "require_foreground_mask": True,
-            "min_mask_pixels": 120,
-            "min_mask_fill_ratio": 0.08,
-            "max_mask_fill_ratio": 0.98,
-            "solidity_bad": 0.25,
-            "solidity_good": 0.85,
         }
         for name, value in defaults.items():
             self.declare_parameter(name, value)
@@ -285,42 +276,15 @@ class CandidateFilterNode(Node):
             physical_long_side_preferred_max_m=float(
                 value("physical_long_side_preferred_max_m")
             ),
-            require_plane_for_objectness=bool(
-                value("require_plane_for_objectness")
-            ),
-            require_foreground_mask=bool(
-                value("require_foreground_mask")
-            ),
-            min_mask_pixels=int(value("min_mask_pixels")),
-            min_mask_fill_ratio=float(
-                value("min_mask_fill_ratio")
-            ),
-            max_mask_fill_ratio=float(
-                value("max_mask_fill_ratio")
-            ),
-            solidity_bad=float(value("solidity_bad")),
-            solidity_good=float(value("solidity_good")),
-            enforce_objectness_score=bool(
-                value("enforce_objectness_score")
-            ),
-            min_objectness_score=float(
-                value("min_objectness_score")
-            ),
-            objectness_depth_weight=float(
-                value("objectness_depth_weight")
-            ),
-            objectness_quality_weight=float(
-                value("objectness_quality_weight")
-            ),
-            objectness_shape_weight=float(
-                value("objectness_shape_weight")
-            ),
-            target_color_weight=float(
-                value("target_color_weight")
-            ),
-            target_physical_size_weight=float(
-                value("target_physical_size_weight")
-            ),
+            enable_color_hard_reject=bool(value("enable_color_hard_reject")),
+            min_color_score=float(value("min_color_score")),
+            enforce_soft_score=bool(value("enforce_soft_score")),
+            min_filter_score=float(value("min_filter_score")),
+            depth_weight=float(value("depth_weight")),
+            quality_weight=float(value("quality_weight")),
+            color_weight=float(value("color_weight")),
+            shape_weight=float(value("shape_weight")),
+            physical_size_weight=float(value("physical_size_weight")),
         )
 
     def _reference_directory(self) -> Path:
@@ -424,26 +388,8 @@ class CandidateFilterNode(Node):
         try:
             config = self._filter_config()
             config.validate()
-
-            image_bgr = decode_compressed_image(
-                message.image.data
-            )
-
-            object_mask = None
-
-            if (
-                message.foreground_mask_available
-                and message.foreground_mask.data
-            ):
-                object_mask = decode_compressed_mask(
-                    message.foreground_mask.data
-                )
-
-            features = compute_image_features(
-                image_bgr,
-                config,
-                object_mask=object_mask,
-            )
+            image_bgr = decode_compressed_image(message.image.data)
+            features = compute_image_features(image_bgr, config)
         except (ValueError, cv2.error) as error:
             self._decode_failures += 1
             self._rejected += 1
@@ -468,10 +414,6 @@ class CandidateFilterNode(Node):
             valid_depth_ratio=float(message.candidate.valid_depth_ratio),
             fill_ratio=float(message.candidate.fill_ratio),
             foreground_height_m=float(message.candidate.foreground_height_m),
-            plane_found=bool(message.plane_found),
-            foreground_height_valid=bool(
-                message.candidate.foreground_height_valid
-            ),
             proposal_score=float(message.candidate.proposal_score),
             touches_border=bool(message.candidate.touches_border),
             sync_offset_abs_sec=abs(float(message.color_time_offset_sec)),
@@ -502,16 +444,8 @@ class CandidateFilterNode(Node):
                 accepted_message.crop = message
                 self._accepted_publisher.publish(accepted_message)
                 self._published_bytes += int(message.jpeg_size_bytes)
-            target_text = (
-                f"{evaluation.target_hint_score:.3f}"
-                if evaluation.target_hint_score is not None
-                else "n/a"
-            )
-
             self._last_result_summary = (
-                f"accept id={message.candidate.id} "
-                f"objectness={evaluation.objectness_score:.3f} "
-                f"target_hint={target_text}"
+                f"accept id={message.candidate.id} score={evaluation.filter_score:.3f}"
             )
         else:
             self._rejected += 1
@@ -519,7 +453,7 @@ class CandidateFilterNode(Node):
             self._last_result_summary = (
                 f"reject id={message.candidate.id} "
                 f"reason={evaluation.reject_reason} "
-                f"objectness={evaluation.filter_score:.3f}"
+                f"score={evaluation.filter_score:.3f}"
             )
 
         self._publish_debug_if_due(
@@ -544,13 +478,6 @@ class CandidateFilterNode(Node):
         result.sync_offset_abs_sec = abs(float(message.color_time_offset_sec))
         result.candidate = message.candidate
         result.crop_roi = message.crop_roi
-        result.plane_found = bool(message.plane_found)
-        result.foreground_height_valid = bool(
-            message.candidate.foreground_height_valid
-        )
-        result.foreground_mask_available = bool(
-            message.foreground_mask_available
-        )
         return result
 
     def _build_failure_result(
@@ -579,10 +506,6 @@ class CandidateFilterNode(Node):
         result.aspect_ratio = -1.0
         result.estimated_width_m = -1.0
         result.estimated_height_m = -1.0
-        result.objectness_score = -1.0
-        result.target_hint_score = -1.0
-        result.mask_fill_ratio = -1.0
-        result.mask_solidity = -1.0
         return result
 
     def _build_result(
@@ -600,16 +523,7 @@ class CandidateFilterNode(Node):
         result.accepted = bool(evaluation.accepted)
         result.reject_stage = evaluation.reject_stage
         result.reject_reason = evaluation.reject_reason
-        result.objectness_score = float(
-            evaluation.objectness_score
-        )
-
-        result.target_hint_score = (
-            float(evaluation.target_hint_score)
-            if evaluation.target_hint_score is not None
-            else -1.0
-        )
-        result.filter_score = float(evaluation.objectness_score)
+        result.filter_score = float(evaluation.filter_score)
         result.depth_score = float(evaluation.depth_score)
         result.quality_score = float(evaluation.quality_score)
         result.color_score = (
@@ -639,12 +553,6 @@ class CandidateFilterNode(Node):
         )
         result.estimated_height_m = (
             float(estimated_height_m) if estimated_height_m is not None else -1.0
-        )
-        result.mask_fill_ratio = float(
-            features.mask_fill_ratio
-        )
-        result.mask_solidity = float(
-            features.mask_solidity
         )
         return result
 
@@ -691,29 +599,15 @@ class CandidateFilterNode(Node):
             if evaluation.physical_size_score is not None
             else "n/a"
         )
-        target_hint_text = (
-            f"{evaluation.target_hint_score:.2f}"
-            if evaluation.target_hint_score is not None
-            else "n/a"
-        )
-
         lines = [
+            f"{decision} id={message.candidate.id} score={evaluation.filter_score:.2f} {reason}",
             (
-                f"{decision} id={message.candidate.id} "
-                f"O={evaluation.objectness_score:.2f} "
-                f"T={target_hint_text} {reason}"
+                f"D={evaluation.depth_score:.2f} Q={evaluation.quality_score:.2f} "
+                f"C={color_score} S={evaluation.shape_score:.2f} P={physical_score}"
             ),
             (
-                f"D={evaluation.depth_score:.2f} "
-                f"Q={evaluation.quality_score:.2f} "
-                f"C={color_score} "
-                f"S={evaluation.shape_score:.2f} "
-                f"P={physical_score}"
-            ),
-            (
-                f"mask={features.mask_fill_ratio:.2f} "
-                f"sol={features.mask_solidity:.2f} "
-                f"z={message.candidate.median_depth_m:.3f}m"
+                f"z={message.candidate.median_depth_m:.3f}m "
+                f"sharp={features.sharpness:.1f} edge={features.edge_density:.3f}"
             ),
         ]
         for index, line in enumerate(lines):
@@ -769,15 +663,11 @@ class CandidateFilterNode(Node):
             "top_reject_reasons": top_reasons,
             "last_result": self._last_result_summary,
             "last_processing_ms": round(elapsed_ms, 3),
-            "objectness_enforcement": bool(
-                self.get_parameter(
-                    "enforce_objectness_score"
-                ).value
+            "soft_enforcement": bool(
+                self.get_parameter("enforce_soft_score").value
             ),
-            "min_objectness_score": float(
-                self.get_parameter(
-                    "min_objectness_score"
-                ).value
+            "min_filter_score": float(
+                self.get_parameter("min_filter_score").value
             ),
         }
         status_message = String()

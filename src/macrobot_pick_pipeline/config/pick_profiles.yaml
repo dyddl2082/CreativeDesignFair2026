@@ -14,7 +14,7 @@ defaults:
   - 0.0
   - 0.05
   lateral_tolerance_m: 0.035
-  min_score: 0.55
+  min_score: 0.0
   stability_count: 5
   stability_window_sec: 1.5
   stability_radius_m: 0.012

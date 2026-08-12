@@ -75,7 +75,7 @@ class AlignmentProfile:
     reference_point_base: Vector3
     recorded_at: str
     frame_id: str = "base_link"
-    minimum_score: float = 0.55
+    minimum_score: float = 0.0
     stability_count: int = 5
     stability_window_sec: float = 1.5
     stability_radius_m: float = 0.012
@@ -91,6 +91,15 @@ class AlignmentProfile:
     max_iterations: int = 20
     max_total_turn_deg: float = 90.0
     max_total_move_m: float = 0.50
+    minimum_localization_quality: float = 0.15
+    maximum_depth_std_m: float = 0.035
+    maximum_center_std_px: float = 20.0
+    require_orientation_match: bool = False
+    reference_orientation_deg: float = 0.0
+    reference_orientation_class: str = "unknown"
+    reference_orientation_quality: float = 0.0
+    minimum_orientation_quality: float = 0.25
+    orientation_tolerance_deg: float = 25.0
 
     @classmethod
     def from_mapping(
@@ -120,6 +129,12 @@ class AlignmentProfile:
             ),
             "recorded_at": str(mapping.get("recorded_at", base.recorded_at)),
             "frame_id": str(mapping.get("frame_id", base.frame_id)),
+            "require_orientation_match": bool(
+                mapping.get("require_orientation_match", base.require_orientation_match)
+            ),
+            "reference_orientation_class": str(
+                mapping.get("reference_orientation_class", base.reference_orientation_class)
+            ).strip() or "unknown",
         }
         float_fields = (
             "minimum_score",
@@ -134,6 +149,13 @@ class AlignmentProfile:
             "settle_sec",
             "max_total_turn_deg",
             "max_total_move_m",
+            "minimum_localization_quality",
+            "maximum_depth_std_m",
+            "maximum_center_std_px",
+            "reference_orientation_deg",
+            "reference_orientation_quality",
+            "minimum_orientation_quality",
+            "orientation_tolerance_deg",
         )
         for field in float_fields:
             kwargs[field] = _finite_float(mapping.get(field, getattr(base, field)), field)
@@ -180,6 +202,18 @@ class AlignmentProfile:
             raise ValueError("settle_sec must be non-negative")
         if not (1 <= self.turn_speed <= 255 and 1 <= self.move_speed <= 255):
             raise ValueError("motor speed must be within 1..255")
+        if not (0.0 <= self.minimum_localization_quality <= 1.0):
+            raise ValueError("minimum_localization_quality must be within [0, 1]")
+        if self.maximum_depth_std_m <= 0.0 or self.maximum_center_std_px <= 0.0:
+            raise ValueError("localization uncertainty limits must be positive")
+        if not (0.0 <= self.minimum_orientation_quality <= 1.0):
+            raise ValueError("minimum_orientation_quality must be within [0, 1]")
+        if self.orientation_tolerance_deg <= 0.0 or self.orientation_tolerance_deg > 90.0:
+            raise ValueError("orientation_tolerance_deg must be within (0, 90]")
+        if self.reference_orientation_class not in {
+            "unknown", "horizontal", "vertical", "diagonal"
+        }:
+            raise ValueError("unsupported reference_orientation_class")
 
     def with_reference(
         self,
@@ -187,6 +221,10 @@ class AlignmentProfile:
         *,
         object_name: Optional[str] = None,
         pick_profile: Optional[str] = None,
+        orientation_deg: Optional[float] = None,
+        orientation_class: Optional[str] = None,
+        orientation_quality: Optional[float] = None,
+        require_orientation_match: Optional[bool] = None,
     ) -> "AlignmentProfile":
         result = replace(
             self,
@@ -194,6 +232,26 @@ class AlignmentProfile:
             pick_profile=(pick_profile or self.pick_profile).strip(),
             reference_point_base=tuple(float(v) for v in point_base),  # type: ignore[arg-type]
             recorded_at=utc_now_iso(),
+            reference_orientation_deg=(
+                self.reference_orientation_deg
+                if orientation_deg is None
+                else float(orientation_deg) % 180.0
+            ),
+            reference_orientation_class=(
+                self.reference_orientation_class
+                if orientation_class is None
+                else (str(orientation_class).strip() or "unknown")
+            ),
+            reference_orientation_quality=(
+                self.reference_orientation_quality
+                if orientation_quality is None
+                else float(orientation_quality)
+            ),
+            require_orientation_match=(
+                self.require_orientation_match
+                if require_orientation_match is None
+                else bool(require_orientation_match)
+            ),
         )
         result.validate()
         return result
@@ -225,6 +283,15 @@ class AlignmentProfile:
             "max_iterations": self.max_iterations,
             "max_total_turn_deg": self.max_total_turn_deg,
             "max_total_move_m": self.max_total_move_m,
+            "minimum_localization_quality": self.minimum_localization_quality,
+            "maximum_depth_std_m": self.maximum_depth_std_m,
+            "maximum_center_std_px": self.maximum_center_std_px,
+            "require_orientation_match": self.require_orientation_match,
+            "reference_orientation_deg": self.reference_orientation_deg,
+            "reference_orientation_class": self.reference_orientation_class,
+            "reference_orientation_quality": self.reference_orientation_quality,
+            "minimum_orientation_quality": self.minimum_orientation_quality,
+            "orientation_tolerance_deg": self.orientation_tolerance_deg,
         }
 
 
@@ -381,6 +448,41 @@ def pico_move_command_cm(
     """Convert physical forward motion in metres to Pico MOVE_CM."""
     value_cm = 100.0 * float(physical_forward_positive_m)
     return value_cm if pico_positive_is_forward else -value_cm
+
+def axial_orientation_error_deg(current_deg: float, reference_deg: float) -> float:
+    """Smallest unsigned error between image-plane axes in degrees."""
+    delta = abs((float(current_deg) - float(reference_deg)) % 180.0)
+    return min(delta, 180.0 - delta)
+
+
+def observation_constraint_decision(
+    profile: AlignmentProfile,
+    *,
+    localization_quality: float,
+    depth_std_m: float,
+    center_std_px: float,
+    orientation_deg: float = 0.0,
+    orientation_class: str = "unknown",
+    orientation_quality: float = 0.0,
+) -> AlignmentDecision:
+    if float(localization_quality) < profile.minimum_localization_quality:
+        return AlignmentDecision("reject", reason="localization_quality_below_threshold")
+    if float(depth_std_m) > profile.maximum_depth_std_m:
+        return AlignmentDecision("reject", reason="localized_depth_uncertainty_too_high")
+    if float(center_std_px) > profile.maximum_center_std_px:
+        return AlignmentDecision("reject", reason="localized_center_uncertainty_too_high")
+    if profile.require_orientation_match:
+        if float(orientation_quality) < profile.minimum_orientation_quality:
+            return AlignmentDecision("reject", reason="object_orientation_unreliable")
+        if (
+            profile.reference_orientation_class != "unknown"
+            and str(orientation_class).strip() != profile.reference_orientation_class
+        ):
+            return AlignmentDecision("reject", reason="object_orientation_class_mismatch")
+        if axial_orientation_error_deg(orientation_deg, profile.reference_orientation_deg) > profile.orientation_tolerance_deg:
+            return AlignmentDecision("reject", reason="object_orientation_angle_mismatch")
+    return AlignmentDecision("ok", reason="observation_constraints_passed")
+
 
 def choose_alignment_action(
     errors: AlignmentErrors,

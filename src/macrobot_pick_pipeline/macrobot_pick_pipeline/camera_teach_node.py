@@ -141,7 +141,7 @@ class CameraTeachNode(Node):
         self.declare_parameter("base_frame", "base_link")
         self.declare_parameter("use_finder", True)
         self.declare_parameter("allow_motion_commands", True)
-        self.declare_parameter("target_min_score", 0.55)
+        self.declare_parameter("target_min_score", 0.0)
         self.declare_parameter("target_stability_count", 5)
         self.declare_parameter("target_stability_window_sec", 1.5)
         self.declare_parameter("target_stability_radius_m", 0.012)

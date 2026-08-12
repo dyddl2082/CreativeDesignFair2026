@@ -6,7 +6,7 @@
     require_camera_health: true
     camera_info_topic: /camera/camera/color/camera_info
     camera_health_timeout_sec: 3.0
-    target_min_score: 0.55
+    target_min_score: 0.0
     target_stability_count: 5
     target_stability_window_sec: 1.5
     target_stability_radius_m: 0.012

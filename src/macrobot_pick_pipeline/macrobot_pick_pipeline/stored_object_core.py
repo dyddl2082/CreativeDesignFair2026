@@ -194,8 +194,9 @@ class StoredObjectRuntimeProfile:
     search_pose_odom: OdomPose
     object_point_odom: Vector3
     alignment: AlignmentProfile
-    grasp_executor: str = "arm_demo"
+    grasp_executor: str = "keyframes"
     grasp_trajectory: str = ""
+    grasp_keyframe_profile: str = ""
     pick_profile: str = ""
     position_scope: str = "pico_odom_session"
     search_max_yaw_deg: float = 35.0
@@ -252,8 +253,11 @@ class StoredObjectRuntimeProfile:
             search_pose_odom=OdomPose.from_mapping(search_pose_raw),
             object_point_odom=object_point,
             alignment=alignment,
-            grasp_executor=str(grasp.get("executor", value.get("grasp_executor", "arm_demo"))).strip(),
+            grasp_executor=str(grasp.get("executor", value.get("grasp_executor", "keyframes"))).strip(),
             grasp_trajectory=str(grasp.get("trajectory", value.get("grasp_trajectory", ""))).strip(),
+            grasp_keyframe_profile=str(
+                grasp.get("keyframe_profile", value.get("grasp_keyframe_profile", ""))
+            ).strip(),
             pick_profile=str(grasp.get("pick_profile", value.get("pick_profile", object_name))).strip(),
             position_scope=str(value.get("position_scope", "pico_odom_session")),
             search_max_yaw_deg=finite_float(search.get("max_yaw_deg", 35.0), "search.max_yaw_deg"),
@@ -274,8 +278,10 @@ class StoredObjectRuntimeProfile:
             raise ValueError("only pico_odom_session is currently supported")
         if not self.search_pose_odom.reliable:
             raise ValueError("recorded search pose must be reliable")
-        if self.grasp_executor not in {"arm_demo", "pick_coordinator"}:
-            raise ValueError("grasp_executor must be arm_demo or pick_coordinator")
+        if self.grasp_executor not in {"keyframes", "arm_demo", "pick_coordinator"}:
+            raise ValueError("grasp_executor must be keyframes, arm_demo or pick_coordinator")
+        if self.grasp_executor == "keyframes" and not self.grasp_keyframe_profile:
+            raise ValueError("keyframe grasp requires grasp_keyframe_profile")
         if self.grasp_executor == "arm_demo" and not self.grasp_trajectory:
             raise ValueError("arm_demo grasp requires grasp_trajectory")
         positive_values = (
@@ -299,8 +305,14 @@ class StoredObjectRuntimeProfile:
         search_pose: OdomPose,
         object_point_odom: Vector3,
         object_name: str,
+        grasp_executor: str,
         grasp_trajectory: str,
+        grasp_keyframe_profile: str,
         pick_profile: str,
+        orientation_deg: float = 0.0,
+        orientation_class: str = "unknown",
+        orientation_quality: float = 0.0,
+        require_orientation_match: Optional[bool] = None,
     ) -> "StoredObjectRuntimeProfile":
         result = replace(
             self,
@@ -312,8 +324,14 @@ class StoredObjectRuntimeProfile:
                 point_base,
                 object_name=object_name,
                 pick_profile=pick_profile,
+                orientation_deg=orientation_deg,
+                orientation_class=orientation_class,
+                orientation_quality=orientation_quality,
+                require_orientation_match=require_orientation_match,
             ),
+            grasp_executor=grasp_executor,
             grasp_trajectory=grasp_trajectory,
+            grasp_keyframe_profile=grasp_keyframe_profile,
             pick_profile=pick_profile,
         )
         result.validate()
@@ -334,6 +352,7 @@ class StoredObjectRuntimeProfile:
             "grasp": {
                 "executor": self.grasp_executor,
                 "trajectory": self.grasp_trajectory,
+                "keyframe_profile": self.grasp_keyframe_profile,
                 "pick_profile": self.pick_profile,
             },
             "search": {

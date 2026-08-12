@@ -34,7 +34,7 @@ class PickProfile:
     pregrasp_offset_base: Vector3 = (0.0, 0.0, 0.035)
     lift_offset_base: Vector3 = (0.0, 0.0, 0.050)
     lateral_tolerance_m: float = 0.035
-    min_score: float = 0.55
+    min_score: float = 0.0
     stability_count: int = 5
     stability_window_sec: float = 1.5
     stability_radius_m: float = 0.012
