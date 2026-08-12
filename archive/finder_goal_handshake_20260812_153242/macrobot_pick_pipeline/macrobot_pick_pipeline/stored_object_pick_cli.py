@@ -95,7 +95,7 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Force global and patch reference banks to be rebuilt after switching target",
     )
-    search.add_argument("--timeout", type=float, default=120.0)
+    search.add_argument("--timeout", type=float, default=40.0)
 
     grasp = sub.add_parser(
         "record-grasp",

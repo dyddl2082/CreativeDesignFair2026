@@ -249,38 +249,6 @@ class ObjectFinderNode(Node):
             )
             return
 
-        # The Pi-side stored-pick node retries goals until it observes an
-        # acknowledgement.  Treat an identical request_id as an idempotent
-        # retransmission instead of restarting the finder session or reloading
-        # the bank again.
-        current = self.session.goal
-        if current is not None and current.request_id == goal.request_id:
-            if current.object_name.casefold() != goal.object_name.casefold():
-                self._publish_result(
-                    not_found_payload(
-                        goal=goal,
-                        reason="duplicate_request_id_object_mismatch",
-                        event="invalid_goal",
-                    )
-                )
-                self._publish_status(
-                    "goal_rejected",
-                    reason="duplicate_request_id_object_mismatch",
-                )
-                return
-            if self.session.state in {"SEARCHING", "TRACKING", "FOUND"}:
-                self.target_repeat_remaining = max(
-                    self.target_repeat_remaining,
-                    max(1, int(self.get_parameter("target_repeat_count").value)),
-                )
-                self._publish_targets(force=True)
-                self._publish_status(
-                    "goal_acknowledged",
-                    duplicate=True,
-                    target_ready=self.target_ready,
-                )
-                return
-
         image_count = self._profile_image_count(goal.object_name)
         minimum_images = int(self.get_parameter("minimum_positive_images").value)
         if bool(self.get_parameter("require_positive_bank_files").value) and image_count < minimum_images:
@@ -296,11 +264,6 @@ class ObjectFinderNode(Node):
 
         now = self._now()
         self.session.start(goal, now)
-        self._publish_status(
-            "goal_received",
-            target_ready=False,
-            rebuild_banks=bool(goal.rebuild_banks),
-        )
         self.target_ready = not bool(
             self.get_parameter("require_target_ready_before_results").value
         )

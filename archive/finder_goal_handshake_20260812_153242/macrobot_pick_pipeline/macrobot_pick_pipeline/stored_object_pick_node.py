@@ -263,12 +263,6 @@ class StoredObjectPickNode(Node):
         )
         self.create_subscription(
             String,
-            str(self.get_parameter("finder_status_topic").value),
-            self._finder_status_callback,
-            20,
-        )
-        self.create_subscription(
-            String,
             str(self.get_parameter("pico_response_topic").value),
             self._pico_response_callback,
             100,
@@ -334,17 +328,6 @@ class StoredObjectPickNode(Node):
         self.finder_active = False
         self.start_finder_for_goal = True
         self.rebuild_banks_for_goal = False
-        # Finder goals cross the Pi-to-WSL DDS boundary.  A single volatile
-        # publish can be lost while discovery is converging, so keep the goal
-        # payload and retry it until the finder acknowledges the same
-        # request_id.  The finder treats duplicate request IDs idempotently.
-        self.finder_goal_payload: Dict[str, Any] = {}
-        self.finder_goal_started = 0.0
-        self.finder_goal_last_publish = 0.0
-        self.finder_goal_publish_count = 0
-        self.finder_goal_acknowledged = False
-        self.finder_goal_acknowledged_at = 0.0
-        self.last_finder_status: Dict[str, Any] = {}
 
         self.pending_odom_purpose = ""
         self.pending_odom_sent = 0.0
@@ -431,9 +414,6 @@ class StoredObjectPickNode(Node):
             "finder_goal_topic": "/object_finder/goal",
             "finder_cancel_topic": "/object_finder/cancel",
             "finder_result_topic": "/object_finder/result",
-            "finder_status_topic": "/object_finder/status",
-            "finder_goal_retry_period_sec": 0.75,
-            "finder_goal_ack_timeout_sec": 12.0,
             "active_target_topic": "/macrobot/pick/active_target",
             "pico_command_topic": "/pico_debug/cmd",
             "pico_response_topic": "/pico_debug/response",
@@ -979,70 +959,6 @@ class StoredObjectPickNode(Node):
             )
         )
 
-    def _finder_status_callback(self, msg: String) -> None:
-        """Acknowledge that the WSL finder accepted this exact request.
-
-        ``/object_finder/goal`` is an internal command topic crossing machines.
-        The stored-pick node retries until this callback observes the matching
-        request ID.  Status messages for older or unrelated finder sessions are
-        ignored.
-        """
-        if not self._is_busy() or not self.finder_active:
-            return
-        try:
-            payload = _json_object(msg.data)
-        except Exception:
-            return
-        self.last_finder_status = dict(payload)
-        request_id = str(payload.get("request_id", "")).strip()
-        object_name = str(payload.get("object_name", "")).strip()
-        if request_id != self.request_id:
-            return
-        if object_name.casefold() != self.object_name.casefold():
-            return
-        state = str(payload.get("state", "")).strip().upper()
-        event = str(payload.get("event", "")).strip().lower()
-        accepted = state in {
-            "SEARCHING",
-            "TRACKING",
-            "FOUND",
-            "LOST",
-            "TIMED_OUT",
-            "ERROR",
-        } or event in {
-            "goal_received",
-            "goal_acknowledged",
-            "search_started",
-            "target_rebuild_started",
-            "target_ready",
-            "object_found",
-            "target_switch_failed",
-            "search_timeout",
-        }
-        if not accepted or self.finder_goal_acknowledged:
-            return
-        self.finder_goal_acknowledged = True
-        self.finder_goal_acknowledged_at = time.monotonic()
-        self._publish_status(
-            "finder_goal_acknowledged",
-            finder_event=event,
-            finder_state=state,
-            finder_goal_publish_count=self.finder_goal_publish_count,
-            finder_goal_subscribers=self.finder_goal_pub.get_subscription_count(),
-        )
-        if event == "target_switch_failed":
-            self._fail(
-                "PERCEPTION_UNAVAILABLE",
-                reason=str(payload.get("reason", "target switch failed")),
-                finder_status=payload,
-            )
-        elif event == "search_timeout":
-            self._fail(
-                "OBJECT_NOT_FOUND",
-                reason="finder search timeout",
-                finder_status=payload,
-            )
-
     def _finder_result_callback(self, msg: String) -> None:
         if not self._is_busy() or not self.finder_active:
             return
@@ -1056,16 +972,6 @@ class StoredObjectPickNode(Node):
         object_name = str(payload.get("object_name", "")).strip()
         if object_name and object_name.casefold() != self.object_name.casefold():
             return
-        if not self.finder_goal_acknowledged:
-            self.finder_goal_acknowledged = True
-            self.finder_goal_acknowledged_at = time.monotonic()
-            self._publish_status(
-                "finder_goal_acknowledged",
-                finder_event=str(payload.get("event", "")).strip().lower(),
-                finder_state="RESULT",
-                finder_goal_publish_count=self.finder_goal_publish_count,
-                finder_goal_subscribers=self.finder_goal_pub.get_subscription_count(),
-            )
         event = str(payload.get("event", "")).strip().lower()
         reason = str(payload.get("reason", "")).strip()
         if event in {"finder_configuration_error", "invalid_goal"}:
@@ -2344,72 +2250,17 @@ class StoredObjectPickNode(Node):
 
     def _start_finder(self, timeout_sec: float) -> None:
         self.finder_active = True
-        self.finder_goal_acknowledged = False
-        self.finder_goal_acknowledged_at = 0.0
-        self.finder_goal_started = time.monotonic()
-        self.finder_goal_last_publish = 0.0
-        self.finder_goal_publish_count = 0
-        self.last_finder_status = {}
-        self.finder_goal_payload = {
-            "object_name": self.object_name,
-            "timeout_sec": max(1.0, timeout_sec),
-            "continuous": True,
-            "request_id": self.request_id,
-            "rebuild_banks": bool(self.rebuild_banks_for_goal),
-        }
         self._set_active_target(self.object_name)
-        self._publish_finder_goal(force=True)
-
-    def _publish_finder_goal(self, *, force: bool = False) -> None:
-        if (
-            not self.finder_active
-            or self.finder_goal_acknowledged
-            or not self.finder_goal_payload
-        ):
-            return
-        now = time.monotonic()
-        period = max(
-            0.1,
-            float(self.get_parameter("finder_goal_retry_period_sec").value),
+        self._publish_json(
+            self.finder_goal_pub,
+            {
+                "object_name": self.object_name,
+                "timeout_sec": max(1.0, timeout_sec),
+                "continuous": True,
+                "request_id": self.request_id,
+                "rebuild_banks": bool(self.rebuild_banks_for_goal),
+            },
         )
-        if not force and now - self.finder_goal_last_publish < period:
-            return
-        self._publish_json(self.finder_goal_pub, self.finder_goal_payload)
-        self.finder_goal_last_publish = now
-        self.finder_goal_publish_count += 1
-        if self.finder_goal_publish_count == 1 or self.finder_goal_publish_count % 4 == 0:
-            self._publish_status(
-                "finder_goal_sent",
-                finder_goal_publish_count=self.finder_goal_publish_count,
-                finder_goal_subscribers=self.finder_goal_pub.get_subscription_count(),
-                waiting_for_finder_ack=True,
-            )
-
-    def _check_finder_goal_delivery(self, now: float) -> bool:
-        """Retry the finder goal and fail early when no acknowledgement arrives."""
-        if not self.finder_active or self.finder_goal_acknowledged:
-            return True
-        self._publish_finder_goal()
-        timeout = max(
-            1.0,
-            float(self.get_parameter("finder_goal_ack_timeout_sec").value),
-        )
-        if now - self.finder_goal_started < timeout:
-            return False
-        subscriber_count = self.finder_goal_pub.get_subscription_count()
-        reason = (
-            "no /object_finder/goal subscriber discovered across the ROS graph"
-            if subscriber_count <= 0
-            else "finder did not acknowledge the goal request_id"
-        )
-        self._fail(
-            "PERCEPTION_UNAVAILABLE",
-            reason=reason,
-            finder_goal_publish_count=self.finder_goal_publish_count,
-            finder_goal_subscribers=subscriber_count,
-            last_finder_status=self.last_finder_status,
-        )
-        return False
 
     def _cancel_finder(self, reason: str) -> None:
         if self.finder_active:
@@ -2417,8 +2268,6 @@ class StoredObjectPickNode(Node):
             message.data = reason
             self.finder_cancel_pub.publish(message)
         self.finder_active = False
-        self.finder_goal_payload = {}
-        self.finder_goal_acknowledged = False
 
     def _set_active_target(self, object_name: str) -> None:
         message = String()
@@ -2599,10 +2448,6 @@ class StoredObjectPickNode(Node):
         if self.goal_deadline > 0.0 and now >= self.goal_deadline:
             self._request_cancel("overall action timeout", terminal="TIMED_OUT")
             return
-        if self.finder_active and not self.finder_goal_acknowledged:
-            self._check_finder_goal_delivery(now)
-            if self.state in TERMINAL_STATES or self.state == "CANCEL_REQUESTED":
-                return
         if self.pending_odom_purpose:
             if now - self.pending_odom_sent > float(
                 self.get_parameter("odom_request_timeout_sec").value
@@ -2701,13 +2546,6 @@ class StoredObjectPickNode(Node):
         self.settle_until = 0.0
         self.finder_active = False
         self.rebuild_banks_for_goal = False
-        self.finder_goal_payload = {}
-        self.finder_goal_started = 0.0
-        self.finder_goal_last_publish = 0.0
-        self.finder_goal_publish_count = 0
-        self.finder_goal_acknowledged = False
-        self.finder_goal_acknowledged_at = 0.0
-        self.last_finder_status = {}
         self.pending_odom_purpose = ""
         self.record_point = None
         self.record_stable_detection = None
