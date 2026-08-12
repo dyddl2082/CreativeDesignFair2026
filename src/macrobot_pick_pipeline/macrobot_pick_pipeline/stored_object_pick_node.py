@@ -28,8 +28,11 @@ from .stored_object_core import (
     StoredObjectProfileStore,
     StoredObjectRuntimeProfile,
     absolute_offsets_to_relative_turns,
+    estimate_handoff_uncertainty_m,
     plan_return_to_pose,
+    planar_range_m,
     point_base_to_odom,
+    point_odom_to_base,
     pico_session_is_compatible,
     search_offsets,
 )
@@ -328,6 +331,20 @@ class StoredObjectPickNode(Node):
         self.record_require_orientation_match: Optional[bool] = None
         self.record_stable_detection: Optional[StableDetection] = None
         self.record_pick_profile = ""
+        self.record_stage = "complete"
+        self.record_graspable_max_range_m = 0.30
+
+        # Distance-aware handoff state.  The target is identified at a
+        # recognition-friendly range, converted into Pico odom, then approached
+        # without requiring DINO to stay above threshold inside arm reach.
+        self.pending_acquisition: Optional[StableDetection] = None
+        self.locked_acquisition: Optional[StableDetection] = None
+        self.locked_object_point_odom: Optional[Vector3] = None
+        self.target_grasp_pose_odom: Optional[OdomPose] = None
+        self.approach_iterations = 0
+        self.approach_total_move_m = 0.0
+        self.approach_total_turn_deg = 0.0
+        self.handoff_uncertainty_m = 0.0
 
         self.coarse_steps: List[Tuple[str, float]] = []
         self.search_relative_turns: List[float] = []
@@ -455,6 +472,27 @@ class StoredObjectPickNode(Node):
             "cancel_confirm_timeout_sec": 4.0,
             "pico_reboot_tolerance_ms": 2000,
             "allow_missing_grasp_trajectory": False,
+
+            # Two-distance recognition/grasp handoff.  DINO acquires the object
+            # outside arm reach; Pico odometry then carries the locked object
+            # pose to the recorded close grasp pose.
+            "distance_handoff_enabled": True,
+            "recognition_min_range_m": 0.32,
+            "recognition_max_range_m": 1.20,
+            "graspable_min_range_m": 0.08,
+            "graspable_max_range_m": 0.30,
+            "approach_position_tolerance_m": 0.012,
+            "approach_angle_tolerance_deg": 2.0,
+            "approach_max_move_step_m": 0.10,
+            "approach_max_turn_step_deg": 15.0,
+            "approach_max_iterations": 16,
+            "approach_max_total_move_m": 0.80,
+            "approach_max_total_turn_deg": 180.0,
+            "base_linear_error_fraction": 0.015,
+            "base_turn_error_fraction": 0.020,
+            "turn_translation_drift_m_per_360": 0.010,
+            "maximum_handoff_uncertainty_m": 0.025,
+            "maximum_object_relocation_m": 1.0,
             "timer_rate_hz": 20.0,
         }
         for name, value in defaults.items():
@@ -550,6 +588,15 @@ class StoredObjectPickNode(Node):
             "base_estimate_reliable": (
                 self.last_odom.reliable if self.last_odom is not None else None
             ),
+            "locked_object_point_odom": (
+                list(self.locked_object_point_odom)
+                if self.locked_object_point_odom is not None else None
+            ),
+            "target_grasp_pose_odom": (
+                self.target_grasp_pose_odom.to_mapping()
+                if self.target_grasp_pose_odom is not None else None
+            ),
+            "handoff_uncertainty_m": self.handoff_uncertainty_m,
         }
 
     def _is_busy(self) -> bool:
@@ -600,6 +647,7 @@ class StoredObjectPickNode(Node):
         request_id = f"record-{int(time.time() * 1000)}"
         object_name = ""
         profile_name = ""
+        record_stage = "complete"
         try:
             request = _json_object(msg.data)
             request_id = str(request.get("request_id", request_id))
@@ -607,33 +655,67 @@ class StoredObjectPickNode(Node):
             profile_name = str(
                 request.get("profile", request.get("alignment_profile", object_name))
             ).strip()
+            record_stage = str(request.get("record_stage", "complete")).strip().casefold()
+            if record_stage not in {"search", "grasp", "complete"}:
+                raise ValueError("record_stage must be search, grasp, or complete")
             if self._is_busy():
                 raise RuntimeError("another stored-object action is active")
             if not object_name:
                 raise ValueError("object_name is required")
+
             grasp_keyframe_profile = str(
                 request.get("grasp_keyframe_profile", "")
             ).strip()
             grasp_trajectory = str(request.get("grasp_trajectory", "")).strip()
             pick_profile = str(request.get("pick_profile", object_name)).strip()
-            start_finder = _as_bool(request.get("start_finder"), True)
+            start_finder = _as_bool(request.get("start_finder"), record_stage != "grasp")
             raw_require_orientation = request.get("require_orientation_match")
             require_orientation_match = (
                 None
                 if raw_require_orientation is None
                 else _as_bool(raw_require_orientation, False)
             )
-            if grasp_keyframe_profile:
+
+            if record_stage == "search":
                 grasp_executor = "keyframes"
-                self.keyframe_store.reload()
-                self.keyframe_store.get(grasp_keyframe_profile).validate()
-            elif grasp_trajectory:
-                grasp_executor = "arm_demo"
-                self._validate_grasp_trajectory(grasp_trajectory)
+                grasp_keyframe_profile = ""
+                grasp_trajectory = ""
             else:
-                raise ValueError(
-                    "grasp_keyframe_profile or grasp_trajectory is required"
+                if grasp_keyframe_profile:
+                    grasp_executor = "keyframes"
+                    # A two-stage registration records the close base pose before
+                    # semantic keyframes are captured.  Validate an existing
+                    # profile, but allow a new profile name during record-grasp.
+                    try:
+                        self.keyframe_store.reload()
+                        self.keyframe_store.get(grasp_keyframe_profile).validate()
+                    except KeyError:
+                        if record_stage == "complete":
+                            raise ValueError(
+                                f"grasp keyframe profile not found: {grasp_keyframe_profile}"
+                            )
+                elif grasp_trajectory:
+                    grasp_executor = "arm_demo"
+                    self._validate_grasp_trajectory(grasp_trajectory)
+                else:
+                    raise ValueError(
+                        "grasp_keyframe_profile or grasp_trajectory is required"
+                    )
+
+            if record_stage == "grasp":
+                # Search registration must already exist; no close-range DINO
+                # observation is required.  The object point is reconstructed
+                # from the stored odom point and the current Pico odometry.
+                self.profile_store.get(profile_name, object_name)
+
+            graspable_max_range_m = float(
+                request.get(
+                    "graspable_max_range_m",
+                    self.get_parameter("graspable_max_range_m").value,
                 )
+            )
+            if not math.isfinite(graspable_max_range_m) or graspable_max_range_m <= 0.0:
+                raise ValueError("graspable_max_range_m must be positive and finite")
         except Exception as exc:
             self._publish_command_rejection(
                 event="stored_object_record_rejected",
@@ -641,10 +723,12 @@ class StoredObjectPickNode(Node):
                 request_id=request_id,
                 object_name=object_name,
                 profile=profile_name,
-                mode="record",
+                mode=f"record_{record_stage}",
                 execute_pick=False,
                 error_code=(
-                    "RESOURCE_BUSY" if isinstance(exc, RuntimeError) else "INVALID_ARGUMENT"
+                    "RESOURCE_BUSY" if isinstance(exc, RuntimeError) else (
+                        "GRASP_PROFILE_NOT_FOUND" if isinstance(exc, KeyError) else "INVALID_ARGUMENT"
+                    )
                 ),
                 reason=str(exc),
             )
@@ -654,31 +738,41 @@ class StoredObjectPickNode(Node):
         self.request_id = request_id
         self.object_name = object_name
         self.profile_name = profile_name
+        self.record_stage = record_stage
         self.record_grasp_executor = grasp_executor
         self.record_grasp_trajectory = grasp_trajectory
         self.record_grasp_keyframe_profile = grasp_keyframe_profile
         self.record_require_orientation_match = require_orientation_match
         self.record_pick_profile = pick_profile
-        self.mode = "record"
+        self.record_graspable_max_range_m = graspable_max_range_m
+        self.mode = f"record_{record_stage}"
         self.execute_pick = False
         self.start_finder_for_goal = start_finder
         self.state = "RUNNING"
-        self.phase = "record_wait_detection"
         self.goal_started = time.monotonic()
         self.goal_deadline = self.goal_started + float(
             self.get_parameter("record_timeout_sec").value
         )
         self.filter.clear()
-        if start_finder:
-            self._start_finder(self.goal_deadline - self.goal_started)
+
+        if record_stage == "grasp":
+            self.phase = "record_grasp_wait_odom"
+            self._request_odom("record_grasp")
         else:
-            self._set_active_target(object_name)
+            self.phase = "record_wait_detection"
+            if start_finder:
+                self._start_finder(self.goal_deadline - self.goal_started)
+            else:
+                self._set_active_target(object_name)
+
         self._publish_status(
             "stored_object_record_started",
+            record_stage=record_stage,
             grasp_executor=grasp_executor,
             grasp_trajectory=grasp_trajectory,
             grasp_keyframe_profile=grasp_keyframe_profile,
             pick_profile=pick_profile,
+            graspable_max_range_m=graspable_max_range_m,
             position_scope="pico_odom_session",
         )
 
@@ -706,6 +800,15 @@ class StoredObjectPickNode(Node):
             if mode not in {"full", "visible_test"}:
                 raise ValueError("mode must be full or visible_test")
             profile = self.profile_store.get(profile_name, object_name)
+            profile.validate_for_execution(
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+            if profile.grasp_executor == "keyframes":
+                self.keyframe_store.reload()
+                self.keyframe_store.get(profile.grasp_keyframe_profile).validate()
+            elif profile.grasp_executor == "arm_demo":
+                self._validate_grasp_trajectory(profile.grasp_trajectory)
             start_finder = _as_bool(request.get("start_finder"), mode == "full")
         except Exception as exc:
             error_code = "RESOURCE_BUSY" if isinstance(exc, RuntimeError) else (
@@ -851,8 +954,19 @@ class StoredObjectPickNode(Node):
                 self.pending_odom_purpose = ""
                 if purpose == "record":
                     self._complete_recording_with_odom(odom)
+                elif purpose == "record_search":
+                    self._complete_search_recording_with_odom(odom)
+                elif purpose == "record_grasp":
+                    self._complete_grasp_recording_with_odom(odom)
                 elif purpose == "coarse":
                     self._start_coarse_return(odom)
+                elif purpose == "handoff_acquire":
+                    acquisition = self.pending_acquisition
+                    self.pending_acquisition = None
+                    if acquisition is None:
+                        self._fail("INTERNAL_ERROR", reason="handoff acquisition disappeared")
+                    else:
+                        self._start_distance_handoff(odom, acquisition)
             return
 
         if event not in BASE_MOTION_EVENTS:
@@ -888,6 +1002,8 @@ class StoredObjectPickNode(Node):
         self.base_purpose = ""
         if purpose.startswith("coarse"):
             self._run_next_coarse_step()
+        elif purpose.startswith("approach"):
+            self._run_next_approach_step()
         elif purpose == "search_turn":
             self.phase = "search"
             assert self.profile is not None
@@ -1200,14 +1316,29 @@ class StoredObjectPickNode(Node):
         stable = self._stable_detection()
         if stable is not None:
             self.last_object_point = stable.point_base
-            self.phase = "align"
             self.filter.clear()
+            assert self.profile is not None
+            acquired_range = planar_range_m(
+                stable.point_base,
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
             self._publish_status(
                 "object_acquired",
                 point_base=list(stable.point_base),
                 sample_count=stable.sample_count,
                 stability_radius_m=stable.radius_m,
+                acquired_range_m=acquired_range,
+                recognition_range_m=[
+                    self.profile.recognition_min_range_m,
+                    self.profile.recognition_max_range_m,
+                ],
+                distance_handoff=self.profile.distance_handoff_enabled,
             )
+            if self.profile.distance_handoff_enabled:
+                self._lock_and_start_distance_handoff(stable)
+            else:
+                self.phase = "align"
             return
         if self.mode == "visible_test":
             return
@@ -1220,6 +1351,291 @@ class StoredObjectPickNode(Node):
         turn = self.search_relative_turns[self.search_index]
         self.search_index += 1
         self._send_turn(turn, "search_turn")
+
+    def _lock_and_start_distance_handoff(self, stable: StableDetection) -> None:
+        """Freeze a far-range identity observation before entering arm reach."""
+        self.locked_acquisition = stable
+        if self.last_odom is None or not self.last_odom.reliable:
+            self.pending_acquisition = stable
+            self._request_odom("handoff_acquire")
+            return
+        self._start_distance_handoff(self.last_odom, stable)
+
+    def _start_distance_handoff(
+        self,
+        current_odom: OdomPose,
+        stable: StableDetection,
+    ) -> None:
+        assert self.profile is not None
+        if not current_odom.reliable:
+            self._fail(
+                "POSE_ESTIMATE_UNRELIABLE",
+                reason="Pico odometry is unreliable at target acquisition",
+            )
+            return
+        if not pico_session_is_compatible(
+            self.profile.search_pose_odom.pico_time_ms,
+            current_odom.pico_time_ms,
+            tolerance_ms=int(self.get_parameter("pico_reboot_tolerance_ms").value),
+        ):
+            self._fail(
+                "POSE_ESTIMATE_UNRELIABLE",
+                reason="Pico odometry session changed before distance handoff",
+            )
+            return
+        constraint = observation_constraint_decision(
+            self.profile.alignment,
+            localization_quality=stable.localization_quality,
+            depth_std_m=stable.depth_std_m,
+            center_std_px=stable.center_std_px,
+            orientation_deg=stable.orientation_deg,
+            orientation_class=stable.orientation_class,
+            orientation_quality=stable.orientation_quality,
+        )
+        if constraint.action == "reject":
+            self._fail("TARGET_NOT_GRASPABLE", reason=constraint.reason)
+            return
+        try:
+            object_odom = point_base_to_odom(
+                stable.point_base,
+                current_odom,
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+            target_pose = self.profile.target_grasp_pose(object_odom)
+            acquired_range = planar_range_m(
+                stable.point_base,
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+        except Exception as exc:
+            self._fail("TARGET_NOT_GRASPABLE", reason=str(exc))
+            return
+
+        self.locked_acquisition = stable
+        self.locked_object_point_odom = object_odom
+        self.target_grasp_pose_odom = target_pose
+        self.last_odom = current_odom
+        self.approach_iterations = 0
+        self.approach_total_move_m = 0.0
+        self.approach_total_turn_deg = 0.0
+        self.handoff_uncertainty_m = 0.0
+        self.phase = "distance_handoff"
+        self.filter.clear()
+
+        # Near-range DINO confidence is intentionally not required.  The object
+        # identity and session-frame point are now locked; subsequent motion is
+        # bounded and checked against the recorded arm-reachable pose.
+        self._cancel_finder("far_target_locked")
+        self._clear_active_target()
+        self.steps["far_acquisition"] = {
+            "point_base": list(stable.point_base),
+            "object_point_odom": list(object_odom),
+            "score": stable.score,
+            "range_m": acquired_range,
+            "localization_quality": stable.localization_quality,
+            "stability_radius_m": stable.radius_m,
+            "depth_std_m": stable.depth_std_m,
+        }
+        self._publish_status(
+            "distance_handoff_started",
+            acquired_range_m=acquired_range,
+            object_point_odom=list(object_odom),
+            target_grasp_pose_odom=target_pose.to_mapping(),
+            finder_cancelled=True,
+            close_range_reidentification_required=False,
+        )
+        self._run_next_approach_step()
+
+    def _run_next_approach_step(self) -> None:
+        assert self.profile is not None
+        if self.last_odom is None or self.target_grasp_pose_odom is None:
+            self._fail("ROBOT_STATE_UNAVAILABLE", reason="distance handoff pose unavailable")
+            return
+        if not self.last_odom.reliable:
+            self._fail(
+                "POSE_ESTIMATE_UNRELIABLE",
+                reason="Pico odometry became unreliable during distance handoff",
+            )
+            return
+        if self.approach_iterations >= self.profile.approach_max_iterations:
+            self._fail("ALIGNMENT_TIMEOUT", reason="distance handoff iteration limit")
+            return
+
+        plan = plan_return_to_pose(
+            self.last_odom,
+            self.target_grasp_pose_odom,
+            position_tolerance_m=self.profile.approach_position_tolerance_m,
+            angle_tolerance_deg=self.profile.approach_angle_tolerance_deg,
+        )
+        if plan.motion_count == 0:
+            self._complete_distance_handoff()
+            return
+
+        action = ""
+        amount = 0.0
+        if abs(plan.initial_turn_deg) > 1e-9:
+            action = "turn"
+            amount = max(
+                -self.profile.approach_max_turn_step_deg,
+                min(self.profile.approach_max_turn_step_deg, plan.initial_turn_deg),
+            )
+        elif abs(plan.move_distance_m) > 1e-9:
+            action = "move"
+            amount = max(
+                -self.profile.approach_max_move_step_m,
+                min(self.profile.approach_max_move_step_m, plan.move_distance_m),
+            )
+        elif abs(plan.final_turn_deg) > 1e-9:
+            action = "turn"
+            amount = max(
+                -self.profile.approach_max_turn_step_deg,
+                min(self.profile.approach_max_turn_step_deg, plan.final_turn_deg),
+            )
+
+        if not action or abs(amount) <= 1e-9:
+            self._complete_distance_handoff()
+            return
+
+        if action == "turn":
+            if (
+                self.approach_total_turn_deg + abs(amount)
+                > self.profile.approach_max_total_turn_deg
+            ):
+                self._fail("SAFETY_BLOCKED", reason="distance handoff turn budget exceeded")
+                return
+            self.approach_total_turn_deg += abs(amount)
+            self.total_turn_deg += abs(amount)
+        else:
+            if (
+                self.approach_total_move_m + abs(amount)
+                > self.profile.approach_max_total_move_m
+            ):
+                self._fail("SAFETY_BLOCKED", reason="distance handoff move budget exceeded")
+                return
+            self.approach_total_move_m += abs(amount)
+            self.total_move_m += abs(amount)
+
+        self.approach_iterations += 1
+        self.phase = "distance_handoff_motion"
+        self._publish_status(
+            "distance_handoff_step",
+            iteration=self.approach_iterations,
+            action=action,
+            amount=amount,
+            remaining_plan={
+                "initial_turn_deg": plan.initial_turn_deg,
+                "move_distance_m": plan.move_distance_m,
+                "final_turn_deg": plan.final_turn_deg,
+            },
+        )
+        if action == "turn":
+            self._send_turn(amount, "approach_turn")
+        else:
+            self._send_move(amount, "approach_move")
+
+    def _complete_distance_handoff(self) -> None:
+        assert self.profile is not None
+        if (
+            self.last_odom is None
+            or self.locked_object_point_odom is None
+            or self.locked_acquisition is None
+        ):
+            self._fail("ROBOT_STATE_UNAVAILABLE", reason="distance handoff state incomplete")
+            return
+        try:
+            predicted_point = point_odom_to_base(
+                self.locked_object_point_odom,
+                self.last_odom,
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+            predicted_range = planar_range_m(
+                predicted_point,
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+            errors = alignment_errors(
+                predicted_point,
+                self.profile.alignment.reference_point_base,
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+            uncertainty = estimate_handoff_uncertainty_m(
+                acquisition_radius_m=self.locked_acquisition.radius_m,
+                acquisition_depth_std_m=self.locked_acquisition.depth_std_m,
+                traveled_distance_m=self.approach_total_move_m,
+                accumulated_turn_deg=self.approach_total_turn_deg,
+                target_range_m=predicted_range,
+                linear_error_fraction=self.profile.base_linear_error_fraction,
+                turn_error_fraction=self.profile.base_turn_error_fraction,
+                turn_translation_drift_m_per_360=(
+                    self.profile.turn_translation_drift_m_per_360
+                ),
+            )
+        except Exception as exc:
+            self._fail("TARGET_NOT_GRASPABLE", reason=str(exc))
+            return
+
+        if predicted_range < self.profile.graspable_min_range_m:
+            self._fail(
+                "TARGET_NOT_GRASPABLE",
+                reason=(
+                    f"predicted object range {predicted_range:.3f}m is closer than "
+                    f"{self.profile.graspable_min_range_m:.3f}m"
+                ),
+            )
+            return
+        if predicted_range > self.profile.graspable_max_range_m:
+            self._fail(
+                "TARGET_NOT_GRASPABLE",
+                reason=(
+                    f"predicted object range {predicted_range:.3f}m exceeds "
+                    f"arm reach {self.profile.graspable_max_range_m:.3f}m"
+                ),
+            )
+            return
+        if uncertainty > self.profile.maximum_handoff_uncertainty_m:
+            self._fail(
+                "POSE_ESTIMATE_UNRELIABLE",
+                reason=(
+                    f"distance handoff uncertainty {uncertainty:.3f}m exceeds "
+                    f"{self.profile.maximum_handoff_uncertainty_m:.3f}m"
+                ),
+            )
+            return
+        if abs(errors.height_error_m) > self.profile.alignment.height_tolerance_m:
+            self._fail(
+                "TARGET_NOT_GRASPABLE",
+                reason="predicted object height differs from recorded grasp height",
+            )
+            return
+
+        self.handoff_uncertainty_m = uncertainty
+        self.last_object_point = predicted_point
+        self.last_errors = errors
+        self.steps["distance_handoff"] = {
+            "iterations": self.approach_iterations,
+            "total_move_m": self.approach_total_move_m,
+            "total_turn_deg": self.approach_total_turn_deg,
+            "predicted_point_base": list(predicted_point),
+            "predicted_range_m": predicted_range,
+            "estimated_uncertainty_m": uncertainty,
+            "final_odom": self.last_odom.to_mapping(),
+            "errors": self._error_mapping(errors),
+        }
+        self._publish_status(
+            "distance_handoff_completed",
+            predicted_point_base=list(predicted_point),
+            predicted_range_m=predicted_range,
+            graspable_range_m=[
+                self.profile.graspable_min_range_m,
+                self.profile.graspable_max_range_m,
+            ],
+            estimated_uncertainty_m=uncertainty,
+            close_range_dino_required=False,
+        )
+        self._alignment_complete()
 
     def _try_alignment_step(self) -> None:
         assert self.profile is not None
@@ -1396,6 +1812,148 @@ class StoredObjectPickNode(Node):
     # ------------------------------------------------------------------
     # Record completion and profile defaults
     # ------------------------------------------------------------------
+    def _complete_search_recording_with_odom(self, odom: OdomPose) -> None:
+        if self.record_point is None or self.record_stable_detection is None:
+            self._fail("INTERNAL_ERROR", reason="search recording point disappeared")
+            return
+        if not odom.reliable:
+            self._fail("POSE_ESTIMATE_UNRELIABLE", reason="Pico odometry is unreliable")
+            return
+        try:
+            try:
+                existing = self.profile_store.get(self.profile_name, self.object_name)
+            except KeyError:
+                existing = self._new_profile_template()
+            acquisition_range = planar_range_m(
+                self.record_point,
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+            if acquisition_range < existing.recognition_min_range_m:
+                raise ValueError(
+                    f"recognition pose is too close ({acquisition_range:.3f}m); "
+                    f"use at least {existing.recognition_min_range_m:.3f}m"
+                )
+            if acquisition_range > existing.recognition_max_range_m:
+                raise ValueError(
+                    f"recognition pose is too far ({acquisition_range:.3f}m); "
+                    f"maximum is {existing.recognition_max_range_m:.3f}m"
+                )
+            object_odom = point_base_to_odom(
+                self.record_point,
+                odom,
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+            stored = existing.with_search_recording(
+                point_base=self.record_point,
+                search_pose=odom,
+                object_point_odom=object_odom,
+                object_name=self.object_name,
+                recognition_score=self.record_stable_detection.score,
+            )
+            self.profile_store.upsert(stored)
+        except Exception as exc:
+            self._fail("POSITION_STORE_ERROR", reason=str(exc))
+            return
+        self.profile = stored
+        self._cancel_finder("stored_object_search_pose_recorded")
+        self._clear_active_target()
+        self.state = "SUCCEEDED"
+        self.phase = "record_search_completed"
+        self._publish_result(
+            "stored_object_search_pose_recorded",
+            True,
+            "alignment_profile_recorded",
+            profile_mapping=stored.to_mapping(),
+            profile_file=str(self.profile_store.path),
+            next_step="move to the close grasp pose and run record-grasp",
+        )
+        self._publish_status(
+            "stored_object_search_pose_recorded",
+            profile_mapping=stored.to_mapping(),
+        )
+
+    def _complete_grasp_recording_with_odom(self, odom: OdomPose) -> None:
+        if not odom.reliable:
+            self._fail("POSE_ESTIMATE_UNRELIABLE", reason="Pico odometry is unreliable")
+            return
+        try:
+            existing = self.profile_store.get(self.profile_name, self.object_name)
+            if not pico_session_is_compatible(
+                existing.search_pose_odom.pico_time_ms,
+                odom.pico_time_ms,
+                tolerance_ms=int(self.get_parameter("pico_reboot_tolerance_ms").value),
+            ):
+                raise ValueError("Pico odometry session changed after record-search")
+            point_base = point_odom_to_base(
+                existing.object_point_odom,
+                odom,
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+            current_range = planar_range_m(
+                point_base,
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+            maximum_range = min(
+                float(self.record_graspable_max_range_m),
+                float(self.get_parameter("graspable_max_range_m").value),
+            )
+            minimum_range = float(self.get_parameter("graspable_min_range_m").value)
+            if current_range < minimum_range:
+                raise ValueError(
+                    f"grasp pose is too close ({current_range:.3f}m < {minimum_range:.3f}m)"
+                )
+            if current_range > maximum_range:
+                raise ValueError(
+                    f"grasp pose remains outside arm reach "
+                    f"({current_range:.3f}m > {maximum_range:.3f}m)"
+                )
+            stored = existing.with_grasp_recording(
+                point_base=point_base,
+                grasp_pose=odom,
+                object_name=self.object_name,
+                grasp_executor=self.record_grasp_executor,
+                grasp_trajectory=self.record_grasp_trajectory,
+                grasp_keyframe_profile=self.record_grasp_keyframe_profile,
+                pick_profile=self.record_pick_profile,
+                orientation_deg=existing.alignment.reference_orientation_deg,
+                orientation_class=existing.alignment.reference_orientation_class,
+                orientation_quality=existing.alignment.reference_orientation_quality,
+                require_orientation_match=self.record_require_orientation_match,
+                graspable_max_range_m=maximum_range,
+            )
+            self.profile_store.upsert(stored)
+        except Exception as exc:
+            self._fail("POSITION_STORE_ERROR", reason=str(exc))
+            return
+        self.profile = stored
+        self.last_object_point = point_base
+        self.state = "SUCCEEDED"
+        self.phase = "record_grasp_completed"
+        self._publish_result(
+            "stored_object_grasp_pose_recorded",
+            True,
+            "alignment_profile_recorded",
+            profile_mapping=stored.to_mapping(),
+            profile_file=str(self.profile_store.path),
+            object_point_base=list(point_base),
+            grasp_range_m=current_range,
+            close_range_dino_used=False,
+            next_step=(
+                "capture semantic keyframes using --stored-profile "
+                f"{self.profile_name}"
+            ),
+        )
+        self._publish_status(
+            "stored_object_grasp_pose_recorded",
+            profile_mapping=stored.to_mapping(),
+            object_point_base=list(point_base),
+            grasp_range_m=current_range,
+        )
+
     def _complete_recording_with_odom(self, odom: OdomPose) -> None:
         if self.record_point is None:
             self._fail("INTERNAL_ERROR", reason="record point disappeared")
@@ -1480,10 +2038,63 @@ class StoredObjectPickNode(Node):
             search_pose_odom=OdomPose(0.0, 0.0, 0.0, True, None),
             object_point_odom=(0.0, 0.0, 0.0),
             alignment=alignment,
+            grasp_pose_odom=None,
+            recording_state="search_only",
             grasp_executor=self.record_grasp_executor,
             grasp_trajectory=self.record_grasp_trajectory,
             grasp_keyframe_profile=self.record_grasp_keyframe_profile,
             pick_profile=self.record_pick_profile,
+            distance_handoff_enabled=bool(
+                self.get_parameter("distance_handoff_enabled").value
+            ),
+            recognition_min_range_m=float(
+                self.get_parameter("recognition_min_range_m").value
+            ),
+            recognition_max_range_m=float(
+                self.get_parameter("recognition_max_range_m").value
+            ),
+            graspable_min_range_m=float(
+                self.get_parameter("graspable_min_range_m").value
+            ),
+            graspable_max_range_m=float(
+                self.get_parameter("graspable_max_range_m").value
+            ),
+            approach_position_tolerance_m=float(
+                self.get_parameter("approach_position_tolerance_m").value
+            ),
+            approach_angle_tolerance_deg=float(
+                self.get_parameter("approach_angle_tolerance_deg").value
+            ),
+            approach_max_move_step_m=float(
+                self.get_parameter("approach_max_move_step_m").value
+            ),
+            approach_max_turn_step_deg=float(
+                self.get_parameter("approach_max_turn_step_deg").value
+            ),
+            approach_max_iterations=int(
+                self.get_parameter("approach_max_iterations").value
+            ),
+            approach_max_total_move_m=float(
+                self.get_parameter("approach_max_total_move_m").value
+            ),
+            approach_max_total_turn_deg=float(
+                self.get_parameter("approach_max_total_turn_deg").value
+            ),
+            base_linear_error_fraction=float(
+                self.get_parameter("base_linear_error_fraction").value
+            ),
+            base_turn_error_fraction=float(
+                self.get_parameter("base_turn_error_fraction").value
+            ),
+            turn_translation_drift_m_per_360=float(
+                self.get_parameter("turn_translation_drift_m_per_360").value
+            ),
+            maximum_handoff_uncertainty_m=float(
+                self.get_parameter("maximum_handoff_uncertainty_m").value
+            ),
+            maximum_object_relocation_m=float(
+                self.get_parameter("maximum_object_relocation_m").value
+            ),
         )
 
     def _validate_grasp_trajectory(self, name: str) -> None:
@@ -1558,6 +2169,13 @@ class StoredObjectPickNode(Node):
             self.steps[purpose] = dict(self.last_base_response)
             if purpose.startswith("coarse"):
                 self._run_next_coarse_step()
+            elif purpose.startswith("approach"):
+                # Dry-run cannot produce a new odometry sample.  Snap the
+                # logical odom to the commanded target so state transitions can
+                # still be inspected without hardware motion.
+                if self.target_grasp_pose_odom is not None:
+                    self.last_odom = self.target_grasp_pose_odom
+                self._run_next_approach_step()
             elif purpose == "search_turn":
                 self.phase = "search"
                 assert self.profile is not None
@@ -1786,7 +2404,9 @@ class StoredObjectPickNode(Node):
                 self.record_point = stable.point_base
                 self.record_stable_detection = stable
                 self.filter.clear()
-                self._request_odom("record")
+                self._request_odom(
+                    "record_search" if self.record_stage == "search" else "record"
+                )
             return
         if self.arm_active and self.pending_arm_q is not None:
             if now >= self.phase_deadline:
@@ -1817,7 +2437,7 @@ class StoredObjectPickNode(Node):
     # Misc helpers
     # ------------------------------------------------------------------
     def _stable_detection(self):
-        assert self.profile is not None or self.mode == "record"
+        assert self.profile is not None or self.mode.startswith("record")
         alignment = self.profile.alignment if self.profile is not None else self.default_alignment
         return self.filter.stable(
             now_sec=time.time(),
@@ -1876,6 +2496,19 @@ class StoredObjectPickNode(Node):
         self.record_grasp_trajectory = ""
         self.record_grasp_keyframe_profile = ""
         self.record_require_orientation_match = None
+        self.record_pick_profile = ""
+        self.record_stage = "complete"
+        self.record_graspable_max_range_m = float(
+            self.get_parameter("graspable_max_range_m").value
+        )
+        self.pending_acquisition = None
+        self.locked_acquisition = None
+        self.locked_object_point_odom = None
+        self.target_grasp_pose_odom = None
+        self.approach_iterations = 0
+        self.approach_total_move_m = 0.0
+        self.approach_total_turn_deg = 0.0
+        self.handoff_uncertainty_m = 0.0
         self.coarse_steps = []
         self.search_relative_turns = []
         self.search_index = 0

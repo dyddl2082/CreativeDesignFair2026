@@ -7,7 +7,7 @@ package_name = "macrobot_pick_pipeline"
 
 setup(
     name=package_name,
-    version="0.6.0",
+    version="0.7.0",
     packages=find_packages(exclude=["test"]),
     data_files=[
         (

@@ -4,12 +4,42 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 import time
 import uuid
 
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
+import yaml
+
+
+def _stored_reference_point(profile_name: str, path_text: str) -> list[float]:
+    path = Path(path_text).expanduser().resolve()
+    if not path.is_file():
+        raise ValueError(f"stored object profile file not found: {path}")
+    root = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    profiles = root.get("profiles", {}) if isinstance(root, dict) else {}
+    if not isinstance(profiles, dict) or profile_name not in profiles:
+        # Case-insensitive fallback matches runtime store behavior.
+        matches = [
+            value
+            for key, value in profiles.items()
+            if str(key).casefold() == profile_name.casefold()
+        ] if isinstance(profiles, dict) else []
+        if len(matches) != 1:
+            raise ValueError(f"stored object profile not found: {profile_name}")
+        profile = matches[0]
+    else:
+        profile = profiles[profile_name]
+    if not isinstance(profile, dict):
+        raise ValueError("stored profile is not a mapping")
+    alignment = profile.get("alignment", {})
+    point = alignment.get("reference_point_base") if isinstance(alignment, dict) else None
+    if not isinstance(point, dict):
+        raise ValueError("stored profile has no grasp reference point")
+    values = [float(point[name]) for name in ("x", "y", "z")]
+    return values
 
 
 class Client(Node):
@@ -47,6 +77,23 @@ def build_parser() -> argparse.ArgumentParser:
     capture.add_argument("profile")
     capture.add_argument("object_name")
     capture.add_argument("stage", choices=["OPEN", "PRE_GRASP", "GRASP_OPEN", "CLOSE", "LIFT"])
+    reference = capture.add_mutually_exclusive_group()
+    reference.add_argument(
+        "--stored-profile",
+        default="",
+        help="Use alignment.reference_point_base from a two-stage stored profile",
+    )
+    reference.add_argument(
+        "--object-point-base",
+        nargs=3,
+        type=float,
+        metavar=("X", "Y", "Z"),
+        help="Explicit base_link object point for close-range capture",
+    )
+    capture.add_argument(
+        "--stored-profile-file",
+        default="~/MacRobot/data/stored_objects/runtime_profiles.yaml",
+    )
     finalize = sub.add_parser("finalize")
     finalize.add_argument("profile")
     play = sub.add_parser("play")
@@ -75,6 +122,14 @@ def main(argv=None) -> None:
                 "stage": args.stage,
             }
         )
+        if args.object_point_base is not None:
+            payload["object_point_base"] = [float(v) for v in args.object_point_base]
+        elif args.stored_profile:
+            payload["object_point_base"] = _stored_reference_point(
+                args.stored_profile,
+                args.stored_profile_file,
+            )
+            payload["object_reference_source"] = "stored_grasp_reference"
     elif args.command in {"play", "preflight"}:
         payload.update(
             {

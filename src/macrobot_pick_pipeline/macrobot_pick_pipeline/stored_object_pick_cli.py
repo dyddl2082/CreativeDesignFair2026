@@ -71,16 +71,48 @@ class _Client(Node):
         return None
 
 
+def _add_grasp_source(parser: argparse.ArgumentParser) -> None:
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--grasp-keyframes", default="")
+    group.add_argument("--grasp-trajectory", default="")
+
+
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Record, test, or run stored-object picking")
+    parser = argparse.ArgumentParser(
+        description="Record or run distance-aware stored-object picking"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    record = sub.add_parser("record", help="Record current graspable camera/base pose")
+    search = sub.add_parser(
+        "record-search",
+        help="At a recognition-friendly distance, store finder point and Pico odom",
+    )
+    search.add_argument("object_name")
+    search.add_argument("--profile", default="")
+    search.add_argument("--no-finder", action="store_true")
+    search.add_argument("--timeout", type=float, default=40.0)
+
+    grasp = sub.add_parser(
+        "record-grasp",
+        help="At the close arm-reachable pose, store odom-derived grasp reference",
+    )
+    grasp.add_argument("object_name")
+    grasp.add_argument("--profile", default="")
+    _add_grasp_source(grasp)
+    grasp.add_argument("--pick-profile", default="")
+    grasp.add_argument("--max-grasp-range", type=float, default=0.30)
+    orientation = grasp.add_mutually_exclusive_group()
+    orientation.add_argument("--require-orientation", action="store_true")
+    orientation.add_argument("--ignore-orientation", action="store_true")
+    grasp.add_argument("--timeout", type=float, default=20.0)
+
+    record = sub.add_parser(
+        "record",
+        help="Legacy one-pose registration; use record-search + record-grasp instead",
+    )
     record.add_argument("object_name")
     record.add_argument("--profile", default="")
-    grasp_group = record.add_mutually_exclusive_group(required=True)
-    grasp_group.add_argument("--grasp-keyframes", default="")
-    grasp_group.add_argument("--grasp-trajectory", default="")
+    _add_grasp_source(record)
     record.add_argument("--pick-profile", default="")
     record.add_argument("--no-finder", action="store_true")
     orientation = record.add_mutually_exclusive_group()
@@ -88,13 +120,19 @@ def _parser() -> argparse.ArgumentParser:
     orientation.add_argument("--ignore-orientation", action="store_true")
     record.add_argument("--timeout", type=float, default=40.0)
 
-    visible = sub.add_parser("visible-test", help="Assume object is already localized; align and grasp")
+    visible = sub.add_parser(
+        "visible-test",
+        help="Acquire a currently visible far target, hand off to odom, align and grasp",
+    )
     visible.add_argument("object_name")
     visible.add_argument("--profile", default="")
     visible.add_argument("--align-only", action="store_true")
     visible.add_argument("--timeout", type=float, default=120.0)
 
-    run = sub.add_parser("run", help="Return near stored pose, find, align, and grasp")
+    run = sub.add_parser(
+        "run",
+        help="Return to far search pose, acquire, approach into arm reach, and grasp",
+    )
     run.add_argument("object_name")
     run.add_argument("--profile", default="")
     run.add_argument("--align-only", action="store_true")
@@ -104,7 +142,7 @@ def _parser() -> argparse.ArgumentParser:
     delete = sub.add_parser("delete", help="Delete a stored profile")
     delete.add_argument("profile")
     sub.add_parser("reload", help="Reload the profile file")
-    sub.add_parser("cancel", help="Cancel active search/alignment/grasp")
+    sub.add_parser("cancel", help="Cancel active search/approach/grasp")
     return parser
 
 
@@ -117,11 +155,43 @@ def main(argv=None) -> None:
         node.request_id = request_id
         timeout = float(getattr(args, "timeout", 10.0))
 
-        if args.command == "record":
+        if args.command == "record-search":
             node._publish(
                 node.record_pub,
                 {
                     "request_id": request_id,
+                    "record_stage": "search",
+                    "object_name": args.object_name,
+                    "profile": args.profile or args.object_name,
+                    "start_finder": not args.no_finder,
+                },
+            )
+        elif args.command == "record-grasp":
+            node._publish(
+                node.record_pub,
+                {
+                    "request_id": request_id,
+                    "record_stage": "grasp",
+                    "object_name": args.object_name,
+                    "profile": args.profile or args.object_name,
+                    "grasp_keyframe_profile": args.grasp_keyframes,
+                    "grasp_trajectory": args.grasp_trajectory,
+                    "pick_profile": args.pick_profile or args.object_name,
+                    "start_finder": False,
+                    "graspable_max_range_m": args.max_grasp_range,
+                    "require_orientation_match": (
+                        True if args.require_orientation else (
+                            False if args.ignore_orientation else None
+                        )
+                    ),
+                },
+            )
+        elif args.command == "record":
+            node._publish(
+                node.record_pub,
+                {
+                    "request_id": request_id,
+                    "record_stage": "complete",
                     "object_name": args.object_name,
                     "profile": args.profile or args.object_name,
                     "grasp_keyframe_profile": args.grasp_keyframes,
