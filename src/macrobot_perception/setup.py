@@ -7,7 +7,7 @@ package_name = "macrobot_perception"
 
 setup(
     name=package_name,
-    version="0.3.0",
+    version="0.3.1",
     packages=find_packages(exclude=("test",)),
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
@@ -27,7 +27,8 @@ setup(
     entry_points={
         "console_scripts": [
             "candidate_filter_node = candidate_filter.candidate_filter_node:main",
-            "embedding_retrieval_node = embedding_retrieval.embedding_retrieval_node:main",
+            "embedding_retrieval_node = embedding_retrieval.runtime_bootstrap:main",
+            "embedding_runtime_check = embedding_retrieval.runtime_bootstrap:check_main",
             "temporal_confirmation_node = temporal_confirmation.temporal_confirmation_node:main",
         ],
     },
