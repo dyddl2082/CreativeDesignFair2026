@@ -320,7 +320,6 @@ class StoredObjectPickNode(Node):
         self.execute_pick = True
         self.profile: Optional[StoredObjectRuntimeProfile] = None
         self.filter = StablePointFilter()
-        self.last_stability_diagnostic_monotonic = 0.0
         self.current_q: Q = (0.0, 0.0, 0.0)
         self.have_q = False
         self.last_object_point: Optional[Vector3] = None
@@ -807,7 +806,6 @@ class StoredObjectPickNode(Node):
         self.goal_started = time.monotonic()
         self.goal_deadline = self.goal_started + action_timeout_sec
         self.filter.clear()
-        self.last_stability_diagnostic_monotonic = 0.0
 
         if record_stage == "grasp":
             self.phase = "record_grasp_wait_odom"
@@ -2667,10 +2665,6 @@ class StoredObjectPickNode(Node):
                 self._request_odom(
                     "record_search" if self.record_stage == "search" else "record"
                 )
-            else:
-                if now - self.last_stability_diagnostic_monotonic >= 1.0:
-                    self.last_stability_diagnostic_monotonic = now
-                    self._publish_stability_diagnostic()
             return
         if self.arm_active and self.pending_arm_q is not None:
             if now >= self.phase_deadline:
@@ -2700,71 +2694,9 @@ class StoredObjectPickNode(Node):
     # ------------------------------------------------------------------
     # Misc helpers
     # ------------------------------------------------------------------
-    def _current_record_alignment(self) -> AlignmentProfile:
-        """Return the current gating profile used for record-search.
-
-        ``default_alignment`` is constructed once during node startup.  During
-        commissioning we often relax stability/localization parameters with
-        ``ros2 param set`` while the node is running.  For record-search and
-        other record modes there is no stored profile yet, so read these gate
-        parameters live instead of using the stale startup snapshot.
-        """
-
-        if self.profile is not None:
-            return self.profile.alignment
-
-        try:
-            alignment = AlignmentProfile(
-                name="runtime_default",
-                object_name=self.object_name or "default",
-                pick_profile=self.record_pick_profile or self.object_name or "default",
-                reference_point_base=self.default_alignment.reference_point_base,
-                recorded_at="",
-                frame_id=str(self.get_parameter("base_frame").value),
-                minimum_score=float(self.get_parameter("minimum_score").value),
-                stability_count=int(self.get_parameter("stability_count").value),
-                stability_window_sec=float(self.get_parameter("stability_window_sec").value),
-                stability_radius_m=float(self.get_parameter("stability_radius_m").value),
-                bearing_tolerance_deg=float(self.get_parameter("bearing_tolerance_deg").value),
-                range_tolerance_m=float(self.get_parameter("range_tolerance_m").value),
-                height_tolerance_m=float(self.get_parameter("height_tolerance_m").value),
-                max_turn_step_deg=float(self.get_parameter("max_turn_step_deg").value),
-                max_move_step_m=float(self.get_parameter("max_move_step_m").value),
-                turn_speed=int(self.get_parameter("alignment_turn_speed").value),
-                move_speed=int(self.get_parameter("alignment_move_speed").value),
-                motion_timeout_sec=float(self.get_parameter("base_motion_timeout_sec").value),
-                settle_sec=float(self.get_parameter("settle_sec").value),
-                max_iterations=int(self.get_parameter("max_alignment_iterations").value),
-                max_total_turn_deg=float(self.get_parameter("max_alignment_total_turn_deg").value),
-                max_total_move_m=float(self.get_parameter("max_alignment_total_move_m").value),
-                minimum_localization_quality=float(
-                    self.get_parameter("minimum_localization_quality").value
-                ),
-                maximum_depth_std_m=float(self.get_parameter("maximum_depth_std_m").value),
-                maximum_center_std_px=float(
-                    self.get_parameter("maximum_center_std_px").value
-                ),
-                require_orientation_match=bool(
-                    self.get_parameter("require_orientation_match").value
-                ),
-                minimum_orientation_quality=float(
-                    self.get_parameter("minimum_orientation_quality").value
-                ),
-                orientation_tolerance_deg=float(
-                    self.get_parameter("orientation_tolerance_deg").value
-                ),
-            )
-            alignment.validate()
-            return alignment
-        except Exception as exc:
-            self.get_logger().warning(
-                f"Using startup default alignment after runtime parameter error: {exc}"
-            )
-            return self.default_alignment
-
     def _stable_detection(self):
         assert self.profile is not None or self.mode.startswith("record")
-        alignment = self._current_record_alignment()
+        alignment = self.profile.alignment if self.profile is not None else self.default_alignment
         return self.filter.stable(
             now_sec=time.time(),
             object_name=self.object_name,
@@ -2780,96 +2712,6 @@ class StoredObjectPickNode(Node):
                 if alignment.require_orientation_match else ""
             ),
             minimum_orientation_quality=alignment.minimum_orientation_quality,
-        )
-
-    def _publish_stability_diagnostic(self) -> None:
-        alignment = self._current_record_alignment()
-        now_wall = time.time()
-        cutoff = now_wall - alignment.stability_window_sec
-        samples = list(self.filter.samples)
-        recent = [item for item in samples if item.stamp_sec >= cutoff]
-        target_key = self.object_name.strip().casefold()
-        same_object = [
-            item for item in recent
-            if item.object_name.strip().casefold() == target_key
-        ]
-        fail_counts: Dict[str, int] = {
-            "score_below_minimum": 0,
-            "localization_quality_below_minimum": 0,
-            "depth_std_above_maximum": 0,
-            "center_std_above_maximum": 0,
-            "orientation_mismatch_or_low_quality": 0,
-        }
-        eligible: List[DetectionSample] = []
-        required_orientation = (
-            alignment.reference_orientation_class
-            if alignment.require_orientation_match else ""
-        ).strip().casefold()
-        for item in same_object:
-            rejected = False
-            if item.score < alignment.minimum_score:
-                fail_counts["score_below_minimum"] += 1
-                rejected = True
-            if item.localization_quality < alignment.minimum_localization_quality:
-                fail_counts["localization_quality_below_minimum"] += 1
-                rejected = True
-            if item.depth_std_m > alignment.maximum_depth_std_m:
-                fail_counts["depth_std_above_maximum"] += 1
-                rejected = True
-            if item.center_std_px > alignment.maximum_center_std_px:
-                fail_counts["center_std_above_maximum"] += 1
-                rejected = True
-            if required_orientation and (
-                item.orientation_class.strip().casefold() != required_orientation
-                or item.orientation_quality < alignment.minimum_orientation_quality
-            ):
-                fail_counts["orientation_mismatch_or_low_quality"] += 1
-                rejected = True
-            if not rejected:
-                eligible.append(item)
-
-        cluster_radius = None
-        if len(eligible) >= alignment.stability_count:
-            latest = eligible[-alignment.stability_count:]
-            coordinates = list(zip(*(item.point_base for item in latest)))
-            med = tuple(float(sorted(axis)[len(axis) // 2]) for axis in coordinates)
-            cluster_radius = max(math.dist(item.point_base, med) for item in latest)
-
-        latest_payload: Dict[str, Any] = {}
-        if same_object:
-            latest = same_object[-1]
-            latest_payload = {
-                "score": latest.score,
-                "point_base": list(latest.point_base),
-                "localization_quality": latest.localization_quality,
-                "depth_std_m": latest.depth_std_m,
-                "center_std_px": latest.center_std_px,
-                "orientation_class": latest.orientation_class,
-                "orientation_quality": latest.orientation_quality,
-                "age_sec": max(0.0, now_wall - latest.stamp_sec),
-            }
-
-        self._publish_status(
-            "record_stability_waiting",
-            phase=self.phase,
-            total_buffered_samples=len(samples),
-            recent_samples=len(recent),
-            recent_target_samples=len(same_object),
-            eligible_samples=len(eligible),
-            required_samples=alignment.stability_count,
-            window_sec=alignment.stability_window_sec,
-            cluster_radius_m=cluster_radius,
-            required_radius_m=alignment.stability_radius_m,
-            gates={
-                "minimum_score": alignment.minimum_score,
-                "minimum_localization_quality": alignment.minimum_localization_quality,
-                "maximum_depth_std_m": alignment.maximum_depth_std_m,
-                "maximum_center_std_px": alignment.maximum_center_std_px,
-                "require_orientation_match": alignment.require_orientation_match,
-                "minimum_orientation_quality": alignment.minimum_orientation_quality,
-            },
-            reject_counts=fail_counts,
-            latest_sample=latest_payload,
         )
 
     @staticmethod
