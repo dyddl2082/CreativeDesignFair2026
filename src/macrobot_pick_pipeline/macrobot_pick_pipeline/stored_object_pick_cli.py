@@ -22,6 +22,8 @@ class _Client(Node):
         self.visible_cancel_pub = self.create_publisher(String, "/macrobot/visible_pick_test/cancel", 10)
         self.result: Optional[Dict[str, Any]] = None
         self.request_id = ""
+        self.command_acknowledged = False
+        self.last_status: Dict[str, Any] = {}
         self.create_subscription(String, "/macrobot/stored_pick/result", self._result_cb, 20)
         self.create_subscription(String, "/macrobot/visible_pick_test/result", self._result_cb, 20)
         self.create_subscription(String, "/macrobot/stored_pick/status", self._status_cb, 20)
@@ -35,6 +37,7 @@ class _Client(Node):
             return
         if self.request_id and str(payload.get("request_id", "")) != self.request_id:
             return
+        self.command_acknowledged = True
         self.result = payload
 
     def _status_cb(self, msg: String) -> None:
@@ -46,6 +49,8 @@ class _Client(Node):
             return
         if self.request_id and str(payload.get("request_id", "")) != self.request_id:
             return
+        self.last_status = payload
+        self.command_acknowledged = True
         print(json.dumps(payload, ensure_ascii=False), flush=True)
         if not self.request_id and str(payload.get("event", "")) in {
             "stored_object_profiles",
@@ -61,6 +66,46 @@ class _Client(Node):
         msg = String()
         msg.data = payload if isinstance(payload, str) else json.dumps(payload, ensure_ascii=False)
         pub.publish(msg)
+
+    def publish_with_ack(
+        self,
+        pub,
+        payload: object,
+        *,
+        discovery_timeout: float = 5.0,
+        acknowledgement_timeout: float = 8.0,
+        retry_period: float = 0.75,
+    ) -> tuple[bool, str]:
+        """Deliver a volatile command reliably without replaying stale commands.
+
+        A fresh ROS 2 CLI publisher may need a short DDS discovery period before
+        its first sample can reach the already-running subscriber.  The same
+        request_id is retried until the stored-object node emits any matching
+        status/result acknowledgement.  The server side treats that duplicate
+        request_id idempotently.
+        """
+        discovery_deadline = time.monotonic() + max(0.1, discovery_timeout)
+        while rclpy.ok() and time.monotonic() < discovery_deadline:
+            if pub.get_subscription_count() > 0:
+                break
+            rclpy.spin_once(self, timeout_sec=0.1)
+        if pub.get_subscription_count() <= 0:
+            return False, "no subscriber discovered for command topic"
+
+        self.command_acknowledged = False
+        deadline = time.monotonic() + max(0.1, acknowledgement_timeout)
+        next_publish = 0.0
+        publish_count = 0
+        while rclpy.ok() and time.monotonic() < deadline:
+            now = time.monotonic()
+            if now >= next_publish:
+                self._publish(pub, payload)
+                publish_count += 1
+                next_publish = now + max(0.1, retry_period)
+            rclpy.spin_once(self, timeout_sec=0.1)
+            if self.command_acknowledged or self.result is not None:
+                return True, f"acknowledged after {publish_count} publish attempt(s)"
+        return False, f"no matching command acknowledgement after {publish_count} publish attempt(s)"
 
     def wait(self, timeout: float) -> Optional[Dict[str, Any]]:
         deadline = time.monotonic() + timeout
@@ -162,59 +207,62 @@ def main(argv=None) -> None:
         timeout = float(getattr(args, "timeout", 10.0))
 
         if args.command == "record-search":
-            node._publish(
-                node.record_pub,
-                {
-                    "request_id": request_id,
-                    "record_stage": "search",
-                    "object_name": args.object_name,
-                    "profile": args.profile or args.object_name,
-                    "start_finder": not args.no_finder,
-                    "rebuild_banks": bool(args.rebuild_banks),
-                    "timeout_sec": timeout,
-                },
-            )
+            payload = {
+                "request_id": request_id,
+                "record_stage": "search",
+                "object_name": args.object_name,
+                "profile": args.profile or args.object_name,
+                "start_finder": not args.no_finder,
+                "rebuild_banks": bool(args.rebuild_banks),
+                "timeout_sec": timeout,
+            }
+            delivered, detail = node.publish_with_ack(node.record_pub, payload)
+            if not delivered:
+                print(f"record-search command delivery failed: {detail}", file=sys.stderr)
+                raise SystemExit(2)
         elif args.command == "record-grasp":
-            node._publish(
-                node.record_pub,
-                {
-                    "request_id": request_id,
-                    "record_stage": "grasp",
-                    "object_name": args.object_name,
-                    "profile": args.profile or args.object_name,
-                    "grasp_keyframe_profile": args.grasp_keyframes,
-                    "grasp_trajectory": args.grasp_trajectory,
-                    "pick_profile": args.pick_profile or args.object_name,
-                    "start_finder": False,
-                    "graspable_max_range_m": args.max_grasp_range,
-                    "require_orientation_match": (
-                        True if args.require_orientation else (
-                            False if args.ignore_orientation else None
-                        )
-                    ),
-                    "timeout_sec": timeout,
-                },
-            )
+            payload = {
+                "request_id": request_id,
+                "record_stage": "grasp",
+                "object_name": args.object_name,
+                "profile": args.profile or args.object_name,
+                "grasp_keyframe_profile": args.grasp_keyframes,
+                "grasp_trajectory": args.grasp_trajectory,
+                "pick_profile": args.pick_profile or args.object_name,
+                "start_finder": False,
+                "graspable_max_range_m": args.max_grasp_range,
+                "require_orientation_match": (
+                    True if args.require_orientation else (
+                        False if args.ignore_orientation else None
+                    )
+                ),
+                "timeout_sec": timeout,
+            }
+            delivered, detail = node.publish_with_ack(node.record_pub, payload)
+            if not delivered:
+                print(f"record-grasp command delivery failed: {detail}", file=sys.stderr)
+                raise SystemExit(2)
         elif args.command == "record":
-            node._publish(
-                node.record_pub,
-                {
-                    "request_id": request_id,
-                    "record_stage": "complete",
-                    "object_name": args.object_name,
-                    "profile": args.profile or args.object_name,
-                    "grasp_keyframe_profile": args.grasp_keyframes,
-                    "grasp_trajectory": args.grasp_trajectory,
-                    "pick_profile": args.pick_profile or args.object_name,
-                    "start_finder": not args.no_finder,
-                    "require_orientation_match": (
-                        True if args.require_orientation else (
-                            False if args.ignore_orientation else None
-                        )
-                    ),
-                    "timeout_sec": timeout,
-                },
-            )
+            payload = {
+                "request_id": request_id,
+                "record_stage": "complete",
+                "object_name": args.object_name,
+                "profile": args.profile or args.object_name,
+                "grasp_keyframe_profile": args.grasp_keyframes,
+                "grasp_trajectory": args.grasp_trajectory,
+                "pick_profile": args.pick_profile or args.object_name,
+                "start_finder": not args.no_finder,
+                "require_orientation_match": (
+                    True if args.require_orientation else (
+                        False if args.ignore_orientation else None
+                    )
+                ),
+                "timeout_sec": timeout,
+            }
+            delivered, detail = node.publish_with_ack(node.record_pub, payload)
+            if not delivered:
+                print(f"record command delivery failed: {detail}", file=sys.stderr)
+                raise SystemExit(2)
         elif args.command == "visible-test":
             node._publish(
                 node.visible_goal_pub,
@@ -227,19 +275,20 @@ def main(argv=None) -> None:
                 },
             )
         elif args.command == "run":
-            node._publish(
-                node.goal_pub,
-                {
-                    "request_id": request_id,
-                    "object_name": args.object_name,
-                    "profile": args.profile or args.object_name,
-                    "mode": "full",
-                    "start_finder": True,
-                    "execute_pick": not args.align_only,
-                    "rebuild_banks": bool(args.rebuild_banks),
-                    "timeout_sec": timeout,
-                },
-            )
+            payload = {
+                "request_id": request_id,
+                "object_name": args.object_name,
+                "profile": args.profile or args.object_name,
+                "mode": "full",
+                "start_finder": True,
+                "execute_pick": not args.align_only,
+                "rebuild_banks": bool(args.rebuild_banks),
+                "timeout_sec": timeout,
+            }
+            delivered, detail = node.publish_with_ack(node.goal_pub, payload)
+            if not delivered:
+                print(f"stored-pick command delivery failed: {detail}", file=sys.stderr)
+                raise SystemExit(2)
         elif args.command == "list":
             node.request_id = ""
             node._publish(node.admin_pub, {"action": "list"})

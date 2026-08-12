@@ -687,6 +687,22 @@ class StoredObjectPickNode(Node):
             if record_stage not in {"search", "grasp", "complete"}:
                 raise ValueError("record_stage must be search, grasp, or complete")
             if self._is_busy():
+                if (
+                    request_id == self.request_id
+                    and object_name == self.object_name
+                    and profile_name == self.profile_name
+                    and self.mode == f"record_{record_stage}"
+                ):
+                    # The CLI retries the same volatile command until it sees an
+                    # acknowledgement.  Treat an identical request_id as a
+                    # delivery retry, not as a second action or RESOURCE_BUSY.
+                    self._publish_status(
+                        "stored_object_command_acknowledged",
+                        command="record",
+                        record_stage=record_stage,
+                        duplicate=True,
+                    )
+                    return
                 raise RuntimeError("another stored-object action is active")
             if not object_name:
                 raise ValueError("object_name is required")
@@ -793,9 +809,21 @@ class StoredObjectPickNode(Node):
 
         if record_stage == "grasp":
             self.phase = "record_grasp_wait_odom"
+            self._publish_status(
+                "stored_object_command_acknowledged",
+                command="record",
+                record_stage=record_stage,
+                duplicate=False,
+            )
             self._request_odom("record_grasp")
         else:
             self.phase = "record_wait_detection"
+            self._publish_status(
+                "stored_object_command_acknowledged",
+                command="record",
+                record_stage=record_stage,
+                duplicate=False,
+            )
             if start_finder:
                 self._start_finder(self.goal_deadline - self.goal_started)
             else:
@@ -830,6 +858,19 @@ class StoredObjectPickNode(Node):
             mode = str(request.get("mode", "full")).strip().casefold()
             execute_pick = _as_bool(request.get("execute_pick"), True)
             if self._is_busy():
+                if (
+                    request_id == self.request_id
+                    and object_name == self.object_name
+                    and profile_name == self.profile_name
+                    and mode == self.mode
+                    and execute_pick == self.execute_pick
+                ):
+                    self._publish_status(
+                        "stored_object_command_acknowledged",
+                        command="run",
+                        duplicate=True,
+                    )
+                    return
                 raise RuntimeError("another stored-object action is active")
             if not object_name:
                 raise ValueError("object_name is required")
@@ -885,6 +926,12 @@ class StoredObjectPickNode(Node):
         self.phase = "starting"
         self.goal_started = time.monotonic()
         self.goal_deadline = self.goal_started + action_timeout_sec
+
+        self._publish_status(
+            "stored_object_command_acknowledged",
+            command="run",
+            duplicate=False,
+        )
 
         if bool(self.get_parameter("stow_before_base_motion").value) and (
             not self.have_q or not _q_close(self.current_q, self.stow_q, 0.01)
