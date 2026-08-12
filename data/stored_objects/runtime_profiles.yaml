@@ -1,21 +1,21 @@
 schema: macrobot.stored_object_runtime/v1
-updated_at: '2026-08-12T10:11:34.937789+00:00'
+updated_at: '2026-08-12T16:41:29.053871+00:00'
 profiles:
   Eraser:
     object_name: Eraser
-    recorded_at: '2026-08-12T10:11:34.937270+00:00'
+    recorded_at: '2026-08-12T16:41:29.053453+00:00'
     recording_state: search_only
     position_scope: pico_odom_session
     search_pose_odom:
-      x_m: 0.0
-      y_m: 0.0
-      yaw_deg: 0.0
+      x_m: -0.170753852
+      y_m: -0.00015865094
+      yaw_deg: 0.106469352
       reliable: true
-      pico_time_ms: 592859
+      pico_time_ms: 377661
     object_point_odom:
-      x: -0.36015832996950764
-      y: 0.002903345591530101
-      z: 0.03416914524140631
+      x: -0.5115048690918542
+      y: -0.05043086077687703
+      z: 0.03869362881043427
     alignment:
       object_name: Eraser
       pick_profile: Eraser
@@ -52,10 +52,10 @@ profiles:
       orientation_tolerance_deg: 25.0
     recognition:
       point_base:
-        x: 0.36015832996950764
-        y: 0.002903345591530101
-        z: 0.03416914524140631
-      score: 0.8833785653114319
+        x: 0.3408438465902876
+        y: -0.04963892598105413
+        z: 0.03869362881043427
+      score: 0.7741330862045288
       minimum_range_m: 0.32
       maximum_range_m: 1.2
     grasp:

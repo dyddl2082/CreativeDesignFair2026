@@ -347,18 +347,41 @@ class ArmServoBridgeNode(Node):
             payload = json.loads(msg.data)
         except Exception:
             return
+
         if not isinstance(payload, dict):
-            self.get_logger().debug(
-                f"Ignoring non-object Pico response: {payload!r}"
-            )
             return
-        if payload.get("ok") is False or payload.get("event") in {
+
+        event = str(payload.get("event", ""))
+
+        base_events = {
+            "move_cm_result",
+            "turn_deg_result",
+            "drive_relative_result",
+            "move_ticks_result",
+            "odometry",
+            "odometry_reset",
+            "status",
+            "track_calibration",
+            "encoders",
+            "encoders_reset",
+            "stopped",
+            "stop_requested",
+        }
+
+        if event in base_events:
+            return
+
+        if payload.get("ok") is False or event in {
             "command_error",
             "main_loop_error",
             "servo_error",
         }:
             self.active = False
-            self._publish_status(False, "pico_error", {"pico_response": payload})
+            self._publish_status(
+                False,
+                "pico_error",
+                {"pico_response": payload},
+            )
 
     def _publish_status(
         self, ok: bool, event: str, details: Optional[Dict[str, object]] = None
