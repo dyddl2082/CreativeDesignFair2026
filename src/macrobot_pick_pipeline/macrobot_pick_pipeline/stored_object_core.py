@@ -81,6 +81,7 @@ class BaseReturnPlan:
     initial_turn_deg: float
     move_distance_m: float
     final_turn_deg: float
+    drive_direction: str = "forward"
 
     @property
     def motion_count(self) -> int:
@@ -94,6 +95,10 @@ class BaseReturnPlan:
             if abs(value) > 1e-9
         )
 
+    @property
+    def uses_reverse(self) -> bool:
+        return self.drive_direction == "reverse" and self.move_distance_m < 0.0
+
 
 def plan_return_to_pose(
     current: OdomPose,
@@ -101,10 +106,29 @@ def plan_return_to_pose(
     *,
     position_tolerance_m: float = 0.01,
     angle_tolerance_deg: float = 2.0,
+    allow_reverse: bool = False,
+    reverse_heading_tolerance_deg: float = 90.0,
 ) -> BaseReturnPlan:
+    """Plan a turn/move/turn return in the Pico odom frame.
+
+    When ``allow_reverse`` is enabled, the planner compares the normal
+    forward-driving plan with a reverse-driving alternative.  Reverse is used
+    only when:
+
+    * the chassis can point its rear toward the target with less than
+      ``reverse_heading_tolerance_deg`` of initial rotation;
+    * the target pose yaw differs from the current chassis yaw by less than the
+      same threshold; and
+    * the reverse option reduces total commanded rotation.
+
+    The strict ``< 90 deg`` default intentionally keeps targets in the forward
+    half-plane on the normal forward path while allowing a pose directly behind
+    the robot, with a similar final heading, to be reached by a negative move.
+    """
     dx = target.x_m - current.x_m
     dy = target.y_m - current.y_m
     distance = math.hypot(dx, dy)
+    drive_direction = "none"
 
     if distance <= max(0.0, float(position_tolerance_m)):
         initial_turn = 0.0
@@ -112,18 +136,49 @@ def plan_return_to_pose(
         final_turn = wrap_angle_deg(target.yaw_deg - current.yaw_deg)
     else:
         bearing = math.degrees(math.atan2(dy, dx))
-        initial_turn = wrap_angle_deg(bearing - current.yaw_deg)
+
+        forward_initial = wrap_angle_deg(bearing - current.yaw_deg)
+        forward_final = wrap_angle_deg(target.yaw_deg - bearing)
+        initial_turn = forward_initial
         move = distance
-        final_turn = wrap_angle_deg(target.yaw_deg - bearing)
+        final_turn = forward_final
+        drive_direction = "forward"
+
+        threshold = max(0.0, min(abs(float(reverse_heading_tolerance_deg)), 180.0))
+        if bool(allow_reverse) and threshold > 0.0:
+            reverse_bearing = wrap_angle_deg(bearing + 180.0)
+            reverse_initial = wrap_angle_deg(reverse_bearing - current.yaw_deg)
+            reverse_final = wrap_angle_deg(target.yaw_deg - reverse_bearing)
+            target_heading_error = abs(
+                wrap_angle_deg(target.yaw_deg - current.yaw_deg)
+            )
+            forward_turn_cost = abs(forward_initial) + abs(forward_final)
+            reverse_turn_cost = abs(reverse_initial) + abs(reverse_final)
+
+            if (
+                abs(reverse_initial) < threshold
+                and target_heading_error < threshold
+                and reverse_turn_cost + 1e-9 < forward_turn_cost
+            ):
+                initial_turn = reverse_initial
+                move = -distance
+                final_turn = reverse_final
+                drive_direction = "reverse"
 
     if abs(initial_turn) <= angle_tolerance_deg:
         initial_turn = 0.0
     if abs(final_turn) <= angle_tolerance_deg:
         final_turn = 0.0
-    if move <= position_tolerance_m:
+    if abs(move) <= position_tolerance_m:
         move = 0.0
+        drive_direction = "none"
 
-    return BaseReturnPlan(initial_turn, move, final_turn)
+    return BaseReturnPlan(
+        initial_turn,
+        move,
+        final_turn,
+        drive_direction=drive_direction,
+    )
 
 
 def pico_session_is_compatible(
