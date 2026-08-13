@@ -21,6 +21,10 @@ from .alignment_core import (
     pico_turn_command_deg,
 )
 from .planner import DetectionSample, StableDetection, StablePointFilter
+from .perception_timing import (
+    PerceptionTimingTracker,
+    effective_observation_wait,
+)
 from .profiles import Q, Vector3
 from .grasp_keyframe_store import GraspKeyframeStore
 from .stored_object_core import (
@@ -381,6 +385,21 @@ class StoredObjectPickNode(Node):
         self.visible_first_deadline = 0.0
         self.visible_first_wait_started = False
 
+        # Progress-aware camera/finder timing.  The overall action deadline is
+        # still a hard safety cap, but the perception phase is split into
+        # target preparation, stationary observation, identity confirmation,
+        # and localized-point stabilization.  This avoids consuming a single
+        # large camera timeout while also allowing slow temporal confirmation
+        # to finish once real target evidence has appeared.
+        self.perception_timing = PerceptionTimingTracker()
+        self.perception_identity_confirmed = False
+        self.perception_localization_deadline = 0.0
+        self.perception_localization_idle_deadline = 0.0
+        self.search_view_started_at = 0.0
+        self.search_view_hard_deadline = 0.0
+        self.search_detection_not_before_source_stamp_sec = 0.0
+        self.perception_latency_logged = False
+
         self.base_active = False
         self.base_expected_event = ""
         self.base_command = ""
@@ -506,11 +525,38 @@ class StoredObjectPickNode(Node):
             "alignment_confirmation_count": 2,
             "record_timeout_sec": 30.0,
             "visible_test_timeout_sec": 20.0,
+            # Absolute search-phase guard only.  Normal failure is driven by
+            # pipeline-stall detection or exhaustion of the bounded scan, not
+            # by waiting this whole value with no feedback.
             "full_search_timeout_sec": 90.0,
             # Give the finder time to deliver temporally confirmed results
-            # before the first yaw-scan motion.  This is intentionally separate
-            # from per-turn search_dwell_sec in the stored profile.
+            # before the first yaw-scan motion.
             "finder_initial_detection_wait_sec": 3.0,
+            # After every completed search turn, remain stationary for at least
+            # this long.  The profile's legacy search.dwell_sec is still
+            # honored when it is larger.
+            "search_post_turn_detection_wait_sec": 3.0,
+            # Reject localized results whose source camera frame predates the
+            # completed turn plus this small sensor-settle guard.
+            "search_post_turn_frame_guard_sec": 0.30,
+            # If target_ready is true but embedding/temporal counters stop
+            # advancing, fail early instead of consuming a large camera timeout.
+            "perception_pipeline_stall_timeout_sec": 6.0,
+            # When accepted crops or temporal tracks appear, extend the current
+            # stationary view window to let confirmation finish.
+            "perception_evidence_grace_sec": 2.5,
+            "perception_view_max_wait_sec": 8.0,
+            # Once object_found is emitted, the camera search timer is no longer
+            # authoritative.  Use a dedicated bounded localization/stability
+            # phase instead.
+            "localization_stability_timeout_sec": 8.0,
+            "localization_idle_timeout_sec": 3.0,
+            # Persist per-run phase latencies so p90/p95 values can be used to
+            # tune the above limits for each object and environment.
+            "perception_latency_log_enabled": True,
+            "perception_latency_log_file": str(
+                Path.home() / "MacRobot" / "data" / "perception" / "finder_latency.jsonl"
+            ),
             # Try the current camera view first.  If the object is already
             # visible, transform it with current odometry and go directly to
             # the recorded grasp pose; otherwise fall back to coarse return.
@@ -647,6 +693,181 @@ class StoredObjectPickNode(Node):
             ),
             "handoff_uncertainty_m": self.handoff_uncertainty_m,
         }
+
+    # ------------------------------------------------------------------
+    # Progress-aware perception timing
+    # ------------------------------------------------------------------
+    def _reset_perception_timing(self) -> None:
+        now = time.monotonic()
+        self.perception_timing.reset(now)
+        self.perception_identity_confirmed = False
+        self.perception_localization_deadline = 0.0
+        self.perception_localization_idle_deadline = 0.0
+        self.search_view_started_at = 0.0
+        self.search_view_hard_deadline = 0.0
+        self.search_detection_not_before_source_stamp_sec = 0.0
+        self.perception_latency_logged = False
+
+    def _perception_latency_payload(self) -> Dict[str, Any]:
+        return self.perception_timing.latency_payload()
+
+    def _log_perception_latency(self, outcome: str, reason: str = "") -> None:
+        if self.perception_latency_logged:
+            return
+        self.perception_latency_logged = True
+        payload = {
+            "schema": "macrobot.perception_latency/v1",
+            "logged_at_sec": time.time(),
+            "request_id": self.request_id,
+            "object_name": self.object_name,
+            "profile": self.profile_name,
+            "mode": self.mode,
+            "outcome": str(outcome),
+            "reason": str(reason),
+            "latency": self._perception_latency_payload(),
+        }
+        if bool(self.get_parameter("perception_latency_log_enabled").value):
+            try:
+                path = Path(
+                    str(self.get_parameter("perception_latency_log_file").value)
+                ).expanduser()
+                path.parent.mkdir(parents=True, exist_ok=True)
+                with path.open("a", encoding="utf-8") as stream:
+                    stream.write(json.dumps(payload, ensure_ascii=False) + "\n")
+            except Exception as error:
+                self.get_logger().warning(
+                    f"Failed to write perception latency log: {error}"
+                )
+        self._publish_status(
+            "perception_latency_summary",
+            perception_outcome=str(outcome),
+            perception_reason=str(reason),
+            perception_latency=payload["latency"],
+        )
+
+    def _observe_finder_progress(self, payload: Mapping[str, Any]) -> None:
+        now = time.monotonic()
+        observation = self.perception_timing.observe_status(payload, now)
+        if observation.evidence_progress:
+            self._publish_status(
+                "finder_target_evidence_progress",
+                counters=observation.counters,
+                evidence_grace_sec=float(
+                    self.get_parameter("perception_evidence_grace_sec").value
+                ),
+            )
+            self._extend_search_observation_for_evidence(now)
+
+    def _extend_search_observation_for_evidence(self, now: float) -> None:
+        if (
+            self.phase != "search"
+            or self.base_active
+            or self.perception_identity_confirmed
+            or self.search_view_hard_deadline <= 0.0
+        ):
+            return
+        grace = max(
+            0.0,
+            float(self.get_parameter("perception_evidence_grace_sec").value),
+        )
+        extended = min(self.search_view_hard_deadline, now + grace)
+        if extended > self.search_next_time + 1e-6:
+            self.search_next_time = extended
+            self._publish_status(
+                "finder_observation_extended_for_evidence",
+                extension_deadline_in_sec=max(0.0, extended - now),
+                view_hard_deadline_in_sec=max(
+                    0.0, self.search_view_hard_deadline - now
+                ),
+            )
+
+    def _begin_search_observation_window(
+        self,
+        *,
+        wait_sec: float,
+        reason: str,
+        frame_guard_sec: float = 0.0,
+    ) -> None:
+        now = time.monotonic()
+        wait = max(0.0, float(wait_sec))
+        maximum = max(
+            wait,
+            float(self.get_parameter("perception_view_max_wait_sec").value),
+        )
+        self.search_view_started_at = now
+        self.search_next_time = now + wait
+        self.search_view_hard_deadline = now + maximum
+        self.search_detection_not_before_source_stamp_sec = (
+            time.time() + max(0.0, float(frame_guard_sec))
+        )
+        self.perception_timing.scan_view_count += 1
+        # Motion intentionally pauses the camera progress watchdog.  Start a
+        # fresh full watchdog interval only after the chassis is stationary.
+        self.perception_timing.last_pipeline_progress_at = now
+        self._publish_status(
+            "finder_observation_window_started",
+            observation_reason=str(reason),
+            wait_sec=wait,
+            maximum_wait_sec=maximum,
+            source_frame_guard_sec=max(0.0, float(frame_guard_sec)),
+            scan_view_count=self.perception_timing.scan_view_count,
+        )
+
+    def _mark_identity_confirmed(self, source: str) -> None:
+        now = time.monotonic()
+        newly_confirmed = not self.perception_identity_confirmed
+        self.perception_identity_confirmed = True
+        self.perception_timing.mark("first_target_evidence", now)
+        self.perception_timing.mark("identity_confirmed", now)
+        self.perception_timing.last_evidence_progress_at = now
+        self.perception_timing.last_pipeline_progress_at = now
+        if newly_confirmed:
+            timeout = max(
+                0.1,
+                float(
+                    self.get_parameter("localization_stability_timeout_sec").value
+                ),
+            )
+            self.perception_localization_deadline = min(
+                self.goal_deadline if self.goal_deadline > 0.0 else now + timeout,
+                now + timeout,
+            )
+            idle = max(
+                0.1,
+                float(self.get_parameter("localization_idle_timeout_sec").value),
+            )
+            self.perception_localization_idle_deadline = min(
+                self.perception_localization_deadline,
+                now + idle,
+            )
+            self._publish_status(
+                "camera_identity_confirmed",
+                confirmation_source=str(source),
+                search_timer_paused=True,
+                localization_stability_timeout_sec=timeout,
+                localization_idle_timeout_sec=idle,
+            )
+
+    def _mark_localized_progress(self) -> None:
+        now = time.monotonic()
+        self.perception_timing.mark_localized(now)
+        if not self.perception_identity_confirmed:
+            self._mark_identity_confirmed("localized_object")
+        idle = max(
+            0.1,
+            float(self.get_parameter("localization_idle_timeout_sec").value),
+        )
+        hard = self.perception_localization_deadline or (
+            now
+            + max(
+                0.1,
+                float(
+                    self.get_parameter("localization_stability_timeout_sec").value
+                ),
+            )
+        )
+        self.perception_localization_deadline = hard
+        self.perception_localization_idle_deadline = min(hard, now + idle)
 
     def _is_busy(self) -> bool:
         return self.state not in TERMINAL_STATES
@@ -1044,6 +1265,21 @@ class StoredObjectPickNode(Node):
             for value in (*point, score, source_stamp, stamp)
         ):
             return
+
+        # After a yaw-search turn, ignore delayed results whose camera frame
+        # was captured during the motion.  Without this guard the next view can
+        # appear to have been observed even though the robot never remained
+        # stationary at the new heading.
+        if (
+            self.phase == "search"
+            and self.search_detection_not_before_source_stamp_sec > 0.0
+            and source_stamp > 1.0e8
+            and source_stamp
+            < self.search_detection_not_before_source_stamp_sec
+        ):
+            return
+
+        self._mark_localized_progress()
         self.last_object_point = point
         localization = payload.get("localization", {})
         orientation = payload.get("orientation", {})
@@ -1091,6 +1327,8 @@ class StoredObjectPickNode(Node):
         if object_name.casefold() != self.object_name.casefold():
             return
 
+        self._observe_finder_progress(payload)
+
         state = str(payload.get("state", "")).strip().upper()
         event = str(payload.get("event", "")).strip().lower()
         accepted = state in {
@@ -1114,6 +1352,10 @@ class StoredObjectPickNode(Node):
         if accepted and not self.finder_goal_acknowledged:
             self.finder_goal_acknowledged = True
             self.finder_goal_acknowledged_at = time.monotonic()
+            self.perception_timing.mark(
+                "finder_goal_acknowledged",
+                self.finder_goal_acknowledged_at,
+            )
             self._publish_status(
                 "finder_goal_acknowledged",
                 finder_event=event,
@@ -1126,6 +1368,9 @@ class StoredObjectPickNode(Node):
             now = time.monotonic()
             self.finder_target_ready = True
             self.finder_target_ready_at = now
+            self.perception_timing.mark("finder_target_ready", now)
+            self.perception_timing.baseline(payload)
+            self.perception_timing.last_pipeline_progress_at = now
             wait_sec = max(
                 0.0,
                 float(
@@ -1136,7 +1381,10 @@ class StoredObjectPickNode(Node):
             )
             if self.phase == "search":
                 self.search_initial_wait_started = True
-                self.search_next_time = now + wait_sec
+                self._begin_search_observation_window(
+                    wait_sec=wait_sec,
+                    reason="initial_target_ready",
+                )
             elif self.phase == "visible_first":
                 self.visible_first_wait_started = True
                 self.visible_first_deadline = now + max(
@@ -1180,6 +1428,10 @@ class StoredObjectPickNode(Node):
         if not self.finder_goal_acknowledged:
             self.finder_goal_acknowledged = True
             self.finder_goal_acknowledged_at = time.monotonic()
+            self.perception_timing.mark(
+                "finder_goal_acknowledged",
+                self.finder_goal_acknowledged_at,
+            )
             self._publish_status(
                 "finder_goal_acknowledged",
                 finder_event=str(payload.get("event", "")).strip().lower(),
@@ -1189,34 +1441,33 @@ class StoredObjectPickNode(Node):
             )
         event = str(payload.get("event", "")).strip().lower()
         reason = str(payload.get("reason", "")).strip()
-        if event == "object_found" and not self.finder_target_ready:
+        if event == "object_found" and self.phase == "search":
+            try:
+                result_source_stamp = float(payload.get("stamp_sec", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                result_source_stamp = 0.0
+            if (
+                self.search_detection_not_before_source_stamp_sec > 0.0
+                and result_source_stamp > 1.0e8
+                and result_source_stamp
+                < self.search_detection_not_before_source_stamp_sec
+            ):
+                return
+        if event == "object_found":
             now = time.monotonic()
-            self.finder_target_ready = True
-            self.finder_target_ready_at = now
-            wait_sec = max(
-                0.0,
-                float(
-                    self.get_parameter(
-                        "finder_initial_detection_wait_sec"
-                    ).value
-                ),
-            )
-            if self.phase == "search":
-                self.search_initial_wait_started = True
-                self.search_next_time = now + wait_sec
-            elif self.phase == "visible_first":
-                self.visible_first_wait_started = True
-                self.visible_first_deadline = now + max(
-                    0.0,
-                    float(self.get_parameter("visible_first_probe_sec").value),
+            if not self.finder_target_ready:
+                self.finder_target_ready = True
+                self.finder_target_ready_at = now
+                self.perception_timing.mark("finder_target_ready", now)
+                self.perception_timing.baseline(self.last_finder_status)
+                self.perception_timing.last_pipeline_progress_at = now
+                self._publish_status(
+                    "finder_target_ready",
+                    finder_event=event,
+                    finder_state="RESULT",
+                    inferred_from_result=True,
                 )
-            self._publish_status(
-                "finder_target_ready",
-                finder_event=event,
-                finder_state="RESULT",
-                inferred_from_result=True,
-                initial_detection_wait_sec=wait_sec,
-            )
+            self._mark_identity_confirmed("object_finder_result")
         if event in {"finder_configuration_error", "invalid_goal"}:
             self._fail(
                 "PERCEPTION_UNAVAILABLE",
@@ -1305,7 +1556,22 @@ class StoredObjectPickNode(Node):
         elif purpose == "search_turn":
             self.phase = "search"
             assert self.profile is not None
-            self.search_next_time = time.monotonic() + self.profile.search_dwell_sec
+            self.perception_timing.scan_turn_count += 1
+            wait_sec = effective_observation_wait(
+                self.profile.search_dwell_sec,
+                float(
+                    self.get_parameter(
+                        "search_post_turn_detection_wait_sec"
+                    ).value
+                ),
+            )
+            self._begin_search_observation_window(
+                wait_sec=wait_sec,
+                reason="post_search_turn",
+                frame_guard_sec=float(
+                    self.get_parameter("search_post_turn_frame_guard_sec").value
+                ),
+            )
             self.filter.clear()
         elif purpose.startswith("align"):
             assert self.profile is not None
@@ -1546,6 +1812,9 @@ class StoredObjectPickNode(Node):
         assert self.profile is not None
         stable = self._stable_detection()
         if stable is not None:
+            acquired_now = time.monotonic()
+            self.perception_timing.mark("stable_object_acquired", acquired_now)
+            self._log_perception_latency("acquired")
             acquired_range = planar_range_m(
                 stable.point_base,
                 forward_axis_sign=self.forward_axis_sign,
@@ -1574,6 +1843,27 @@ class StoredObjectPickNode(Node):
             return
 
         now = time.monotonic()
+        if self.perception_identity_confirmed:
+            hard_due = (
+                self.perception_localization_deadline > 0.0
+                and now >= self.perception_localization_deadline
+            )
+            idle_due = (
+                self.perception_localization_idle_deadline > 0.0
+                and now >= self.perception_localization_idle_deadline
+            )
+            if not hard_due and not idle_due:
+                return
+            self._publish_status(
+                "visible_first_localization_not_stable",
+                fallback="stored_search_pose",
+                perception_latency=self._perception_latency_payload(),
+            )
+            self.perception_identity_confirmed = False
+            self.perception_localization_deadline = 0.0
+            self.perception_localization_idle_deadline = 0.0
+            self.filter.clear()
+
         if not self.visible_first_wait_started:
             # With the managed finder, start the probe window only after the
             # target bank is ready.  External-finder mode starts it immediately.
@@ -1735,10 +2025,14 @@ class StoredObjectPickNode(Node):
         # consuming the whole observation period.
         if not self.start_finder_for_goal or self.finder_target_ready:
             self.search_initial_wait_started = True
-            self.search_next_time = now + initial_wait
+            self._begin_search_observation_window(
+                wait_sec=initial_wait,
+                reason="initial_search_view",
+            )
         else:
             self.search_initial_wait_started = False
             self.search_next_time = float("inf")
+            self.search_view_hard_deadline = 0.0
 
         self._publish_status(
             "object_search_started",
@@ -1756,6 +2050,9 @@ class StoredObjectPickNode(Node):
         if stable is not None:
             self.last_object_point = stable.point_base
             self.filter.clear()
+            acquired_now = time.monotonic()
+            self.perception_timing.mark("stable_object_acquired", acquired_now)
+            self._log_perception_latency("acquired")
             assert self.profile is not None
             acquired_range = planar_range_m(
                 stable.point_base,
@@ -1784,6 +2081,11 @@ class StoredObjectPickNode(Node):
         now = time.monotonic()
         if self.start_finder_for_goal and not self.finder_target_ready:
             return
+        # Once identity is confirmed, do not rotate away while the Pi localizer
+        # is producing the stable 3-D point.  A dedicated localization timeout
+        # now replaces the former camera/search countdown.
+        if self.perception_identity_confirmed:
+            return
         if not self.search_initial_wait_started:
             self.search_initial_wait_started = True
             wait_sec = max(
@@ -1794,7 +2096,10 @@ class StoredObjectPickNode(Node):
                     ).value
                 ),
             )
-            self.search_next_time = now + wait_sec
+            self._begin_search_observation_window(
+                wait_sec=wait_sec,
+                reason="initial_search_view_late_start",
+            )
             self._publish_status(
                 "finder_initial_observation_wait_started",
                 wait_sec=wait_sec,
@@ -1807,6 +2112,19 @@ class StoredObjectPickNode(Node):
             return
         turn = self.search_relative_turns[self.search_index]
         self.search_index += 1
+        # Ignore all delayed localization while the chassis is rotating.  The
+        # guard is replaced with a finite post-turn camera timestamp once the
+        # Pico reports completion.
+        self.search_detection_not_before_source_stamp_sec = float("inf")
+        self.filter.clear()
+        self._publish_status(
+            "search_turn_started",
+            turn_deg=turn,
+            search_index=self.search_index,
+            remaining_turns=max(
+                0, len(self.search_relative_turns) - self.search_index
+            ),
+        )
         self._send_turn(turn, "search_turn")
 
     def _lock_and_start_distance_handoff(self, stable: StableDetection) -> None:
@@ -2636,7 +2954,25 @@ class StoredObjectPickNode(Node):
             elif purpose == "search_turn":
                 self.phase = "search"
                 assert self.profile is not None
-                self.search_next_time = time.monotonic() + self.profile.search_dwell_sec
+                self.perception_timing.scan_turn_count += 1
+                wait_sec = effective_observation_wait(
+                    self.profile.search_dwell_sec,
+                    float(
+                        self.get_parameter(
+                            "search_post_turn_detection_wait_sec"
+                        ).value
+                    ),
+                )
+                self._begin_search_observation_window(
+                    wait_sec=wait_sec,
+                    reason="post_search_turn_dry_run",
+                    frame_guard_sec=float(
+                        self.get_parameter(
+                            "search_post_turn_frame_guard_sec"
+                        ).value
+                    ),
+                )
+                self.filter.clear()
             else:
                 self.phase = "align_settle"
                 assert self.profile is not None
@@ -2651,6 +2987,7 @@ class StoredObjectPickNode(Node):
         )
 
     def _start_finder(self, timeout_sec: float) -> None:
+        self._reset_perception_timing()
         self.finder_active = True
         self.finder_goal_acknowledged = False
         self.finder_goal_acknowledged_at = 0.0
@@ -2774,6 +3111,8 @@ class StoredObjectPickNode(Node):
             return
         if self.state == "CANCEL_REQUESTED":
             return
+        if self.perception_timing.started_at > 0.0:
+            self._log_perception_latency(terminal.casefold(), reason)
         self.cancel_reason = reason
         self.cancel_terminal = terminal
         self.cancel_error_code = error_code or (
@@ -2924,6 +3263,10 @@ class StoredObjectPickNode(Node):
         if self.phase == "record_wait_detection":
             stable = self._stable_detection()
             if stable is not None:
+                self.perception_timing.mark(
+                    "stable_object_acquired", time.monotonic()
+                )
+                self._log_perception_latency("record_acquired")
                 self.record_point = stable.point_base
                 self.record_stable_detection = stable
                 self.filter.clear()
@@ -2947,9 +3290,62 @@ class StoredObjectPickNode(Node):
             self._try_visible_first_probe()
             return
         if self.phase == "search":
-            if now >= self.phase_deadline:
-                self._fail("OBJECT_NOT_FOUND", reason="search timeout")
-                return
+            if self.perception_identity_confirmed:
+                if (
+                    self.perception_localization_idle_deadline > 0.0
+                    and now >= self.perception_localization_idle_deadline
+                ):
+                    self._fail(
+                        "OBJECT_LOST",
+                        reason=(
+                            "identity was confirmed but localized_object progress "
+                            "stalled before a stable 3-D point was formed"
+                        ),
+                        perception_latency=self._perception_latency_payload(),
+                    )
+                    return
+                if (
+                    self.perception_localization_deadline > 0.0
+                    and now >= self.perception_localization_deadline
+                ):
+                    self._fail(
+                        "OBJECT_LOST",
+                        reason=(
+                            "identity was confirmed but the localized 3-D point "
+                            "did not satisfy the stability gate before timeout"
+                        ),
+                        perception_latency=self._perception_latency_payload(),
+                    )
+                    return
+            else:
+                if now >= self.phase_deadline:
+                    self._fail("OBJECT_NOT_FOUND", reason="search hard timeout")
+                    return
+                if self.finder_target_ready:
+                    stall_timeout = max(
+                        0.1,
+                        float(
+                            self.get_parameter(
+                                "perception_pipeline_stall_timeout_sec"
+                            ).value
+                        ),
+                    )
+                    last_progress = self.perception_timing.last_pipeline_progress_at
+                    if (
+                        last_progress > 0.0
+                        and now - last_progress >= stall_timeout
+                    ):
+                        self._fail(
+                            "PERCEPTION_UNAVAILABLE",
+                            reason=(
+                                "finder target is ready but embedding/temporal "
+                                "pipeline counters stopped advancing"
+                            ),
+                            pipeline_stall_sec=now - last_progress,
+                            pipeline_stall_timeout_sec=stall_timeout,
+                            perception_latency=self._perception_latency_payload(),
+                        )
+                        return
             self._try_search_or_align()
             return
         if self.phase == "align_settle":
@@ -3208,6 +3604,14 @@ class StoredObjectPickNode(Node):
         self.search_initial_wait_started = False
         self.visible_first_deadline = 0.0
         self.visible_first_wait_started = False
+        self.perception_timing = PerceptionTimingTracker()
+        self.perception_identity_confirmed = False
+        self.perception_localization_deadline = 0.0
+        self.perception_localization_idle_deadline = 0.0
+        self.search_view_started_at = 0.0
+        self.search_view_hard_deadline = 0.0
+        self.search_detection_not_before_source_stamp_sec = 0.0
+        self.perception_latency_logged = False
         self.base_active = False
         self.base_expected_event = ""
         self.base_command = ""

@@ -47,6 +47,15 @@ macrobot_stored_object_pick:
     visible_test_timeout_sec: 20.0
     full_search_timeout_sec: 90.0
     finder_initial_detection_wait_sec: 3.0
+    search_post_turn_detection_wait_sec: 3.0
+    search_post_turn_frame_guard_sec: 0.30
+    perception_pipeline_stall_timeout_sec: 6.0
+    perception_evidence_grace_sec: 2.5
+    perception_view_max_wait_sec: 8.0
+    localization_stability_timeout_sec: 8.0
+    localization_idle_timeout_sec: 3.0
+    perception_latency_log_enabled: true
+    perception_latency_log_file: ~/MacRobot/data/perception/finder_latency.jsonl
     visible_first_enabled: true
     visible_first_probe_sec: 3.0
     overall_timeout_sec: 180.0
