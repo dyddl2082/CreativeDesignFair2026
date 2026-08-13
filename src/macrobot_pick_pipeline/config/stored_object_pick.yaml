@@ -4,7 +4,7 @@ macrobot_stored_object_pick:
     recordings_dir: ~/MacRobot/data/arm_primitives
     grasp_keyframe_profile_file: ~/MacRobot/data/grasp_keyframes/profiles.yaml
     base_frame: base_link
-    forward_axis_sign: -1.0
+    forward_axis_sign: 1.0
     lateral_axis_sign: 1.0
     pico_turn_positive_is_right: true
     pico_move_positive_is_forward: true
@@ -35,6 +35,8 @@ macrobot_stored_object_pick:
     alignment_move_speed: 80
     coarse_turn_speed: 150
     coarse_move_speed: 80
+    coarse_allow_reverse: true
+    coarse_reverse_heading_tolerance_deg: 90.0
     base_motion_timeout_sec: 10.0
     settle_sec: 0.45
     max_alignment_iterations: 20
@@ -44,6 +46,9 @@ macrobot_stored_object_pick:
     record_timeout_sec: 30.0
     visible_test_timeout_sec: 20.0
     full_search_timeout_sec: 90.0
+    finder_initial_detection_wait_sec: 3.0
+    visible_first_enabled: true
+    visible_first_probe_sec: 3.0
     overall_timeout_sec: 180.0
     odom_request_timeout_sec: 2.0
     cancel_confirm_timeout_sec: 4.0

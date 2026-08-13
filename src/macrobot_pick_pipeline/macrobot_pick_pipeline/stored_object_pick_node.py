@@ -345,6 +345,8 @@ class StoredObjectPickNode(Node):
         self.finder_goal_publish_count = 0
         self.finder_goal_acknowledged = False
         self.finder_goal_acknowledged_at = 0.0
+        self.finder_target_ready = False
+        self.finder_target_ready_at = 0.0
         self.last_finder_status: Dict[str, Any] = {}
 
         self.pending_odom_purpose = ""
@@ -375,6 +377,9 @@ class StoredObjectPickNode(Node):
         self.search_relative_turns: List[float] = []
         self.search_index = 0
         self.search_next_time = 0.0
+        self.search_initial_wait_started = False
+        self.visible_first_deadline = 0.0
+        self.visible_first_wait_started = False
 
         self.base_active = False
         self.base_expected_event = ""
@@ -459,7 +464,7 @@ class StoredObjectPickNode(Node):
             ),
             "recordings_dir": str(Path.home() / "MacRobot" / "data" / "arm_primitives"),
             "base_frame": "base_link",
-            "forward_axis_sign": -1.0,
+            "forward_axis_sign": 1.0,
             "lateral_axis_sign": 1.0,
             "pico_turn_positive_is_right": True,
             "pico_move_positive_is_forward": True,
@@ -487,6 +492,12 @@ class StoredObjectPickNode(Node):
             "alignment_move_speed": 80,
             "coarse_turn_speed": 150,
             "coarse_move_speed": 80,
+            # Coarse return may use a negative MOVE_CM instead of the former
+            # 180deg turn + forward move + 180deg turn sequence.  Reverse is
+            # considered only when both the rear-facing target direction and
+            # the stored target yaw are within this strict angular threshold.
+            "coarse_allow_reverse": True,
+            "coarse_reverse_heading_tolerance_deg": 90.0,
             "base_motion_timeout_sec": 10.0,
             "settle_sec": 0.45,
             "max_alignment_iterations": 20,
@@ -496,6 +507,15 @@ class StoredObjectPickNode(Node):
             "record_timeout_sec": 30.0,
             "visible_test_timeout_sec": 20.0,
             "full_search_timeout_sec": 90.0,
+            # Give the finder time to deliver temporally confirmed results
+            # before the first yaw-scan motion.  This is intentionally separate
+            # from per-turn search_dwell_sec in the stored profile.
+            "finder_initial_detection_wait_sec": 3.0,
+            # Try the current camera view first.  If the object is already
+            # visible, transform it with current odometry and go directly to
+            # the recorded grasp pose; otherwise fall back to coarse return.
+            "visible_first_enabled": True,
+            "visible_first_probe_sec": 3.0,
             "overall_timeout_sec": 180.0,
             "odom_request_timeout_sec": 2.0,
             "cancel_confirm_timeout_sec": 4.0,
@@ -984,7 +1004,12 @@ class StoredObjectPickNode(Node):
     # Perception, Pico, and arm callbacks
     # ------------------------------------------------------------------
     def _detection_callback(self, msg: String) -> None:
-        if self.phase not in {"record_wait_detection", "search", "align"}:
+        if self.phase not in {
+            "record_wait_detection",
+            "visible_first",
+            "search",
+            "align",
+        }:
             return
         try:
             payload = json.loads(msg.data)
@@ -1005,20 +1030,19 @@ class StoredObjectPickNode(Node):
         except (TypeError, ValueError):
             return
 
-        # ``stamp_sec`` is the original camera/result timestamp.  After DINOv2,
-        # patch heatmap, temporal confirmation, DDS transport, and Pi-side depth
-        # refinement, it can already be older than the short record stability
-        # window when the localized message arrives.  The stability filter is
-        # intended to group recently *published/received* localized observations,
-        # so use ``published_at_sec`` when available and fall back to local receipt
-        # time.  Keep rejecting non-finite source timestamps, but do not prune a
-        # valid localized observation merely because the original camera frame is
-        # old.
+        # ``stamp_sec`` is the original camera/result timestamp.  DINOv2,
+        # patch localization, temporal confirmation, DDS transport, and Pi-side
+        # depth refinement can make it older than the short stability window
+        # before the localized message arrives.  Use the localizer publication
+        # time for recent-sample grouping while still validating the source stamp.
         stamp = published_stamp
         if not math.isfinite(stamp) or stamp <= 0.0 or stamp > now_sec + 1.0:
             stamp = now_sec
 
-        if not all(math.isfinite(value) for value in (*point, score, source_stamp, stamp)):
+        if not all(
+            math.isfinite(value)
+            for value in (*point, score, source_stamp, stamp)
+        ):
             return
         self.last_object_point = point
         localization = payload.get("localization", {})
@@ -1045,12 +1069,13 @@ class StoredObjectPickNode(Node):
         )
 
     def _finder_status_callback(self, msg: String) -> None:
-        """Acknowledge that the WSL finder accepted this exact request.
+        """Track finder acknowledgement and the target-ready transition.
 
-        ``/object_finder/goal`` is an internal command topic crossing machines.
-        The stored-pick node retries until this callback observes the matching
-        request ID.  Status messages for older or unrelated finder sessions are
-        ignored.
+        Finder goals cross the Pi-to-WSL DDS boundary.  Acknowledgement proves
+        that the exact request ID arrived.  ``target_ready`` is tracked
+        separately because DINO bank loading can complete later; scan motion is
+        not started until that transition has occurred and the configured
+        observation wait has elapsed.
         """
         if not self._is_busy() or not self.finder_active:
             return
@@ -1065,6 +1090,7 @@ class StoredObjectPickNode(Node):
             return
         if object_name.casefold() != self.object_name.casefold():
             return
+
         state = str(payload.get("state", "")).strip().upper()
         event = str(payload.get("event", "")).strip().lower()
         accepted = state in {
@@ -1084,17 +1110,47 @@ class StoredObjectPickNode(Node):
             "target_switch_failed",
             "search_timeout",
         }
-        if not accepted or self.finder_goal_acknowledged:
-            return
-        self.finder_goal_acknowledged = True
-        self.finder_goal_acknowledged_at = time.monotonic()
-        self._publish_status(
-            "finder_goal_acknowledged",
-            finder_event=event,
-            finder_state=state,
-            finder_goal_publish_count=self.finder_goal_publish_count,
-            finder_goal_subscribers=self.finder_goal_pub.get_subscription_count(),
-        )
+
+        if accepted and not self.finder_goal_acknowledged:
+            self.finder_goal_acknowledged = True
+            self.finder_goal_acknowledged_at = time.monotonic()
+            self._publish_status(
+                "finder_goal_acknowledged",
+                finder_event=event,
+                finder_state=state,
+                finder_goal_publish_count=self.finder_goal_publish_count,
+                finder_goal_subscribers=self.finder_goal_pub.get_subscription_count(),
+            )
+
+        if event == "target_ready" and not self.finder_target_ready:
+            now = time.monotonic()
+            self.finder_target_ready = True
+            self.finder_target_ready_at = now
+            wait_sec = max(
+                0.0,
+                float(
+                    self.get_parameter(
+                        "finder_initial_detection_wait_sec"
+                    ).value
+                ),
+            )
+            if self.phase == "search":
+                self.search_initial_wait_started = True
+                self.search_next_time = now + wait_sec
+            elif self.phase == "visible_first":
+                self.visible_first_wait_started = True
+                self.visible_first_deadline = now + max(
+                    0.0,
+                    float(self.get_parameter("visible_first_probe_sec").value),
+                )
+            self._publish_status(
+                "finder_target_ready",
+                finder_event=event,
+                finder_state=state,
+                initial_detection_wait_sec=wait_sec,
+                visible_first=self.phase == "visible_first",
+            )
+
         if event == "target_switch_failed":
             self._fail(
                 "PERCEPTION_UNAVAILABLE",
@@ -1133,6 +1189,34 @@ class StoredObjectPickNode(Node):
             )
         event = str(payload.get("event", "")).strip().lower()
         reason = str(payload.get("reason", "")).strip()
+        if event == "object_found" and not self.finder_target_ready:
+            now = time.monotonic()
+            self.finder_target_ready = True
+            self.finder_target_ready_at = now
+            wait_sec = max(
+                0.0,
+                float(
+                    self.get_parameter(
+                        "finder_initial_detection_wait_sec"
+                    ).value
+                ),
+            )
+            if self.phase == "search":
+                self.search_initial_wait_started = True
+                self.search_next_time = now + wait_sec
+            elif self.phase == "visible_first":
+                self.visible_first_wait_started = True
+                self.visible_first_deadline = now + max(
+                    0.0,
+                    float(self.get_parameter("visible_first_probe_sec").value),
+                )
+            self._publish_status(
+                "finder_target_ready",
+                finder_event=event,
+                finder_state="RESULT",
+                inferred_from_result=True,
+                initial_detection_wait_sec=wait_sec,
+            )
         if event in {"finder_configuration_error", "invalid_goal"}:
             self._fail(
                 "PERCEPTION_UNAVAILABLE",
@@ -1417,8 +1501,100 @@ class StoredObjectPickNode(Node):
     def _after_stow(self) -> None:
         if self.mode == "visible_test":
             self._start_search(visible_test=True)
+        elif bool(self.get_parameter("visible_first_enabled").value):
+            self._start_visible_first_probe()
         else:
             self._request_odom("coarse")
+
+    def _start_visible_first_probe(self) -> None:
+        """Try the current camera view before returning to the stored pose.
+
+        A successful observation is transformed with the current Pico odometry
+        and handed directly to the existing distance-handoff controller.  No
+        scan motion is performed in this phase.  When the configured probe
+        window expires, the state machine falls back to the stored search pose.
+        """
+        assert self.profile is not None
+        self.filter.clear()
+        self.phase = "visible_first"
+        self.visible_first_deadline = 0.0
+        self.visible_first_wait_started = False
+
+        now = time.monotonic()
+        remaining = max(1.0, self.goal_deadline - now)
+        if self.start_finder_for_goal:
+            if not self.finder_active:
+                self._start_finder(remaining)
+            else:
+                self._set_active_target(self.object_name)
+        else:
+            self._set_active_target(self.object_name)
+            self.visible_first_wait_started = True
+            self.visible_first_deadline = now + max(
+                0.0,
+                float(self.get_parameter("visible_first_probe_sec").value),
+            )
+
+        self._publish_status(
+            "visible_first_probe_started",
+            probe_sec=float(self.get_parameter("visible_first_probe_sec").value),
+            finder_started=self.start_finder_for_goal,
+            fallback="stored_search_pose",
+        )
+
+    def _try_visible_first_probe(self) -> None:
+        assert self.profile is not None
+        stable = self._stable_detection()
+        if stable is not None:
+            acquired_range = planar_range_m(
+                stable.point_base,
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+            self.last_object_point = stable.point_base
+            self.filter.clear()
+            self._publish_status(
+                "visible_first_object_acquired",
+                point_base=list(stable.point_base),
+                acquired_range_m=acquired_range,
+                sample_count=stable.sample_count,
+                stability_radius_m=stable.radius_m,
+                action="distance_handoff_from_current_pose",
+            )
+            if self.profile.distance_handoff_enabled:
+                # Visible-first must use a fresh odometry snapshot.  ``last_odom``
+                # may belong to an earlier action even when it is still marked
+                # reliable, so never calculate the object odom point from that
+                # cached value.
+                self.locked_acquisition = stable
+                self.pending_acquisition = stable
+                self._request_odom("handoff_acquire")
+            else:
+                self.phase = "align"
+            return
+
+        now = time.monotonic()
+        if not self.visible_first_wait_started:
+            # With the managed finder, start the probe window only after the
+            # target bank is ready.  External-finder mode starts it immediately.
+            if self.start_finder_for_goal and not self.finder_target_ready:
+                return
+            self.visible_first_wait_started = True
+            self.visible_first_deadline = now + max(
+                0.0,
+                float(self.get_parameter("visible_first_probe_sec").value),
+            )
+
+        if now < self.visible_first_deadline:
+            return
+
+        self.filter.clear()
+        self._publish_status(
+            "visible_first_not_found",
+            fallback="stored_search_pose",
+            finder_kept_active=self.finder_active,
+        )
+        self._request_odom("coarse")
 
     def _command_arm_q(self, q: Q, label: str) -> None:
         goal = JointState()
@@ -1462,6 +1638,10 @@ class StoredObjectPickNode(Node):
             self.profile.search_pose_odom,
             position_tolerance_m=self.profile.coarse_position_tolerance_m,
             angle_tolerance_deg=self.profile.coarse_angle_tolerance_deg,
+            allow_reverse=bool(self.get_parameter("coarse_allow_reverse").value),
+            reverse_heading_tolerance_deg=float(
+                self.get_parameter("coarse_reverse_heading_tolerance_deg").value
+            ),
         )
         if abs(plan.move_distance_m) > self.profile.coarse_max_move_m:
             self._fail("SAFETY_BLOCKED", reason="coarse return distance exceeds profile limit")
@@ -1480,7 +1660,18 @@ class StoredObjectPickNode(Node):
             "initial_turn_deg": plan.initial_turn_deg,
             "move_distance_m": plan.move_distance_m,
             "final_turn_deg": plan.final_turn_deg,
+            "drive_direction": plan.drive_direction,
+            "uses_reverse": plan.uses_reverse,
+            "reverse_heading_tolerance_deg": float(
+                self.get_parameter("coarse_reverse_heading_tolerance_deg").value
+            ),
         }
+        self._publish_status(
+            "coarse_return_planned",
+            current_odom=current.to_mapping(),
+            target_odom=self.profile.search_pose_odom.to_mapping(),
+            plan=self.steps["coarse_plan"],
+        )
         self._run_next_coarse_step()
 
     def _run_next_coarse_step(self) -> None:
@@ -1502,11 +1693,21 @@ class StoredObjectPickNode(Node):
             if visible_test
             else float(self.get_parameter("full_search_timeout_sec").value)
         )
-        self.phase_deadline = min(self.goal_deadline, time.monotonic() + timeout)
+        now = time.monotonic()
+        self.phase_deadline = min(self.goal_deadline, now + timeout)
+
+        # A visible-first miss may leave the same finder session running while
+        # the chassis returns to the stored search pose.  Reuse that session
+        # rather than restarting bank loading and temporal confirmation.
+        finder_was_active = self.finder_active
         if self.start_finder_for_goal:
-            self._start_finder(timeout)
+            if not self.finder_active:
+                self._start_finder(max(1.0, self.goal_deadline - now))
+            else:
+                self._set_active_target(self.object_name)
         else:
             self._set_active_target(self.object_name)
+
         if visible_test:
             offsets = (0.0,)
         else:
@@ -1514,16 +1715,40 @@ class StoredObjectPickNode(Node):
                 self.profile.search_max_yaw_deg,
                 self.profile.search_step_deg,
             )
+            # Scan-angle policy is intentionally unchanged in this revision.
             # Return to the recorded heading before declaring search failure.
             offsets = generated if generated[-1] == 0.0 else (*generated, 0.0)
-        self.search_relative_turns = list(absolute_offsets_to_relative_turns(offsets))[1:]
+
+        self.search_relative_turns = list(
+            absolute_offsets_to_relative_turns(offsets)
+        )[1:]
         self.search_index = 0
-        self.search_next_time = time.monotonic() + self.profile.search_dwell_sec
+        initial_wait = max(
+            0.0,
+            float(
+                self.get_parameter("finder_initial_detection_wait_sec").value
+            ),
+        )
+
+        # In managed-finder mode the wait begins at target_ready, not merely at
+        # command publication.  This prevents an expensive bank switch from
+        # consuming the whole observation period.
+        if not self.start_finder_for_goal or self.finder_target_ready:
+            self.search_initial_wait_started = True
+            self.search_next_time = now + initial_wait
+        else:
+            self.search_initial_wait_started = False
+            self.search_next_time = float("inf")
+
         self._publish_status(
             "object_search_started",
             visible_test=visible_test,
             finder_started=self.start_finder_for_goal,
+            finder_reused=finder_was_active,
+            finder_target_ready=self.finder_target_ready,
+            initial_detection_wait_sec=initial_wait,
             search_offsets_deg=list(offsets),
+            scan_policy_changed=False,
         )
 
     def _try_search_or_align(self) -> None:
@@ -1557,6 +1782,24 @@ class StoredObjectPickNode(Node):
         if self.mode == "visible_test":
             return
         now = time.monotonic()
+        if self.start_finder_for_goal and not self.finder_target_ready:
+            return
+        if not self.search_initial_wait_started:
+            self.search_initial_wait_started = True
+            wait_sec = max(
+                0.0,
+                float(
+                    self.get_parameter(
+                        "finder_initial_detection_wait_sec"
+                    ).value
+                ),
+            )
+            self.search_next_time = now + wait_sec
+            self._publish_status(
+                "finder_initial_observation_wait_started",
+                wait_sec=wait_sec,
+            )
+            return
         if now < self.search_next_time or self.base_active:
             return
         if self.search_index >= len(self.search_relative_turns):
@@ -2411,6 +2654,8 @@ class StoredObjectPickNode(Node):
         self.finder_active = True
         self.finder_goal_acknowledged = False
         self.finder_goal_acknowledged_at = 0.0
+        self.finder_target_ready = False
+        self.finder_target_ready_at = 0.0
         self.finder_goal_started = time.monotonic()
         self.finder_goal_last_publish = 0.0
         self.finder_goal_publish_count = 0
@@ -2484,6 +2729,8 @@ class StoredObjectPickNode(Node):
         self.finder_active = False
         self.finder_goal_payload = {}
         self.finder_goal_acknowledged = False
+        self.finder_target_ready = False
+        self.finder_target_ready_at = 0.0
 
     def _set_active_target(self, object_name: str) -> None:
         message = String()
@@ -2695,6 +2942,9 @@ class StoredObjectPickNode(Node):
         if self.base_active:
             if now >= self.phase_deadline:
                 self._request_cancel("base motion timeout", terminal="TIMED_OUT")
+            return
+        if self.phase == "visible_first":
+            self._try_visible_first_probe()
             return
         if self.phase == "search":
             if now >= self.phase_deadline:
@@ -2928,6 +3178,8 @@ class StoredObjectPickNode(Node):
         self.finder_goal_publish_count = 0
         self.finder_goal_acknowledged = False
         self.finder_goal_acknowledged_at = 0.0
+        self.finder_target_ready = False
+        self.finder_target_ready_at = 0.0
         self.last_finder_status = {}
         self.pending_odom_purpose = ""
         self.record_point = None
@@ -2952,6 +3204,10 @@ class StoredObjectPickNode(Node):
         self.coarse_steps = []
         self.search_relative_turns = []
         self.search_index = 0
+        self.search_next_time = 0.0
+        self.search_initial_wait_started = False
+        self.visible_first_deadline = 0.0
+        self.visible_first_wait_started = False
         self.base_active = False
         self.base_expected_event = ""
         self.base_command = ""
