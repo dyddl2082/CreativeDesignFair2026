@@ -50,7 +50,7 @@ class ArmServoBridgeNode(Node):
         self.declare_parameter("safe_region_csv", "")
         self.declare_parameter("require_safe_region", False)
         self.declare_parameter("safe_region_mode", "cell")
-        self.declare_parameter("required_safe_region_revision", "macrobot-collision-dae-v2-20260808")
+        self.declare_parameter("required_safe_region_revision", "macrobot-serial-2axis-2026-09-04-r4")
 
         self.declare_parameter("dry_run", True)
         self.declare_parameter("command_mode", "pulse_us")  # pulse_us or angle

@@ -938,12 +938,12 @@ class LinkageStateNode(Node):
         self.declare_parameter("publish_mimic_joint_states", True)
         self.declare_parameter("publish_rate", 30.0)
 @@GEOMETRY_DECLARATIONS@@
-        self.declare_parameter("arm_lift_min", float(@@Q1_MIN@@))
-        self.declare_parameter("arm_lift_max", float(@@Q1_MAX@@))
-        self.declare_parameter("wrist_pitch_min", float(@@Q2_MIN@@))
-        self.declare_parameter("wrist_pitch_max", float(@@Q2_MAX@@))
-        self.declare_parameter("gripper_min", float(@@Q3_MIN@@))
-        self.declare_parameter("gripper_max", float(@@Q3_MAX@@))
+        self.declare_parameter("arm_lift_min", @@Q1_MIN@@)
+        self.declare_parameter("arm_lift_max", @@Q1_MAX@@)
+        self.declare_parameter("wrist_pitch_min", @@Q2_MIN@@)
+        self.declare_parameter("wrist_pitch_max", @@Q2_MAX@@)
+        self.declare_parameter("gripper_min", @@Q3_MIN@@)
+        self.declare_parameter("gripper_max", @@Q3_MAX@@)
         self.declare_parameter("gripper_open_gap_m", 0.070)
         self.declare_parameter("gripper_closed_gap_m", 0.010)
         self.declare_parameter("max_plane_error_m", 0.030)
@@ -1143,12 +1143,12 @@ class IKNode(Node):
         self.declare_parameter("seed_weight", 0.001)
         self.declare_parameter("max_plane_error_m", 0.030)
 @@GEOMETRY_DECLARATIONS@@
-        self.declare_parameter("arm_lift_min", float(@@Q1_MIN@@))
-        self.declare_parameter("arm_lift_max", float(@@Q1_MAX@@))
-        self.declare_parameter("wrist_pitch_min", float(@@Q2_MIN@@))
-        self.declare_parameter("wrist_pitch_max", float(@@Q2_MAX@@))
-        self.declare_parameter("gripper_min", float(@@Q3_MIN@@))
-        self.declare_parameter("gripper_max", float(@@Q3_MAX@@))
+        self.declare_parameter("arm_lift_min", @@Q1_MIN@@)
+        self.declare_parameter("arm_lift_max", @@Q1_MAX@@)
+        self.declare_parameter("wrist_pitch_min", @@Q2_MIN@@)
+        self.declare_parameter("wrist_pitch_max", @@Q2_MAX@@)
+        self.declare_parameter("gripper_min", @@Q3_MIN@@)
+        self.declare_parameter("gripper_max", @@Q3_MAX@@)
 
         geometry = ArmGeometry(
             shoulder_origin_xyz=_vector_parameter(self, "shoulder_origin_xyz"),

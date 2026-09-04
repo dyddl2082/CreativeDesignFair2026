@@ -1,30 +1,30 @@
 schema: macrobot.stored_object_runtime/v1
-updated_at: '2026-08-13T06:00:05.433296+00:00'
+updated_at: '2026-08-13T07:41:11.238698+00:00'
 profiles:
   Eraser:
     object_name: Eraser
-    recorded_at: '2026-08-13T06:00:05.432527+00:00'
+    recorded_at: '2026-08-13T07:41:11.237740+00:00'
     recording_state: complete
     position_scope: pico_odom_session
     search_pose_odom:
-      x_m: -0.15078698
-      y_m: -0.0002020054
-      yaw_deg: 0.15351524
+      x_m: -0.14991414
+      y_m: -0.002146358
+      yaw_deg: 1.6426227
       reliable: true
-      pico_time_ms: 903503
+      pico_time_ms: 1146329
     object_point_odom:
-      x: 0.17613947121199594
-      y: -0.05534215339935805
-      z: 0.03375734399783177
+      x: 0.17637665233594663
+      y: -0.050278879596330636
+      z: 0.03653310323644983
     alignment:
       object_name: Eraser
       pick_profile: Eraser
       frame_id: base_link
       reference_point_base:
-        x: 0.17592154828925669
-        y: -0.057228819851978856
-        z: 0.03375734399783177
-      recorded_at: '2026-08-13T06:00:05.432619+00:00'
+        x: 0.17637665233594663
+        y: -0.050278879596330636
+        z: 0.03653310323644983
+      recorded_at: '2026-08-13T07:41:11.237798+00:00'
       minimum_score: 0.0
       stability_count: 5
       stability_window_sec: 1.5
@@ -52,10 +52,10 @@ profiles:
       orientation_tolerance_deg: 25.0
     recognition:
       point_base:
-        x: 0.3267775383473076
-        y: -0.056015898235541844
-        z: 0.03375734399783177
-      score: 0.7610730528831482
+        x: 0.32477697816397566
+        y: -0.057465948640195136
+        z: 0.03653310323644983
+      score: 0.7579206228256226
       minimum_range_m: 0.32
       maximum_range_m: 1.2
     grasp:
@@ -89,8 +89,8 @@ profiles:
       maximum_uncertainty_m: 0.025
       maximum_object_relocation_m: 1.0
     grasp_pose_odom:
-      x_m: -0.0002066195
-      y_m: 0.00056478056
-      yaw_deg: 0.43000332
+      x_m: 0.0
+      y_m: 0.0
+      yaw_deg: 0.0
       reliable: true
-      pico_time_ms: 1082714
+      pico_time_ms: 1646932

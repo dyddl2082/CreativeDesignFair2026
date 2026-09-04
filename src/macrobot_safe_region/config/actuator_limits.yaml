@@ -1,4 +1,3 @@
-# Serial-2R actuator calibration. Reconfirm zero/sign/range on hardware.
 /**:
   ros__parameters:
     q1_min: -1.0
@@ -38,5 +37,5 @@
     gripper_command_min_deg: 0.0
     gripper_command_max_deg: 180.0
     model_type: serial_2r
-    model_revision: macrobot-serial-2axis-2026-09-01-r3
+    model_revision: macrobot-serial-2axis-2026-09-04-r4
     wrist_actuator_coordinate: q2

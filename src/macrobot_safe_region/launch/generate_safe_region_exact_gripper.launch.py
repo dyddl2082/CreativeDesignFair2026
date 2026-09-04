@@ -52,7 +52,7 @@ def generate_launch_description():
                 scan_config,
                 {
                     'robot_model_mode': 'serial_2r',
-                    'model_revision': 'macrobot-serial-2axis-2026-09-01-r3',
+                    'model_revision': 'macrobot-serial-2axis-2026-09-04-r4',
                     'output_directory': output_directory,
                 },
             ],
