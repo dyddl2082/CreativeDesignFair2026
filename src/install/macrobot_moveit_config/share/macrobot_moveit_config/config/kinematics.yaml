@@ -1,6 +1,0 @@
-# The project currently uses macrobot_arm_kinematics/ik_node.py for analytic IK.
-# No MoveIt kinematics plugin is required for safe-region collision sampling.
-arm:
-  kinematics_solver: ""
-arm_with_gripper:
-  kinematics_solver: ""

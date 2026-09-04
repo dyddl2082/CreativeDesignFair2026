@@ -1,36 +1,74 @@
+"""Fit a fixed grasp frame for the serial-2R arm.
+
+The previous implementation inferred a q3-dependent endpoint with the arm
+four-bar relation.  In the current model ``grasp_nominal`` is a rigid child of
+``gripper_link``.  Calibration therefore estimates one constant XYZ offset in
+the gripper-link frame from measurements collected at several q1/q2 poses.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 import math
 from statistics import mean
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
+
+from macrobot_arm_kinematics.model import MacRobotArmModel
+
+Vec3 = Tuple[float, float, float]
+Mat3 = Tuple[Tuple[float, float, float], Tuple[float, float, float], Tuple[float, float, float]]
 
 
 @dataclass(frozen=True)
 class GeometryReference:
-    pivot_x: float
-    pivot_z: float
-    main_link_length: float
+    """Deprecated compatibility container.
+
+    Old callers may still construct this object.  Its planar four-bar values
+    are intentionally ignored; the current URDF-derived MacRobotArmModel is the
+    source of truth.
+    """
+
+    pivot_x: float = 0.0
+    pivot_z: float = 0.0
+    main_link_length: float = 0.0
 
 
-def base_point_to_wrist_offset(
+def _transpose_multiply(rotation: Mat3, vector: Vec3) -> Vec3:
+    return tuple(
+        sum(rotation[row][column] * vector[row] for row in range(3))
+        for column in range(3)
+    )  # type: ignore[return-value]
+
+
+def _transform_point(position: Vec3, rotation: Mat3, local: Vec3) -> Vec3:
+    rotated = tuple(
+        sum(rotation[row][column] * local[column] for column in range(3))
+        for row in range(3)
+    )
+    return (
+        position[0] + rotated[0],
+        position[1] + rotated[1],
+        position[2] + rotated[2],
+    )
+
+
+def base_point_to_gripper_offset(
     q1: float,
     q2: float,
     measured_x: float,
+    measured_y: float,
     measured_z: float,
-    reference: GeometryReference,
-) -> Tuple[float, float]:
-    """Transform a measured base_link X/Z point into the wrist frame."""
-    rear_lift_angle = q1 + q2
-    wrist_x = reference.pivot_x - reference.main_link_length * math.sin(q1)
-    wrist_z = reference.pivot_z + reference.main_link_length * math.cos(q1)
-    dx = measured_x - wrist_x
-    dz = measured_z - wrist_z
-    # Inverse of the corrected local-to-base rotation:
-    # x = ox*cos(h) - oz*sin(h), z = ox*sin(h) + oz*cos(h).
-    offset_x = dx * math.cos(rear_lift_angle) + dz * math.sin(rear_lift_angle)
-    offset_z = -dx * math.sin(rear_lift_angle) + dz * math.cos(rear_lift_angle)
-    return offset_x, offset_z
+    model: Optional[MacRobotArmModel] = None,
+) -> Vec3:
+    """Convert a measured base_link point to the gripper_link frame."""
+    active_model = model or MacRobotArmModel()
+    position, rotation = active_model.gripper_link_transform(float(q1), float(q2))
+    delta = (
+        float(measured_x) - position[0],
+        float(measured_y) - position[1],
+        float(measured_z) - position[2],
+    )
+    return _transpose_multiply(rotation, delta)
 
 
 def _linear_fit(x: Sequence[float], y: Sequence[float]) -> Tuple[float, float]:
@@ -40,104 +78,119 @@ def _linear_fit(x: Sequence[float], y: Sequence[float]) -> Tuple[float, float]:
     y_mean = mean(y)
     denominator = sum((value - x_mean) ** 2 for value in x)
     if denominator <= 1e-14:
-        raise ValueError("The q3 samples do not provide enough variation")
+        raise ValueError("Samples do not provide enough q3 variation")
     slope = sum(
         (x_value - x_mean) * (y_value - y_mean)
         for x_value, y_value in zip(x, y)
     ) / denominator
-    intercept = y_mean - slope * x_mean
-    return intercept, slope
+    return y_mean - slope * x_mean, slope
 
 
 def fit_grasp_frame(
     samples: Sequence[Dict[str, float]],
-    reference: GeometryReference,
+    reference: Optional[GeometryReference] = None,
+    model: Optional[MacRobotArmModel] = None,
 ) -> Dict[str, object]:
-    """Fit the parameters used by MacRobotArmModel.effective_tool_offset().
+    """Estimate the fixed ``gripper_link -> grasp_nominal`` translation.
 
-    Expected sample keys:
-      q1, q2, q3, measured_x, measured_z, measurement_frame
-
-    ``measurement_frame`` is either ``base_link`` or ``wrist``.  Optional
-    ``measured_gap`` values fit ``gripper_base_separation``.
+    Required sample keys are ``q1``, ``q2``, ``measured_x``, ``measured_y``
+    and ``measured_z``.  ``measurement_frame`` may be ``base_link`` or
+    ``gripper_link``; the legacy word ``wrist`` is accepted as an alias for
+    ``gripper_link``.  q3 is recorded only for optional jaw-gap fitting and
+    never changes the grasp-frame origin.
     """
+    del reference  # retained only so old callers fail safely rather than at import time
     if len(samples) < 3:
-        raise ValueError("Three or more grasp-frame samples are recommended")
+        raise ValueError("Three or more serial-2R grasp-frame samples are required")
+    active_model = model or MacRobotArmModel()
 
     transformed: List[Dict[str, float]] = []
     for raw in samples:
         q1 = float(raw["q1"])
         q2 = float(raw["q2"])
-        q3 = float(raw["q3"])
+        q3 = float(raw.get("q3", 0.0))
         frame = str(raw.get("measurement_frame", "base_link"))
         measured_x = float(raw["measured_x"])
         measured_z = float(raw["measured_z"])
-        if frame == "base_link":
-            offset_x, offset_z = base_point_to_wrist_offset(
-                q1, q2, measured_x, measured_z, reference
+        if "measured_y" not in raw:
+            raise ValueError(
+                "measured_y is required for the serial-2R 3D grasp-frame fit"
             )
-        elif frame == "wrist":
-            offset_x, offset_z = measured_x, measured_z
+        measured_y = float(raw["measured_y"])
+
+        if frame == "base_link":
+            local = base_point_to_gripper_offset(
+                q1, q2, measured_x, measured_y, measured_z, active_model
+            )
+        elif frame in {"gripper_link", "wrist"}:
+            local = (measured_x, measured_y, measured_z)
         else:
             raise ValueError(f"Unknown measurement_frame: {frame}")
+
         transformed.append(
             {
                 "q1": q1,
                 "q2": q2,
                 "q3": q3,
-                "offset_x": offset_x,
-                "offset_z": offset_z,
+                "local_x": local[0],
+                "local_y": local[1],
+                "local_z": local[2],
                 **(
                     {"measured_gap": float(raw["measured_gap"])}
-                    if "measured_gap" in raw and raw["measured_gap"] is not None
+                    if raw.get("measured_gap") is not None
                     else {}
                 ),
             }
         )
 
-    predictor = [math.sin(item["q3"]) for item in transformed]
-    observed_x = [item["offset_x"] for item in transformed]
-    tool_offset_x, gripper_link_length = _linear_fit(predictor, observed_x)
-    tool_offset_z = mean(item["offset_z"] for item in transformed)
-
-    residuals = []
+    origin: Vec3 = (
+        mean(item["local_x"] for item in transformed),
+        mean(item["local_y"] for item in transformed),
+        mean(item["local_z"] for item in transformed),
+    )
+    residuals: List[Dict[str, float]] = []
     for item in transformed:
-        predicted_x = tool_offset_x + gripper_link_length * math.sin(item["q3"])
-        predicted_z = tool_offset_z
+        error = math.dist(
+            (item["local_x"], item["local_y"], item["local_z"]),
+            origin,
+        )
         residuals.append(
             {
+                "q1": item["q1"],
+                "q2": item["q2"],
                 "q3": item["q3"],
-                "offset_x": item["offset_x"],
-                "offset_z": item["offset_z"],
-                "predicted_x": predicted_x,
-                "predicted_z": predicted_z,
-                "error_m": math.hypot(
-                    item["offset_x"] - predicted_x,
-                    item["offset_z"] - predicted_z,
-                ),
+                "error_m": error,
             }
         )
 
-    fitted: Dict[str, object] = {
-        "tool_offset_x": tool_offset_x,
-        "tool_offset_z": tool_offset_z,
-        "gripper_link_length": gripper_link_length,
-        "rms_error_m": math.sqrt(
-            mean(item["error_m"] ** 2 for item in residuals)
-        ),
+    output: Dict[str, object] = {
+        "grasp_origin_xyz": list(origin),
+        "grasp_origin_x": origin[0],
+        "grasp_origin_y": origin[1],
+        "grasp_origin_z": origin[2],
+        "rms_error_m": math.sqrt(mean(item["error_m"] ** 2 for item in residuals)),
         "max_error_m": max(item["error_m"] for item in residuals),
         "transformed_samples": transformed,
         "residuals": residuals,
+        "model_note": "fixed grasp_nominal under gripper_link; q3-independent center",
     }
 
-    gap_items = [
-        item for item in transformed if "measured_gap" in item
-    ]
-    if gap_items:
-        base_values = [
-            item["measured_gap"]
-            - 2.0 * gripper_link_length * math.cos(item["q3"])
-            for item in gap_items
-        ]
-        fitted["gripper_base_separation"] = mean(base_values)
-    return fitted
+    gap_items = [item for item in transformed if "measured_gap" in item]
+    if len(gap_items) >= 2:
+        q3_min = active_model.limits.gripper_min
+        q3_max = active_model.limits.gripper_max
+        span = q3_max - q3_min
+        if span > 1e-12:
+            predictors = []
+            observed = []
+            for item in gap_items:
+                ratio = min(1.0, max(0.0, (item["q3"] - q3_min) / span))
+                predictors.append(math.cos(0.5 * math.pi * ratio))
+                observed.append(item["measured_gap"])
+            try:
+                closed_gap, open_minus_closed = _linear_fit(predictors, observed)
+                output["gripper_closed_gap_m"] = closed_gap
+                output["gripper_open_gap_m"] = closed_gap + open_minus_closed
+            except ValueError:
+                output["gap_fit_warning"] = "q3 samples do not span enough range"
+    return output

@@ -1,0 +1,37 @@
+model_revision: macrobot-serial-2axis-2026-09-04-r4
+previous_model_revision: macrobot-serial-2axis-2026-09-01-r3
+change_class: arm_gripper_geometry_and_joint_transform_revision
+must_invalidate:
+- all r3 and earlier safe_samples.csv, safe_connected_samples.csv, and safe_region_summary.yaml
+- MoveIt self-collision and allowed-collision matrices generated from earlier meshes
+- PICK and PLACE keyframes or profiles not tagged with r4
+- cached FK/IK expected points and reachable-workspace tables from r3
+may_retain_after_verification:
+- logical names arm_lift_joint, wrist_pitch_joint, gripper_joint
+- high-level ROS topics, actions, and Gateway contracts
+- the macrobot_camera_tf RGB-anchor calibration because base_link to camera_link is
+  unchanged
+- object-recognition banks and threshold profiles because they are not robot-geometry
+  coordinates
+- reboot-persistence/object-memory patch code, while stale odometry observations remain
+  epoch-scoped
+required_downstream_actions:
+  macrobot_arm_kinematics:
+  - load r4 shoulder, wrist, and grasp fixed transforms from kinematics.yaml
+  - rebuild and rerun serial-2R FK/IK tests
+  macrobot_moveit_config:
+  - regenerate SRDF self-collision data using r4 exact collision STLs
+  - verify only q1, q2, and q3 are active command variables
+  macrobot_safe_region:
+  - reject all earlier model revisions
+  - regenerate coarse then fine connected safe regions
+  macrobot_arm_control:
+  - require matching r4 description, calibration, and safe-region revisions
+  - retain independent q1 and q2 command mapping
+  macrobot_pick_pipeline:
+  - re-record or fully revalidate PICK and PLACE paths for the shifted grasp frame
+  - retest distance handoff against the new workspace
+  camera_and_perception:
+  - base_link to camera_link did not change; verify the existing RGB-anchor runtime
+    TF instead of recapturing automatically
+  - confirm localized detections still use camera_color_optical_frame

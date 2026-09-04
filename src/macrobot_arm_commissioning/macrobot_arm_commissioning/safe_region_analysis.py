@@ -27,14 +27,19 @@ class SafeSample:
         return (self.q1, self.q2, self.q3)
 
     @property
+    def wrist_angle(self) -> float:
+        """Independent serial wrist coordinate."""
+        return self.q2
+
+    @property
     def rear_lift_angle(self) -> float:
-        """Absolute angle of the right driven/rear-lift gear."""
-        return self.q1 + self.q2
+        """Deprecated report alias; returns q2 in the serial-2R model."""
+        return self.q2
 
     @property
     def tool_pitch(self) -> float:
-        """Backward-compatible alias for rear_lift_angle."""
-        return self.rear_lift_angle
+        """Backward-compatible alias for the independent wrist angle."""
+        return self.q2
 
 
 def _read_bool(value: object, default: bool = False) -> bool:
@@ -178,7 +183,7 @@ class SafeRegionDataset:
             "name": name,
             "category": category,
             "q": [sample.q1, sample.q2, sample.q3],
-            "rear_lift_angle": sample.rear_lift_angle,
+            "wrist_angle": sample.q2,
             "tool_pitch": sample.tool_pitch,  # legacy report key
             "rationale": rationale,
         }
@@ -245,27 +250,27 @@ class SafeRegionDataset:
             )
         )
 
-        pitches = sorted({round(item.rear_lift_angle, 10) for item in self.connected})
+        pitches = sorted({round(item.q2, 10) for item in self.connected})
         for high in (False, True):
             target_pitch = self._second_inset(pitches, high)
             candidates = [
                 item
                 for item in self.connected
-                if abs(item.rear_lift_angle - target_pitch) < 1e-7
+                if abs(item.q2 - target_pitch) < 1e-7
             ]
             if not candidates:
                 candidates = sorted(
                     self.connected,
-                    key=lambda item: abs(item.rear_lift_angle - target_pitch),
+                    key=lambda item: abs(item.q2 - target_pitch),
                 )[: max(1, min(100, len(self.connected)))]
             sample = self.nearest(home.q, candidates)
             side = "max_inside" if high else "min_inside"
             cases.append(
                 self._case(
-                    f"rear_lift_angle_{side}",
-                    "coupled_boundary",
+                    f"wrist_angle_{side}",
+                    "wrist_boundary",
                     sample,
-                    "One sampled level inside the q1+q2 rear-lift boundary.",
+                    "One sampled level inside the independent q2 wrist boundary.",
                 )
             )
 

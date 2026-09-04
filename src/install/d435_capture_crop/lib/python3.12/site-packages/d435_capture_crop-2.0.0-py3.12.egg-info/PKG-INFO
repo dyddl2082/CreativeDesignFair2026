@@ -1,7 +1,0 @@
-Metadata-Version: 2.1
-Name: d435-capture-crop
-Version: 2.0.0
-Summary: Capture Intel RealSense D435 color/depth frames, crop them in a browser before saving, maintain reusable negative libraries, and write MacRobot dataset metadata.
-Maintainer: MacRobot
-Maintainer-email: macrobot@example.com
-License: Apache-2.0

@@ -30,10 +30,9 @@ class AnalyticValidator:
         self.mapping = mapping
 
     def validate(self, q: Q) -> ValidationResult:
-        q1, q2, q3 = (float(v) for v in q)
-        if not all(math.isfinite(v) for v in (q1, q2, q3)):
+        q1, q2, q3 = (float(value) for value in q)
+        if not all(math.isfinite(value) for value in (q1, q2, q3)):
             return ValidationResult(False, "non_finite_joint_value")
-
         limits = self.mapping.logical_limits
         if not (limits.q1_min <= q1 <= limits.q1_max):
             return ValidationResult(False, "q1_logical_limit", {"q1": q1})
@@ -41,19 +40,6 @@ class AnalyticValidator:
             return ValidationResult(False, "q2_logical_limit", {"q2": q2})
         if not (limits.q3_min <= q3 <= limits.q3_max):
             return ValidationResult(False, "q3_logical_limit", {"q3": q3})
-
-        rear_lift_angle = q1 + q2
-        if not (limits.tool_pitch_min <= rear_lift_angle <= limits.tool_pitch_max):
-            return ValidationResult(
-                False, "rear_lift_angle_limit", {"rear_lift_angle": rear_lift_angle}
-            )
-        toggle_bound = math.pi / 2.0 - limits.four_bar_margin_rad
-        if abs(q2) > toggle_bound:
-            return ValidationResult(
-                False,
-                "four_bar_toggle_margin",
-                {"q2": q2, "allowed_abs_max": toggle_bound},
-            )
 
         servo_ok, servo_reason = self.mapping.command_limits_ok(q1, q2, q3)
         commands = self.mapping.servo_commands_deg(q1, q2, q3)
@@ -63,11 +49,13 @@ class AnalyticValidator:
             True,
             "safe",
             {
-                "rear_lift_angle": rear_lift_angle,
+                "model_type": "serial_2r",
+                "wrist_joint": q2,
                 "servo_deg": commands,
                 "servo_pulse_us": self.mapping.servo_pulses_us(q1, q2, q3),
             },
         )
+
 
 
 class SafeRegionGrid:

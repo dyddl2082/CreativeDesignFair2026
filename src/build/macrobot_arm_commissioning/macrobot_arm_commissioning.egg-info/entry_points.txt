@@ -1,5 +1,0 @@
-[console_scripts]
-apply_report_recommendations = macrobot_arm_commissioning.apply_report:main
-commissioning_cli = macrobot_arm_commissioning.commissioning_cli:main
-commissioning_report_summary = macrobot_arm_commissioning.report_summary:main
-primitive_executor_node = macrobot_arm_commissioning.primitive_executor_node:main

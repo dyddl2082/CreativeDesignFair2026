@@ -1,3 +1,0 @@
-[console_scripts]
-ik_validator_node = macrobot_arm_control.ik_validator_node:main
-servo_bridge_node = macrobot_arm_control.servo_bridge_node:main

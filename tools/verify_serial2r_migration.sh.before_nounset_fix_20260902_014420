@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+WS="${1:-$HOME/MacRobot}"
+SRC="$WS/src"
+
+if [[ ! -d "$SRC/macrobot_description" ]]; then
+  echo "ERROR: macrobot_description not found under $SRC" >&2
+  exit 1
+fi
+
+if [[ -f /opt/ros/jazzy/setup.bash ]]; then
+  # shellcheck disable=SC1091
+  source /opt/ros/jazzy/setup.bash
+fi
+if [[ -f "$WS/install/setup.bash" ]]; then
+  # shellcheck disable=SC1091
+  source "$WS/install/setup.bash"
+fi
+
+echo "[1/5] description validator"
+python3 "$SRC/macrobot_description/scripts/validate_description.py" \
+  "$SRC/macrobot_description"
+
+echo "[2/5] Python syntax"
+python3 - "$SRC" <<'PY'
+from pathlib import Path
+import sys
+
+src = Path(sys.argv[1])
+packages = (
+    src / "macrobot_arm_kinematics",
+    src / "macrobot_arm_control",
+    src / "macrobot_arm_commissioning",
+)
+count = 0
+for package in packages:
+    if not package.exists():
+        continue
+    for path in package.rglob("*.py"):
+        source = path.read_text(encoding="utf-8")
+        compile(source, str(path), "exec")
+        count += 1
+print(f"Compiled {count} Python source files.")
+PY
+
+echo "[3/5] active legacy-behaviour scan"
+python3 - "$SRC" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+root = Path(sys.argv[1])
+patterns = {
+    "rear_lift=q1+q2": re.compile(r"\brear_lift_angle\s*=\s*q1\s*\+\s*q2\b"),
+    "Python wrist servo q1+q2": re.compile(r"model_angle_to_command_deg\(\s*q1\s*\+\s*q2\s*\)"),
+    "C++ wrist servo q1+q2": re.compile(r"tilt_multiplier_\s*\*\s*\(\s*q1\s*\+\s*q2\s*\)"),
+    "legacy MoveIt arm mapping": re.compile(
+        r"setVariablePosition\(\s*[\"'](?:servo_left_gear_joint|servo_right_gear_joint|"
+        r"ratio_left_gear_joint|ratio_right_gear_joint|ratio_left_gear_back_link_joint|"
+        r"back_link_top_link_joint)[\"']"
+    ),
+    "four-bar operator check": re.compile(r"[\"']four_bar_parallelogram_maintained[\"']"),
+    "enabled four-bar config": re.compile(r"\bfour_bar_enabled\s*:\s*(?:true|True|1)\b"),
+}
+findings = []
+for path in root.rglob('*'):
+    if not path.is_file() or path.suffix not in {'.py', '.cpp', '.hpp', '.h', '.yaml', '.yml'}:
+        continue
+    if any(part in {'docs', 'urdf', 'original', 'build', 'install', 'backup', 'log'} for part in path.parts):
+        continue
+    try:
+        lines = path.read_text(encoding='utf-8').splitlines()
+    except UnicodeDecodeError:
+        continue
+    for line_number, line in enumerate(lines, 1):
+        for name, pattern in patterns.items():
+            if pattern.search(line):
+                findings.append((path, line_number, name, line.strip()))
+if findings:
+    for path, line_number, name, text in findings:
+        print(f"ERROR {path}:{line_number}: {name}: {text}")
+    raise SystemExit(2)
+print("No executable four-bar mapping remains.")
+PY
+
+echo "[4/5] focused unit tests"
+export PYTHONPATH="$SRC/macrobot_arm_kinematics:$SRC/macrobot_arm_control:$SRC/macrobot_arm_commissioning${PYTHONPATH:+:$PYTHONPATH}"
+# ROS 2 environments can auto-load pytest plugins that start discovery or ROS
+# fixtures and make these pure unit tests wait indefinitely.  Disable external
+# plugin autoload so only the package tests are executed.
+export PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
+for package in \
+  macrobot_arm_kinematics \
+  macrobot_arm_control \
+  macrobot_arm_commissioning
+do
+  test_dir="$SRC/$package/test"
+  if [[ -d "$test_dir" ]]; then
+    echo "  - $package"
+    timeout --kill-after=5s 60s python3 -m pytest -q "$test_dir"
+  fi
+done
+
+echo "[5/5] migration report"
+if [[ -f "$WS/four_bar_to_serial2r_report.json" ]]; then
+  python3 - "$WS/four_bar_to_serial2r_report.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+report = json.loads(path.read_text(encoding='utf-8'))
+print('model_revision:', report.get('model_revision'))
+print('source_urdf:', report.get('source_urdf'))
+print('axis_alignment:', report.get('axis_alignment'))
+print('zero_grasp_xyz:', report.get('zero_grasp_xyz'))
+print('gripper_servo_mimic:', report.get('gripper_mimics', {}).get('gripper_servo_joint'))
+if report.get('static_errors'):
+    raise SystemExit('report contains static errors')
+if report.get('unresolved_legacy_runtime_references'):
+    raise SystemExit('report contains unresolved legacy runtime references')
+PY
+else
+  echo "WARNING: $WS/four_bar_to_serial2r_report.json does not exist"
+fi
+
+echo
+cat <<'MSG'
+Static migration checks passed.
+This does not replace MoveIt collision regeneration, safe-region regeneration,
+servo calibration, or low-speed physical validation.
+MSG

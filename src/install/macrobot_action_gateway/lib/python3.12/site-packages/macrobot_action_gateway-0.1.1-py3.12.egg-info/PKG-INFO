@@ -1,8 +1,0 @@
-Metadata-Version: 2.1
-Name: macrobot-action-gateway
-Version: 0.1.1
-Summary: Robot Action Gateway for MacRobot LLM API v0.2 with confirmed stored find-align-pick cancellation.
-Maintainer: Kim Jinhyeong
-Maintainer-email: dyddl2082@snu.ac.kr
-License: MIT
-License-File: LICENSE

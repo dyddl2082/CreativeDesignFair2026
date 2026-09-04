@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import math
-from typing import Dict
+from typing import Dict, Tuple
 
 import rclpy
-from geometry_msgs.msg import PoseStamped, Quaternion, TransformStamped
+from geometry_msgs.msg import PoseStamped, TransformStamped
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64
@@ -12,217 +12,170 @@ from tf2_ros import TransformBroadcaster
 
 from .model import ArmGeometry, JointLimits, MacRobotArmModel
 
+MIMIC_MAP = {
+    'clamp_left_addition_joint': ('gripper_joint', 1, 0),
+    'clamp_right_addition_joint': ('gripper_joint', -1, 0),
+    'gripper_left_addition_joint': ('gripper_joint', -1, 0),
+    'gripper_left_gear_joint': ('gripper_joint', -1, 0),
+    'gripper_right_addition_joint': ('gripper_joint', 1, 0),
+    'gripper_right_gear_joint': ('gripper_joint', 1, 0),
+    'gripper_servo_joint': ('gripper_joint', 2, 0),
+}
+WHEEL_JOINTS = ['front_left_wheel_joint', 'back_left_wheel_joint', 'front_right_wheel_joint', 'back_right_wheel_joint']
 
-def quaternion_from_pitch(pitch: float) -> Quaternion:
-    q = Quaternion()
-    q.x = 0.0
-    q.y = math.sin(pitch / 2.0)
-    q.z = 0.0
-    q.w = math.cos(pitch / 2.0)
-    return q
+
+def _vector_parameter(node: Node, name: str) -> Tuple[float, float, float]:
+    values = tuple(float(value) for value in node.get_parameter(name).value)
+    if len(values) != 3:
+        raise ValueError(f"{name} must contain three numbers")
+    return values  # type: ignore[return-value]
 
 
 class LinkageStateNode(Node):
-    """Map corrected physical logical coordinates to the full Fusion visual joints.
-
-    The node can also run in a pose-only mode for the reduced kinematic model:
-    set ``publish_full_joint_states:=false`` and subscribe its logical input to
-    ``/joint_states`` from joint_state_publisher_gui.
-    """
+    """Publish serial-2R logical state, exact tool pose, and gripper mimics."""
 
     def __init__(self) -> None:
-        super().__init__('macrobot_linkage_state_node')
-
-        self.declare_parameter('base_frame', 'base_link')
-        self.declare_parameter('tool_frame', 'grasp_frame')
-        self.declare_parameter('logical_state_topic', '/macrobot/arm/logical_joint_states')
-        self.declare_parameter('full_joint_state_topic', '/joint_states')
-        self.declare_parameter('tool_pose_topic', '/macrobot/arm/tool_pose')
-        self.declare_parameter('gripper_gap_topic', '/macrobot/gripper/gap')
-        self.declare_parameter('publish_full_joint_states', True)
-        self.declare_parameter('publish_rate', 30.0)
-
-        self.declare_parameter('pivot_x', 0.02095)
-        self.declare_parameter('pivot_y', 0.06340)
-        self.declare_parameter('pivot_z', 0.064595)
-        self.declare_parameter('main_link_length', 0.10000)
-        self.declare_parameter('tool_offset_x', -0.184756)
-        self.declare_parameter('tool_offset_z', -0.006000)
-        self.declare_parameter('tool_y', 0.064500)
-        self.declare_parameter('gripper_link_length', 0.03000)
-        self.declare_parameter('gripper_base_separation', 0.01000)
-
-        self.declare_parameter('arm_lift_min', -1.0)
-        self.declare_parameter('arm_lift_max', 1.0)
-        self.declare_parameter('wrist_pitch_min', -1.30)
-        self.declare_parameter('wrist_pitch_max', 1.30)
-        self.declare_parameter('tool_pitch_min', -2.0)
-        self.declare_parameter('tool_pitch_max', 2.0)
-        self.declare_parameter('four_bar_margin', math.radians(10.0))
-        self.declare_parameter('gripper_min', 0.0)
-        self.declare_parameter('gripper_max', math.pi / 2.0)
-
-        self.declare_parameter('lift_servo_joint', 'servo_left_gear_joint')
-        self.declare_parameter('tilt_servo_joint', 'servo_right_gear_joint')
-        self.declare_parameter('lift_ratio_joint', 'ratio_left_gear_joint')
-        self.declare_parameter('tilt_ratio_joint', 'ratio_right_gear_joint')
-        self.declare_parameter('rear_passive_joint', 'ratio_left_gear_back_link_joint')
-        self.declare_parameter('top_passive_joint', 'back_link_top_link_joint')
-        self.declare_parameter('lift_servo_multiplier', 2.0)
-        self.declare_parameter('tilt_servo_multiplier', -2.0)
-
-        self.declare_parameter('gripper_servo_joint', 'gripper_servo_joint')
-        self.declare_parameter('gripper_left_gear_joint', 'gripper_left_gear_joint')
-        self.declare_parameter('gripper_right_gear_joint', 'gripper_right_gear_joint')
-        self.declare_parameter('gripper_left_addition_joint', 'gripper_left_addition_joint')
-        self.declare_parameter('gripper_right_addition_joint', 'gripper_right_addition_joint')
-        self.declare_parameter('gripper_left_clamp_joint', 'clamp_left_addition_joint')
-        self.declare_parameter('gripper_right_clamp_joint', 'clamp_right_addition_joint')
-        self.declare_parameter('gripper_servo_multiplier', -2.0)
+        super().__init__("macrobot_linkage_state_node")
+        self.declare_parameter("model_revision", 'macrobot-serial-2axis-2026-09-01-r3')
+        self.declare_parameter("base_frame", "base_link")
+        self.declare_parameter("tool_frame", "grasp_frame")
+        self.declare_parameter("logical_state_topic", "/macrobot/arm/logical_joint_states")
+        self.declare_parameter("full_joint_state_topic", "/joint_states")
+        self.declare_parameter("tool_pose_topic", "/macrobot/arm/tool_pose")
+        self.declare_parameter("gripper_gap_topic", "/macrobot/gripper/gap")
+        self.declare_parameter("publish_full_joint_states", True)
+        self.declare_parameter("publish_mimic_joint_states", True)
+        self.declare_parameter("publish_rate", 30.0)
+        self.declare_parameter('shoulder_origin_xyz', [0.03, 0.0937, 0.0579])
+        self.declare_parameter('shoulder_origin_rpy', [-1.662703, -1.570796, -3.049686])
+        self.declare_parameter('shoulder_axis', [-0.0, 0.0, -1.0])
+        self.declare_parameter('wrist_origin_xyz', [0.161, 0.0004, 0.0])
+        self.declare_parameter('wrist_origin_rpy', [-0.0, -1.570796, 0.0])
+        self.declare_parameter('wrist_axis', [-1.0, 0.0, 0.0])
+        self.declare_parameter('grasp_origin_xyz', [0.013, 0.218151, -0.008098])
+        self.declare_parameter('grasp_origin_rpy', [0.0, 0.0, 0.0])
+        self.declare_parameter("arm_lift_min", -1)
+        self.declare_parameter("arm_lift_max", 1)
+        self.declare_parameter("wrist_pitch_min", -1.3)
+        self.declare_parameter("wrist_pitch_max", 1.3)
+        self.declare_parameter("gripper_min", 0)
+        self.declare_parameter("gripper_max", 1.5707963268)
+        self.declare_parameter("gripper_open_gap_m", 0.070)
+        self.declare_parameter("gripper_closed_gap_m", 0.010)
+        self.declare_parameter("max_plane_error_m", 0.030)
 
         geometry = ArmGeometry(
-            pivot_x=float(self.get_parameter('pivot_x').value),
-            pivot_y=float(self.get_parameter('pivot_y').value),
-            pivot_z=float(self.get_parameter('pivot_z').value),
-            main_link_length=float(self.get_parameter('main_link_length').value),
-            tool_offset_x=float(self.get_parameter('tool_offset_x').value),
-            tool_offset_z=float(self.get_parameter('tool_offset_z').value),
-            tool_y=float(self.get_parameter('tool_y').value),
-            gripper_link_length=float(self.get_parameter('gripper_link_length').value),
-            gripper_base_separation=float(self.get_parameter('gripper_base_separation').value),
+            shoulder_origin_xyz=_vector_parameter(self, "shoulder_origin_xyz"),
+            shoulder_origin_rpy=_vector_parameter(self, "shoulder_origin_rpy"),
+            shoulder_axis=_vector_parameter(self, "shoulder_axis"),
+            wrist_origin_xyz=_vector_parameter(self, "wrist_origin_xyz"),
+            wrist_origin_rpy=_vector_parameter(self, "wrist_origin_rpy"),
+            wrist_axis=_vector_parameter(self, "wrist_axis"),
+            grasp_origin_xyz=_vector_parameter(self, "grasp_origin_xyz"),
+            grasp_origin_rpy=_vector_parameter(self, "grasp_origin_rpy"),
+            gripper_open_gap_m=float(self.get_parameter("gripper_open_gap_m").value),
+            gripper_closed_gap_m=float(self.get_parameter("gripper_closed_gap_m").value),
         )
         limits = JointLimits(
-            arm_lift_min=float(self.get_parameter('arm_lift_min').value),
-            arm_lift_max=float(self.get_parameter('arm_lift_max').value),
-            wrist_pitch_min=float(self.get_parameter('wrist_pitch_min').value),
-            wrist_pitch_max=float(self.get_parameter('wrist_pitch_max').value),
-            tool_pitch_min=float(self.get_parameter('tool_pitch_min').value),
-            tool_pitch_max=float(self.get_parameter('tool_pitch_max').value),
-            four_bar_margin=float(self.get_parameter('four_bar_margin').value),
-            gripper_min=float(self.get_parameter('gripper_min').value),
-            gripper_max=float(self.get_parameter('gripper_max').value),
+            arm_lift_min=float(self.get_parameter("arm_lift_min").value),
+            arm_lift_max=float(self.get_parameter("arm_lift_max").value),
+            wrist_pitch_min=float(self.get_parameter("wrist_pitch_min").value),
+            wrist_pitch_max=float(self.get_parameter("wrist_pitch_max").value),
+            gripper_min=float(self.get_parameter("gripper_min").value),
+            gripper_max=float(self.get_parameter("gripper_max").value),
         )
-        self.model = MacRobotArmModel(geometry, limits)
-        self.base_frame = str(self.get_parameter('base_frame').value)
-        self.tool_frame = str(self.get_parameter('tool_frame').value)
-        self.publish_full = bool(self.get_parameter('publish_full_joint_states').value)
-        self.lift_servo_multiplier = float(self.get_parameter('lift_servo_multiplier').value)
-        self.tilt_servo_multiplier = float(self.get_parameter('tilt_servo_multiplier').value)
-        self.gripper_servo_multiplier = float(
-            self.get_parameter('gripper_servo_multiplier').value
+        self.model = MacRobotArmModel(
+            geometry,
+            limits,
+            max_plane_error_m=float(self.get_parameter("max_plane_error_m").value),
         )
-
-        self.full_names = {
-            'lift_servo': str(self.get_parameter('lift_servo_joint').value),
-            'tilt_servo': str(self.get_parameter('tilt_servo_joint').value),
-            'lift_ratio': str(self.get_parameter('lift_ratio_joint').value),
-            'tilt_ratio': str(self.get_parameter('tilt_ratio_joint').value),
-            'rear_passive': str(self.get_parameter('rear_passive_joint').value),
-            'top_passive': str(self.get_parameter('top_passive_joint').value),
-            'gripper_servo': str(self.get_parameter('gripper_servo_joint').value),
-            'gripper_left_gear': str(self.get_parameter('gripper_left_gear_joint').value),
-            'gripper_right_gear': str(self.get_parameter('gripper_right_gear_joint').value),
-            'gripper_left_addition': str(
-                self.get_parameter('gripper_left_addition_joint').value
-            ),
-            'gripper_right_addition': str(
-                self.get_parameter('gripper_right_addition_joint').value
-            ),
-            'gripper_left_clamp': str(self.get_parameter('gripper_left_clamp_joint').value),
-            'gripper_right_clamp': str(
-                self.get_parameter('gripper_right_clamp_joint').value
-            ),
-        }
-        self.wheel_names = [
-            'front_left_wheel_joint',
-            'back_left_wheel_joint',
-            'front_right_wheel_joint',
-            'back_right_wheel_joint',
-        ]
-
+        self.base_frame = str(self.get_parameter("base_frame").value)
+        self.tool_frame = str(self.get_parameter("tool_frame").value)
+        self.publish_full = bool(self.get_parameter("publish_full_joint_states").value)
+        self.publish_mimics = bool(self.get_parameter("publish_mimic_joint_states").value)
         self.q1 = 0.0
         self.q2 = 0.0
         self.q3 = 0.0
 
-        logical_topic = str(self.get_parameter('logical_state_topic').value)
-        full_topic = str(self.get_parameter('full_joint_state_topic').value)
-        tool_topic = str(self.get_parameter('tool_pose_topic').value)
-        gap_topic = str(self.get_parameter('gripper_gap_topic').value)
-
+        logical_topic = str(self.get_parameter("logical_state_topic").value)
+        full_topic = str(self.get_parameter("full_joint_state_topic").value)
         self.create_subscription(JointState, logical_topic, self.logical_callback, 10)
-        self.joint_pub = (
-            self.create_publisher(JointState, full_topic, 10) if self.publish_full else None
+        self.joint_pub = self.create_publisher(JointState, full_topic, 10) if self.publish_full else None
+        self.tool_pub = self.create_publisher(
+            PoseStamped, str(self.get_parameter("tool_pose_topic").value), 10
         )
-        self.tool_pub = self.create_publisher(PoseStamped, tool_topic, 10)
-        self.gap_pub = self.create_publisher(Float64, gap_topic, 10)
+        self.gap_pub = self.create_publisher(
+            Float64, str(self.get_parameter("gripper_gap_topic").value), 10
+        )
         self.tf_broadcaster = TransformBroadcaster(self)
-
-        rate = max(1.0, float(self.get_parameter('publish_rate').value))
+        rate = max(1.0, float(self.get_parameter("publish_rate").value))
         self.create_timer(1.0 / rate, self.publish_state)
-
         self.get_logger().info(
-            'Linkage mapper ready: logical=%s, full_joint_states=%s, grasp_frame=%s'
-            % (logical_topic, self.publish_full, self.tool_frame)
+            f"Serial-2R state publisher ready; revision={self.get_parameter('model_revision').value}"
         )
 
     def logical_callback(self, msg: JointState) -> None:
         values: Dict[str, float] = dict(zip(msg.name, msg.position))
-        q1 = values.get('arm_lift_joint', self.q1)
-        q2 = values.get('wrist_pitch_joint', self.q2)
-        q3 = values.get('gripper_joint', self.q3)
-        if not self.model.limits.contains(q1, q2, q3):
+        candidate = (
+            float(values.get("arm_lift_joint", self.q1)),
+            float(values.get("wrist_pitch_joint", self.q2)),
+            float(values.get("gripper_joint", self.q3)),
+        )
+        if not all(math.isfinite(value) for value in candidate):
+            self.get_logger().warning("Rejected non-finite logical joint state")
+            return
+        if not self.model.limits.contains(*candidate):
             self.get_logger().warning(
-                f'Rejected logical state outside constraints: '
-                f'q1={q1:.3f}, q2={q2:.3f}, q3={q3:.3f}'
+                f"Rejected logical state outside limits: q={candidate}"
             )
             return
-        self.q1 = q1
-        self.q2 = q2
-        self.q3 = q3
+        self.q1, self.q2, self.q3 = candidate
+
+    @staticmethod
+    def _resolved_joint_positions(q1: float, q2: float, q3: float) -> Dict[str, float]:
+        resolved: Dict[str, float] = {
+            "arm_lift_joint": q1,
+            "wrist_pitch_joint": q2,
+            "gripper_joint": q3,
+        }
+        pending = dict(MIMIC_MAP)
+        while pending:
+            progressed = False
+            for child, (master, multiplier, offset) in list(pending.items()):
+                if master not in resolved:
+                    continue
+                resolved[child] = multiplier * resolved[master] + offset
+                del pending[child]
+                progressed = True
+            if not progressed:
+                break
+        return resolved
 
     def publish_state(self) -> None:
         now = self.get_clock().now().to_msg()
-
         if self.joint_pub is not None:
-            mapped = self.model.full_visual_joint_positions(
-                self.q1,
-                self.q2,
-                self.q3,
-                self.lift_servo_multiplier,
-                self.tilt_servo_multiplier,
-                self.gripper_servo_multiplier,
-            )
-            order = (
-                'lift_servo',
-                'tilt_servo',
-                'lift_ratio',
-                'tilt_ratio',
-                'rear_passive',
-                'top_passive',
-                'gripper_servo',
-                'gripper_left_gear',
-                'gripper_right_gear',
-                'gripper_left_addition',
-                'gripper_right_addition',
-                'gripper_left_clamp',
-                'gripper_right_clamp',
-            )
+            positions = self._resolved_joint_positions(self.q1, self.q2, self.q3)
+            names = ["arm_lift_joint", "wrist_pitch_joint", "gripper_joint"]
+            if self.publish_mimics:
+                names.extend(name for name in sorted(MIMIC_MAP) if name not in names)
+            names.extend(name for name in WHEEL_JOINTS if name not in names)
             msg = JointState()
             msg.header.stamp = now
-            msg.name = [self.full_names[key] for key in order] + self.wheel_names
-            msg.position = [mapped[key] for key in order] + [0.0] * len(self.wheel_names)
+            msg.name = names
+            msg.position = [positions.get(name, 0.0) for name in names]
             self.joint_pub.publish(msg)
 
         pose = self.model.forward(self.q1, self.q2, self.q3)
-        orientation = quaternion_from_pitch(pose.pitch)
-
         pmsg = PoseStamped()
         pmsg.header.stamp = now
         pmsg.header.frame_id = self.base_frame
         pmsg.pose.position.x = pose.x
         pmsg.pose.position.y = pose.y
         pmsg.pose.position.z = pose.z
-        pmsg.pose.orientation = orientation
+        pmsg.pose.orientation.x = pose.qx
+        pmsg.pose.orientation.y = pose.qy
+        pmsg.pose.orientation.z = pose.qz
+        pmsg.pose.orientation.w = pose.qw
         self.tool_pub.publish(pmsg)
 
         transform = TransformStamped()
@@ -232,7 +185,7 @@ class LinkageStateNode(Node):
         transform.transform.translation.x = pose.x
         transform.transform.translation.y = pose.y
         transform.transform.translation.z = pose.z
-        transform.transform.rotation = orientation
+        transform.transform.rotation = pmsg.pose.orientation
         self.tf_broadcaster.sendTransform(transform)
 
         gap = Float64()

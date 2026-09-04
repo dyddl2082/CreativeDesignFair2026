@@ -18,7 +18,7 @@ MacRobot corrected-direction arm smoke test
 ============================================================
 Physical conventions:
 - CH0 left MG996R: CCW -> arm tilts forward
-- CH1 right MG996R: CW -> rear linkage rises
+- CH1 right MG996R: CW -> independent second arm joint moves
 - CH2 MG90S: 0 deg/open, CCW 180 deg/closed
 - Pulse calibration: 0/90/180 deg = 500/1500/2500 us
 
@@ -37,14 +37,13 @@ send_command "SERVO_STATE?" 0.5
 read -r -p "HOME/OPEN (1500,1500,500)을 보내려면 Enter: "
 send_command "ARM_US 1500 1500 500" 2.0
 
-# q1=+0.15: left servo CCW (+17.19deg), rear absolute angle also +0.15
-# so right servo turns CW (-17.19deg).
+# q1=+0.15: only the first arm servo moves; q2 remains zero.
 read -r -p "q1 +0.15: 팔 앞쪽 기울기 시험을 하려면 Enter: "
-send_command "ARM_US 1691 1309 500" 2.0
+send_command "ARM_US 1691 1500 500" 2.0
 send_command "ARM_US 1500 1500 500" 2.0
 
-# q2=+0.15 with q1=0: pure relative rear lift; right servo CW.
-read -r -p "q2 +0.15: 뒤쪽 높이 상승 시험을 하려면 Enter: "
+# q2=+0.15 with q1=0: the independent second servo turns CW.
+read -r -p "q2 +0.15: 두 번째 직렬 관절 시험을 하려면 Enter: "
 send_command "ARM_US 1500 1309 500" 2.0
 send_command "ARM_US 1500 1500 500" 2.0
 

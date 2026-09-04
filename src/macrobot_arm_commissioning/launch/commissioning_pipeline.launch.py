@@ -31,24 +31,33 @@ def generate_launch_description():
         DeclareLaunchArgument("require_safe_region", default_value="true"),
         DeclareLaunchArgument("safe_region_csv", default_value=""),
         DeclareLaunchArgument(
-            "actuator_limits_file",
-            default_value=str(default_actuator_file),
+            "actuator_limits_file", default_value=str(default_actuator_file)
         ),
-        DeclareLaunchArgument("start_rviz", default_value="true"),
+        DeclareLaunchArgument("start_rviz", default_value="false"),
         DeclareLaunchArgument("start_pico_debug", default_value="false"),
         DeclareLaunchArgument("serial_port", default_value="/dev/ttyACM0"),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
-                str(description_pkg / "launch" / "display_full.launch.py")
+                str(description_pkg / "launch" / "runtime_description.launch.py")
             ),
-            launch_arguments={
-                "use_sim_time": "false",
-                "auto_apply_ik": "false",
-                "start_rviz": start_rviz,
-            }.items(),
+            launch_arguments={"use_sim_time": "false"}.items(),
         ),
-
+        Node(
+            package="macrobot_arm_kinematics",
+            executable="linkage_state_node",
+            name="macrobot_serial2r_state_node",
+            output="screen",
+            parameters=[str(description_pkg / "config" / "kinematics.yaml")],
+        ),
+        Node(
+            package="rviz2",
+            executable="rviz2",
+            name="rviz2",
+            arguments=["-d", str(description_pkg / "rviz" / "display.rviz")],
+            condition=IfCondition(start_rviz),
+            output="screen",
+        ),
         Node(
             package="pico_debug",
             executable="pico_debug_node",
@@ -62,7 +71,6 @@ def generate_launch_description():
                 "send_stop_on_shutdown": True,
             }],
         ),
-
         Node(
             package="macrobot_arm_control",
             executable="ik_validator_node",
@@ -80,7 +88,6 @@ def generate_launch_description():
                 },
             ],
         ),
-
         Node(
             package="macrobot_arm_control",
             executable="servo_bridge_node",

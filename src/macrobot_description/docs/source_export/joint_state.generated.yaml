@@ -1,0 +1,35 @@
+# Joint configuration for joint_state_publisher_gui
+
+joint_state_publisher:
+  ros__parameters:
+    # Joint names and default positions
+    zeros:
+      back_left_wheel_joint: 0.0
+      back_right_wheel_joint: 0.0
+      clamp_left_addition_joint: 0.0
+      clamp_right_addition_joint: 0.0
+      front_left_wheel_joint: 0.0
+      front_right_wheel_joint: 0.0
+      gripper_joint: 0.0
+      gripper_left_addition_joint: 0.0
+      gripper_left_gear_joint: 0.0
+      gripper_right_addition_joint: 0.0
+      gripper_right_gear_joint: 0.0
+      gripper_servo_joint: 0.0
+      robot_arm_joint: 0.0
+
+    # Joints to publish
+    source_list:
+      - back_left_wheel_joint
+      - back_right_wheel_joint
+      - clamp_left_addition_joint
+      - clamp_right_addition_joint
+      - front_left_wheel_joint
+      - front_right_wheel_joint
+      - gripper_joint
+      - gripper_left_addition_joint
+      - gripper_left_gear_joint
+      - gripper_right_addition_joint
+      - gripper_right_gear_joint
+      - gripper_servo_joint
+      - robot_arm_joint

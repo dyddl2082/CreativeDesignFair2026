@@ -17,9 +17,8 @@ from std_srvs.srv import Trigger
 from visualization_msgs.msg import Marker, MarkerArray
 import yaml
 
-from macrobot_arm_kinematics.model import ArmGeometry
-
-from .grasp_frame_fit import GeometryReference, fit_grasp_frame
+from .grasp_frame_fit import fit_grasp_frame
+from .serial2r_model_config import build_arm_model
 from .planner import DetectionSample, StablePointFilter
 from .teach_core import (
     PROFILE_STAGES,
@@ -164,19 +163,7 @@ class CameraTeachNode(Node):
             .expanduser()
             .resolve()
         )
-        self.geometry = ArmGeometry(
-            pivot_x=float(params.get("pivot_x", 0.02095)),
-            pivot_y=float(params.get("pivot_y", 0.06340)),
-            pivot_z=float(params.get("pivot_z", 0.064595)),
-            main_link_length=float(params.get("main_link_length", 0.10000)),
-            tool_offset_x=float(params.get("tool_offset_x", -0.184756)),
-            tool_offset_z=float(params.get("tool_offset_z", -0.006000)),
-            tool_y=float(params.get("tool_y", 0.064500)),
-            gripper_link_length=float(params.get("gripper_link_length", 0.03000)),
-            gripper_base_separation=float(
-                params.get("gripper_base_separation", 0.01000)
-            ),
-        )
+        self.arm_model = build_arm_model(params)
 
         self.status_pub = self.create_publisher(
             String, str(self.get_parameter("status_topic").value), 20
@@ -531,38 +518,30 @@ class CameraTeachNode(Node):
     ) -> None:
         if len(self.grasp_samples) < 3:
             raise ValueError("at least three camera-aligned samples are required")
-        reference = GeometryReference(
-            pivot_x=self.geometry.pivot_x,
-            pivot_z=self.geometry.pivot_z,
-            main_link_length=self.geometry.main_link_length,
-        )
         fit_samples = [
             {key: value for key, value in sample.items() if value is not None}
             for sample in self.grasp_samples
         ]
-        fitted = fit_grasp_frame(fit_samples, reference)
-        recommended = {
-            key: fitted[key]
-            for key in (
-                "tool_offset_x",
-                "tool_offset_z",
-                "gripper_link_length",
-                "gripper_base_separation",
-            )
-            if key in fitted
-        }
+        fitted = fit_grasp_frame(fit_samples, model=self.arm_model)
+        recommended = {"grasp_origin_xyz": fitted["grasp_origin_xyz"]}
+        for key in ("gripper_open_gap_m", "gripper_closed_gap_m"):
+            if key in fitted:
+                recommended[key] = fitted[key]
+
         self.report.complete_section(
             "grasp_frame_calibration",
             {
                 "source": "camera_arm_teach",
+                "model_type": "serial_2r",
                 "measurement_method": "camera_locked_calibration_target",
-                "reference_geometry": reference.__dict__,
                 "samples": list(self.grasp_samples),
                 "fit": fitted,
+                "recommended_description_parameters": recommended,
                 "recommended_kinematics_parameters": recommended,
                 "warning": (
                     "This fit includes camera extrinsic and object-centre error. "
-                    "Use a small fixed calibration target and verify in RViz before applying."
+                    "Apply grasp_origin_xyz to the URDF and kinematics.yaml together, "
+                    "then regenerate MoveIt collision data and safe-region outputs."
                 ),
             },
         )
@@ -570,7 +549,12 @@ class CameraTeachNode(Node):
         recommendation_file.parent.mkdir(parents=True, exist_ok=True)
         with recommendation_file.open("w", encoding="utf-8") as stream:
             yaml.safe_dump(
-                {"recommended_kinematics_parameters": recommended, "fit": fitted},
+                {
+                    "model_type": "serial_2r",
+                    "recommended_description_parameters": recommended,
+                    "recommended_kinematics_parameters": recommended,
+                    "fit": fitted,
+                },
                 stream,
                 allow_unicode=True,
                 sort_keys=False,
@@ -578,6 +562,7 @@ class CameraTeachNode(Node):
         self._result(
             command_id,
             "grasp_frame_fit_completed",
+            recommended_description_parameters=recommended,
             recommended_kinematics_parameters=recommended,
             fit=fitted,
             recommendation_file=str(recommendation_file),

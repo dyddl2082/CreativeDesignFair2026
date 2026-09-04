@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>macrobot_description</name>
-  <version>0.5.0</version>
-  <description>MacRobot descriptions with corrected detailed Fusion collision geometry, physical servo directions, D435F frame, and gripper.</description>
+  <version>0.8.0</version>
+  <description>Reviewed MacRobot description for the current serial two-axis arm, exact collision meshes, RGB-lens camera anchor, and logical gripper.</description>
   <maintainer email="dyddl2082@snu.ac.kr">Kim Jinhyeong</maintainer>
   <license>MIT</license>
 
@@ -15,7 +15,6 @@
   <exec_depend>joint_state_publisher_gui</exec_depend>
   <exec_depend>rviz2</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
-  <exec_depend>macrobot_arm_kinematics</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

@@ -1,0 +1,21 @@
+model_revision: macrobot-serial-2axis-2026-09-04-r4
+camera_link:
+  semantic: RGB lens center defined by the 1 mm CAD marker
+  parent: base_link
+  xyz_m:
+  - -0.03065000000000001
+  - 0.060623
+  - 0.025819999999999996
+  rpy_rad:
+  - 0.0
+  - 0.0
+  - 0.0
+runtime_contract:
+  internal_frame_publisher: macrobot_camera_tf
+  realsense_publish_tf: false
+  optical_frame_for_aligned_depth: camera_color_optical_frame
+  do_not_add_internal_realsense_frames_to_this_urdf: true
+compatibility:
+  base_to_camera_link_changed_from_r3: false
+  existing_rgb_anchor_calibration_file_may_be_retained: true
+  runtime_tf_still_requires_verification: true

@@ -51,8 +51,8 @@ def generate_launch_description():
                 str(safe_pkg / 'config' / 'actuator_limits.yaml'),
                 scan_config,
                 {
-                    'robot_model_mode': 'full_mapped',
-                    'model_revision': 'macrobot-collision-dae-v2-20260808',
+                    'robot_model_mode': 'serial_2r',
+                    'model_revision': 'macrobot-serial-2axis-2026-09-01-r3',
                     'output_directory': output_directory,
                 },
             ],

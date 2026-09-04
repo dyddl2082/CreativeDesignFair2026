@@ -1,3 +1,0 @@
-[console_scripts]
-object_finder_cli = macrobot_object_finder.object_finder_cli:main
-object_finder_node = macrobot_object_finder.object_finder_node:main

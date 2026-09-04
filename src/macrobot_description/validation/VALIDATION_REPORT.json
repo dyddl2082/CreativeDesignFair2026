@@ -1,0 +1,71 @@
+{
+  "model_revision": "macrobot-serial-2axis-2026-09-04-r4",
+  "source_archive": "macrobot_description(4).zip",
+  "link_count": 18,
+  "joint_count": 17,
+  "roots": [
+    "base_link"
+  ],
+  "shoulder_axis_base": [
+    1.9615306712239544e-08,
+    0.9999999999999997,
+    2.194398578627441e-08
+  ],
+  "wrist_axis_base_zero": [
+    1.9615413266101763e-08,
+    0.9999999999999535,
+    -3.048509107518476e-07
+  ],
+  "axis_alignment": 0.9999999999999468,
+  "zero_pose_grasp_nominal_xyz_base_m": [
+    -0.18190005573781895,
+    0.06300000309218803,
+    0.22699793699942175
+  ],
+  "gripper_servo_effective_vector_per_q3": [
+    -2.400000625001818e-13,
+    -6.928204132387454e-07,
+    -1.99999999999988
+  ],
+  "collision_triangle_counts": {
+    "back_left_wheel_collision.stl": 590,
+    "back_right_wheel_collision.stl": 590,
+    "base_link_collision.stl": 45174,
+    "camera_link_collision.stl": 416,
+    "front_left_wheel_collision.stl": 590,
+    "front_right_wheel_collision.stl": 590,
+    "gripper_clamp_left_collision.stl": 502,
+    "gripper_clamp_right_collision.stl": 502,
+    "gripper_left_addition_collision.stl": 1240,
+    "gripper_left_gear_collision.stl": 5232,
+    "gripper_link_collision.stl": 24199,
+    "gripper_right_addition_collision.stl": 1240,
+    "gripper_right_gear_collision.stl": 5204,
+    "gripper_servo_gear_collision.stl": 20836,
+    "robot_arm_link_collision.stl": 7879
+  },
+  "parsed_xml_files": [
+    "package.xml",
+    "urdf/assemblies/macrobot_2axis_full.urdf.xacro",
+    "urdf/assemblies/macrobot_full_exact_gripper.urdf.xacro",
+    "urdf/assemblies/macrobot_full_visual.urdf.xacro",
+    "urdf/macrobot.urdf.xacro",
+    "urdf/macrobot_arm_kinematic.urdf.xacro",
+    "urdf/macrobot_full_collision.urdf.xacro",
+    "urdf/macrobot_full_exact_gripper.urdf.xacro",
+    "urdf/macrobot_full_visual.urdf.xacro",
+    "urdf/original/fusion_export_assembly.urdf.xacro",
+    "urdf/original/fusion_export_macrobot.urdf.xacro"
+  ],
+  "compiled_launch_files": [
+    "launch/display.launch.py",
+    "launch/display_collision.launch.py",
+    "launch/display_full.launch.py",
+    "launch/display_full_exact_collision.launch.py",
+    "launch/display_kinematic.launch.py",
+    "launch/runtime_description.launch.py"
+  ],
+  "warnings": [],
+  "errors": [],
+  "passed": true
+}

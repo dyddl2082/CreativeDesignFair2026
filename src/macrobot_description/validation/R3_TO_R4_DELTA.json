@@ -1,0 +1,62 @@
+{
+  "previous_revision": "macrobot-serial-2axis-2026-09-01-r3",
+  "new_revision": "macrobot-serial-2axis-2026-09-04-r4",
+  "source_archive": "macrobot_description(4).zip",
+  "joint_changes": {
+    "shoulder_source_rpy_old": [
+      -1.662703,
+      -1.570796,
+      -2.882675
+    ],
+    "shoulder_source_rpy_new": [
+      -1.637996,
+      -1.570796,
+      -2.865406
+    ],
+    "shoulder_reviewed_rpy_new": [
+      -1.637996,
+      -1.570796,
+      -3.074393
+    ],
+    "wrist_origin_old_m": [
+      0.161,
+      0.0004,
+      0.0
+    ],
+    "wrist_origin_new_m": [
+      0.161,
+      0.0004,
+      0.01
+    ],
+    "gripper_servo_source_axis_changed": true,
+    "gripper_servo_reviewed_effective_direction_preserved": true
+  },
+  "grasp": {
+    "old_local_xyz_m": [
+      0.013,
+      0.218151,
+      -0.008098
+    ],
+    "new_local_xyz_m": [
+      0.0207,
+      0.2115,
+      -0.008098
+    ],
+    "old_zero_base_xyz_m": [
+      -0.18855105528212882,
+      0.08070000186168422,
+      0.22699793273850205
+    ],
+    "new_zero_base_xyz_m": [
+      -0.18190005573781895,
+      0.06300000309218803,
+      0.22699793699942175
+    ],
+    "zero_base_delta_m": [
+      0.006650999544309866,
+      -0.017699998769496184,
+      4.260919700405097e-09
+    ]
+  },
+  "camera_base_transform_changed": false
+}

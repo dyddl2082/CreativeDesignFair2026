@@ -1,60 +1,140 @@
+model_revision: macrobot-serial-2axis-2026-09-04-r4
+previous_model_revision: macrobot-serial-2axis-2026-09-01-r3
+source:
+  archive: macrobot_description(4).zip
+  cad: Fusion 360
+  exporter_version: 3.0.0
+  export_timestamp: '2026-09-04T14:55:53.683464'
+  total_mass_kg: 5.867
+  base_frame_policy: retain the established MacRobot base_link convention and wheel
+    contact z=0
+  base_rebase_delta_m:
+  - 0.360034
+  - 0.056971
+  - -0.117663
+review_corrections:
+  shoulder_plane:
+    source_rpy_rad:
+    - -1.637996
+    - -1.570796
+    - -2.865406
+    reviewed_rpy_rad:
+    - -1.637996
+    - -1.570796
+    - -3.074393
+    reason: remove unintended XY-plane yaw so both serial arm axes align with base_link
+      +Y
+    effective_axis_in_base:
+    - 1.9615306717495192e-08
+    - 0.9999999999999997
+    - 2.194398578627441e-08
+  gripper_servo_gear:
+    source_local_axis:
+    - 0.0
+    - 0.0
+    - -1.0
+    reviewed_local_axis:
+    - 0.0
+    - 0.0
+    - 1.0
+    mimic_multiplier: 2.0
+    reason: preserve the previously verified 1:2 external-gear direction; source export
+      flipped the local axis
+  camera_anchor:
+    frame: camera_link
+    meaning: center of the 1 mm CAD marker placed at the RGB lens
+    base_to_camera_link_xyz_m:
+    - -0.03065000000000001
+    - 0.060623
+    - 0.025819999999999996
+    base_to_camera_link_rpy_rad:
+    - 0.0
+    - 0.0
+    - 0.0
+    other_realsense_frames: published by macrobot_camera_tf from this anchor; not
+      duplicated in URDF
 logical_joints:
   arm_lift_joint:
-    legacy_name: true
-    recommended_label: arm_tilt
-    meaning: Left-servo arm tilt. Positive q1 tilts the arm toward robot front.
-    physical_actuator: left MG996R
-    servo_motion_for_positive: counterclockwise viewed from the output shaft
-    full_visual_driver: ratio_left_gear_joint
-    actuator_visual_joint: servo_left_gear_joint
-    actuator_to_driven_ratio: 2.0
-
+    source_export_joint: robot_arm_joint
+    coordinate: q1
+    positive_motion_near_zero: grasp point moves toward +base X and +base Z
+    origin_xyz_m:
+    - 0.03
+    - 0.0937
+    - 0.0579
+    origin_rpy_rad:
+    - -1.637996
+    - -1.570796
+    - -3.074393
+    axis_local:
+    - 0.0
+    - 0.0
+    - -1.0
+    axis_base:
+    - 1.9615306717495192e-08
+    - 0.9999999999999997
+    - 2.194398578627441e-08
   wrist_pitch_joint:
-    legacy_name: true
-    recommended_label: rear_lift_relative
-    meaning: Relative rear-height coordinate. Absolute right driven angle is q1+q2.
-    physical_actuator: right MG996R
-    servo_motion_for_positive_rear_lift: clockwise viewed from the output shaft
-    full_visual_driver: ratio_right_gear_joint
-    actuator_visual_joint: servo_right_gear_joint
-    actuator_to_absolute_rear_lift_ratio: -2.0
-
+    source_export_joint: gripper_joint
+    coordinate: q2
+    command_dependency: q2 only; never q1+q2
+    positive_motion_near_zero: grasp point moves primarily toward +base Z
+    origin_xyz_m:
+    - 0.161
+    - 0.0004
+    - 0.01
+    origin_rpy_rad:
+    - 0.0
+    - -1.570796
+    - 0.0
+    axis_local:
+    - -1.0
+    - 0.0
+    - 0.0
+    axis_base_zero:
+    - 1.961541327135741e-08
+    - 0.9999999999999535
+    - -3.048509107518476e-07
   gripper_joint:
-    meaning: Symmetric gripper closure coordinate. 0 rad is open; positive closes.
-    physical_actuator: MG90S
-    servo_motion_for_positive: counterclockwise viewed from the output shaft
-    logical_range_rad: [0.0, 1.57079632679]
-    full_visual_driver: gripper_left_gear_joint
-    actuator_visual_joint: gripper_servo_joint
-    physical_actuator_to_driven_ratio: 2.0
-
-passive_constraints:
-  arm_linkage:
-    definitions:
-      - rear_lift_angle = q1 + q2
-    equations:
-      - ratio_left_gear_joint = q1
-      - ratio_right_gear_joint = rear_lift_angle
-      - ratio_left_gear_back_link_joint = q2
-      - back_link_top_link_joint = q2
-    safety:
-      - Keep abs(q2) below pi/2 minus four_bar_margin.
-
-  gripper:
-    equations:
-      - gripper_servo_joint = -2*q3  # axis -Z; physical servo rotation is CCW
-      - gripper_left_gear_joint = -q3
-      - gripper_right_gear_joint = q3
-      - gripper_left_addition_joint = -q3
-      - gripper_right_addition_joint = q3
-      - clamp_left_addition_joint = q3
-      - clamp_right_addition_joint = -q3
-    notes:
-      - The external gear pair reverses physical rotation and halves the driven angle.
-      - q3=pi/2 gives a 180-degree MG90S shaft rotation.
-
-frames:
-  base_link: CAD and arm-kinematics reference.
-  camera_link: D435F depth-origin point, fixed to base_link.
-  tool0: Wrist/gripper-platform reference.
-  grasp_frame: Dynamic nominal object-grasp center broadcast by linkage_state_node.
+    coordinate: q3
+    range_rad:
+    - 0.0
+    - 1.5707963267948966
+    meaning: 0=open; positive=close
+    mimics:
+      gripper_servo_joint:
+      - 2.0
+      - 0.0
+      gripper_left_gear_joint:
+      - -1.0
+      - 0.0
+      gripper_right_gear_joint:
+      - 1.0
+      - 0.0
+      gripper_left_addition_joint:
+      - -1.0
+      - 0.0
+      gripper_right_addition_joint:
+      - 1.0
+      - 0.0
+      clamp_left_addition_joint:
+      - 1.0
+      - 0.0
+      clamp_right_addition_joint:
+      - -1.0
+      - 0.0
+nominal_frames:
+  tool0_parent: gripper_link
+  tool0_xyz_m:
+  - 0.0
+  - 0.0
+  - 0.0
+  grasp_nominal_parent: gripper_link
+  grasp_nominal_xyz_m:
+  - 0.0207
+  - 0.2115
+  - -0.008098
+  zero_pose_grasp_nominal_xyz_base_m:
+  - -0.18190005573781895
+  - 0.06300000309218803
+  - 0.22699793699942175

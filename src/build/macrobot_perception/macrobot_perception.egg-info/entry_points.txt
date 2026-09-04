@@ -1,3 +1,0 @@
-[console_scripts]
-candidate_filter_node = candidate_filter.candidate_filter_node:main
-temporal_confirmation_node = temporal_confirmation.temporal_confirmation_node:main

@@ -1,67 +1,39 @@
 import math
 
-from macrobot_arm_kinematics.model import (
-    JointLimits,
-    MacRobotArmModel,
-    normalize_angle,
-)
+from macrobot_arm_kinematics.model import JointLimits, MacRobotArmModel
 
 
-def test_forward_inverse_round_trip():
+def test_zero_pose_matches_active_urdf():
+    pose = MacRobotArmModel().forward(0.0, 0.0, 0.0)
+    expected = (-0.188551055282, 0.0807000018617, 0.226997932739)
+    actual = (pose.x, pose.y, pose.z)
+    assert max(abs(a - b) for a, b in zip(actual, expected)) < 2e-6
+
+
+def test_fk_ik_round_trip_serial_2r():
     model = MacRobotArmModel()
-    cases = [
-        (0.0, 0.0, 0.0),
-        (0.2, -0.1, 0.3),
-        (-0.3, 0.2, 1.0),
-        (0.4, 0.1, 1.4),
-    ]
-    for q1, q2, q3 in cases:
-        pose = model.forward(q1, q2, q3)
-        solutions = model.inverse(
-            pose.x,
-            pose.z,
-            seed=(q1, q2),
-            gripper_q=q3,
-        )
+    for q1, q2 in ((0.0, 0.0), (0.20, -0.10), (-0.20, 0.15)):
+        pose = model.forward(q1, q2, 0.0)
+        solutions = model.inverse_xyz(pose.x, pose.y, pose.z, seed=(q1, q2))
         assert solutions
         best = solutions[0]
-        assert abs(normalize_angle(best.q1 - q1)) < 1e-8
-        assert abs(normalize_angle(best.q2 - q2)) < 1e-8
-        assert best.position_error < 1e-9
+        reconstructed = model.forward(best.q1, best.q2, 0.0)
+        assert math.dist(
+            (pose.x, pose.y, pose.z),
+            (reconstructed.x, reconstructed.y, reconstructed.z),
+        ) < 1e-5
 
 
-def test_corrected_full_visual_mapping():
-    q1 = 0.15
-    q2 = 0.10
-    q3 = 0.40
-    mapped = MacRobotArmModel.full_visual_joint_positions(q1, q2, q3)
-
-    # Left servo CCW and right servo CW for positive logical motion.
-    assert abs(mapped['lift_servo'] - 2.0 * q1) < 1e-12
-    assert abs(mapped['tilt_servo'] + 2.0 * (q1 + q2)) < 1e-12
-
-    # Driven arm gears and passive joints preserve the linkage.
-    assert abs(mapped['lift_ratio'] - q1) < 1e-12
-    assert abs(mapped['tilt_ratio'] - (q1 + q2)) < 1e-12
-    assert abs(mapped['rear_passive'] - q2) < 1e-12
-    assert abs(mapped['top_passive'] - q2) < 1e-12
-
-    # Positive q3 closes. The servo joint has -Z axis, hence negative coordinate.
-    assert abs(mapped['gripper_servo'] + 2.0 * q3) < 1e-12
-    assert abs(mapped['gripper_left_gear'] + q3) < 1e-12
-    assert abs(mapped['gripper_right_gear'] - q3) < 1e-12
+def test_q2_is_independent_and_four_bar_guard_is_removed():
+    model = MacRobotArmModel()
+    assert model.limits.contains(0.8, -1.0, 0.0)
+    mapped_a = model.full_visual_joint_positions(0.25, 0.10, 0.0, 2.0, -2.0, 2.0)
+    mapped_b = model.full_visual_joint_positions(-0.25, 0.10, 0.0, 2.0, -2.0, 2.0)
+    assert mapped_a["tilt_servo"] == mapped_b["tilt_servo"] == -0.20
 
 
-def test_gripper_positive_closes_and_reaches_180_servo_degrees():
+def test_joint_limits_are_independent():
     limits = JointLimits()
-    assert limits.contains(0.0, 0.0, 0.0)
-    assert limits.contains(0.0, 0.0, math.pi / 2.0)
-    assert not limits.contains(0.0, 0.0, -0.01)
-    assert not limits.contains(0.0, 0.0, math.pi / 2.0 + 0.01)
-
-
-def test_four_bar_toggle_guard():
-    limits = JointLimits(four_bar_margin=math.radians(10.0))
-    assert limits.contains(0.0, 0.0, 0.0)
-    assert not limits.contains(0.0, math.radians(89.0), 0.0)
-    assert not limits.contains(0.0, math.radians(-89.0), 0.0)
+    assert not limits.contains(limits.arm_lift_max + 0.01, 0.0, 0.0)
+    assert not limits.contains(0.0, limits.wrist_pitch_max + 0.01, 0.0)
+    assert not limits.contains(0.0, 0.0, limits.gripper_max + 0.01)

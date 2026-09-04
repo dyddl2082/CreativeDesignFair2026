@@ -9,7 +9,7 @@ import time
 from typing import Any, Dict, Optional, Tuple
 
 from ament_index_python.packages import get_package_share_directory
-from macrobot_arm_kinematics.model import ArmGeometry, JointLimits, MacRobotArmModel
+from .serial2r_model_config import build_arm_model
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
@@ -100,29 +100,7 @@ class GraspKeyframeNode(Node):
         parameters = _params(
             Path(str(self.get_parameter("kinematics_file").value)).expanduser().resolve()
         )
-        geometry = ArmGeometry(
-            pivot_x=float(parameters.get("pivot_x", 0.02095)),
-            pivot_y=float(parameters.get("pivot_y", 0.06340)),
-            pivot_z=float(parameters.get("pivot_z", 0.064595)),
-            main_link_length=float(parameters.get("main_link_length", 0.10000)),
-            tool_offset_x=float(parameters.get("tool_offset_x", -0.184756)),
-            tool_offset_z=float(parameters.get("tool_offset_z", -0.006000)),
-            tool_y=float(parameters.get("tool_y", 0.064500)),
-            gripper_link_length=float(parameters.get("gripper_link_length", 0.03000)),
-            gripper_base_separation=float(parameters.get("gripper_base_separation", 0.01000)),
-        )
-        limits = JointLimits(
-            arm_lift_min=float(parameters.get("arm_lift_min", -1.0)),
-            arm_lift_max=float(parameters.get("arm_lift_max", 1.0)),
-            wrist_pitch_min=float(parameters.get("wrist_pitch_min", -1.30)),
-            wrist_pitch_max=float(parameters.get("wrist_pitch_max", 1.30)),
-            tool_pitch_min=float(parameters.get("tool_pitch_min", -2.0)),
-            tool_pitch_max=float(parameters.get("tool_pitch_max", 2.0)),
-            four_bar_margin=float(parameters.get("four_bar_margin", math.radians(10.0))),
-            gripper_min=float(parameters.get("gripper_min", 0.0)),
-            gripper_max=float(parameters.get("gripper_max", math.pi / 2.0)),
-        )
-        self.model = MacRobotArmModel(geometry, limits)
+        self.model = build_arm_model(parameters)
         self.store = GraspKeyframeStore(str(self.get_parameter("profile_file").value))
         self.safe_region: Optional[SafeRegionLookup] = None
         safe_path = str(self.get_parameter("safe_region_csv").value).strip()

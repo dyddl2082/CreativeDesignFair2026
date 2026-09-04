@@ -1,7 +1,15 @@
 /**:
   ros__parameters:
+    model_revision: macrobot-serial-2axis-2026-09-04-r4
+    model_type: serial_2r
     base_frame: base_link
     tool_frame: grasp_frame
+    nominal_tool_frame: grasp_nominal
+    camera_anchor_frame: camera_link
+    camera_anchor_semantics: rgb_lens_center_marker
+    shoulder_joint: arm_lift_joint
+    wrist_joint: wrist_pitch_joint
+    gripper_joint: gripper_joint
     logical_state_topic: /macrobot/arm/logical_joint_states
     full_joint_state_topic: /joint_states
     target_topic: /macrobot/arm/target_point
@@ -9,60 +17,69 @@
     status_topic: /macrobot/arm/ik_status
     tool_pose_topic: /macrobot/arm/tool_pose
     gripper_gap_topic: /macrobot/gripper/gap
-
-    # Geometry recovered from the Fusion export.
-    pivot_x: 0.02095
-    pivot_y: 0.06340
-    pivot_z: 0.064595
-    main_link_length: 0.10000
-    tool_offset_x: -0.184756
-    tool_offset_z: -0.006000
-    tool_y: 0.064500
-    gripper_link_length: 0.03000
-    gripper_base_separation: 0.01000
-
-    # Logical conventions (legacy ROS names retained):
-    # q1 / arm_lift_joint: left-servo arm tilt; positive tilts forward.
-    # q2 / wrist_pitch_joint: relative rear-lift coordinate.
-    # absolute right driven/rear-lift angle = q1 + q2; positive lifts upward.
+    shoulder_origin_xyz:
+    - 0.03
+    - 0.0937
+    - 0.0579
+    shoulder_origin_rpy:
+    - -1.637996
+    - -1.570796
+    - -3.074393
+    shoulder_axis:
+    - 0.0
+    - 0.0
+    - -1.0
+    wrist_origin_xyz:
+    - 0.161
+    - 0.0004
+    - 0.01
+    wrist_origin_rpy:
+    - 0.0
+    - -1.570796
+    - 0.0
+    wrist_axis:
+    - -1.0
+    - 0.0
+    - 0.0
+    grasp_origin_xyz:
+    - 0.0207
+    - 0.2115
+    - -0.008098
+    grasp_origin_rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+    nominal_grasp_xyz_in_gripper_link:
+    - 0.0207
+    - 0.2115
+    - -0.008098
+    nominal_grasp_rpy_in_gripper_link:
+    - 0.0
+    - 0.0
+    - 0.0
+    shoulder_axis_base:
+    - 0.0
+    - 1.0
+    - 0.0
+    wrist_axis_base_zero:
+    - 0.0
+    - 1.0
+    - 0.0
+    arm_axis_base_xy:
+    - 0.0
+    - 1.0
+    positive_tilt_direction_base_xy:
+    - 1.0
+    - 0.0
+    arm_plane_yaw_rad: 0.0
     arm_lift_min: -1.0
     arm_lift_max: 1.0
-    wrist_pitch_min: -1.30
-    wrist_pitch_max: 1.30
-    tool_pitch_min: -2.0
-    tool_pitch_max: 2.0
-    four_bar_margin: 0.174533
-
-    # q3=0 is open. Positive q3 closes. With a 1:2 gear pair, q3=pi/2
-    # corresponds to 180 degrees at the MG90S shaft.
+    wrist_pitch_min: -1.3
+    wrist_pitch_max: 1.3
     gripper_min: 0.0
     gripper_max: 1.57079632679
-
-    # Full Fusion arm joint names.
-    lift_servo_joint: servo_left_gear_joint
-    tilt_servo_joint: servo_right_gear_joint
-    lift_ratio_joint: ratio_left_gear_joint
-    tilt_ratio_joint: ratio_right_gear_joint
-    rear_passive_joint: ratio_left_gear_back_link_joint
-    top_passive_joint: back_link_top_link_joint
-
-    # Visual-joint coordinates. Note that the right servo's URDF axis is -Y,
-    # and the gripper servo's URDF axis is -Z.
-    lift_servo_multiplier: 2.0
-    tilt_servo_multiplier: -2.0
-
-    # Gripper visual mapping. Physical servo CCW close is represented by a
-    # negative joint coordinate because gripper_servo_joint uses axis -Z.
-    gripper_servo_joint: gripper_servo_joint
-    gripper_left_gear_joint: gripper_left_gear_joint
-    gripper_right_gear_joint: gripper_right_gear_joint
-    gripper_left_addition_joint: gripper_left_addition_joint
-    gripper_right_addition_joint: gripper_right_addition_joint
-    gripper_left_clamp_joint: clamp_left_addition_joint
-    gripper_right_clamp_joint: clamp_right_addition_joint
-    gripper_servo_multiplier: -2.0
-
-    publish_full_joint_states: true
-    publish_rate: 30.0
-    auto_apply_ik: false
-    seed_weight: 0.001
+    gripper_servo_gear_multiplier: 2.0
+    four_bar_enabled: false
+    wrist_actuator_uses_absolute_angle: false
+    wrist_actuator_coordinate: q2
+    old_kinematics_binary_compatible: false

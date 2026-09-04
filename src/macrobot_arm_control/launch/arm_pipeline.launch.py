@@ -3,6 +3,7 @@ from pathlib import Path
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -23,6 +24,7 @@ def generate_launch_description():
 
     actuator_file = safe_pkg / "config" / "actuator_limits.yaml"
     control_defaults = control_pkg / "config" / "control_defaults.yaml"
+    kinematics_file = description_pkg / "config" / "kinematics.yaml"
 
     return LaunchDescription([
         DeclareLaunchArgument("dry_run", default_value="true"),
@@ -30,19 +32,29 @@ def generate_launch_description():
         DeclareLaunchArgument("safe_region_csv", default_value=""),
         DeclareLaunchArgument("command_home_on_start", default_value="false"),
         DeclareLaunchArgument("use_sim_time", default_value="false"),
-        DeclareLaunchArgument("start_rviz", default_value="true"),
+        DeclareLaunchArgument("start_rviz", default_value="false"),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
-                str(description_pkg / "launch" / "display_full.launch.py")
+                str(description_pkg / "launch" / "runtime_description.launch.py")
             ),
-            launch_arguments={
-                "use_sim_time": use_sim_time,
-                "auto_apply_ik": "false",
-                "start_rviz": start_rviz,
-            }.items(),
+            launch_arguments={"use_sim_time": use_sim_time}.items(),
         ),
-
+        Node(
+            package="macrobot_arm_kinematics",
+            executable="linkage_state_node",
+            name="macrobot_serial2r_state_node",
+            output="screen",
+            parameters=[str(kinematics_file), {"use_sim_time": use_sim_time}],
+        ),
+        Node(
+            package="rviz2",
+            executable="rviz2",
+            name="rviz2",
+            arguments=["-d", str(description_pkg / "rviz" / "display.rviz")],
+            condition=IfCondition(start_rviz),
+            output="screen",
+        ),
         Node(
             package="macrobot_arm_control",
             executable="ik_validator_node",
@@ -59,7 +71,6 @@ def generate_launch_description():
                 },
             ],
         ),
-
         Node(
             package="macrobot_arm_control",
             executable="servo_bridge_node",

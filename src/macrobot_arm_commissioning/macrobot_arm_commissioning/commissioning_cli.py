@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from rclpy.executors import MultiThreadedExecutor
 import rclpy
 
-from .grasp_frame_fit import GeometryReference, fit_grasp_frame
+from .grasp_frame_fit import fit_grasp_frame
 from .report_store import ReportStore, utc_now
 from .ros_client import ArmCommissioningNode, Q
 from .safe_region_analysis import SafeRegionDataset
@@ -447,8 +447,8 @@ class CommissioningWizard:
                 "model_and_physical_direction_match": ask_yes_no(
                     "RViz 모델과 실물의 회전 방향이 일치하나요?", True
                 ),
-                "four_bar_parallelogram_maintained": ask_yes_no(
-                    "팔 4-bar가 평행사변형을 유지하나요?", True
+                "serial_2r_joint_alignment_verified": ask_yes_no(
+                    "두 직렬 관절이 의도한 평면에서 독립적으로 움직이나요?", True
                 ),
                 "gripper_clamps_parallel": (
                     ask_yes_no("양쪽 clamp가 평행을 유지하나요?", True)
@@ -656,95 +656,104 @@ class CommissioningWizard:
     def grasp_frame_calibration(self) -> None:
         if not self._require_motion():
             return
-        self.report.begin_section("grasp_frame_calibration")
-        q1 = float(ask_float("측정 자세 q1", self.node.current_q[0]))
-        q2 = float(ask_float("측정 자세 q2", self.node.current_q[1]))
-        close_q3 = (
-            self.safe_region.safe_close_q3()
-            if self.safe_region
-            else self.node.mapping.logical_limits.q3_max
+        self.report.begin_section("grasp_frame_calibration_serial_2r")
+        limits = self.node.mapping.logical_limits
+        current = self.node.current_q
+
+        def clamp(value: float, lower: float, upper: float) -> float:
+            return min(upper, max(lower, value))
+
+        defaults = [
+            current,
+            (
+                clamp(current[0] + 0.15, limits.q1_min, limits.q1_max),
+                clamp(current[1] - 0.10, limits.q2_min, limits.q2_max),
+                current[2],
+            ),
+            (
+                clamp(current[0] - 0.15, limits.q1_min, limits.q1_max),
+                clamp(current[1] + 0.10, limits.q2_min, limits.q2_max),
+                current[2],
+            ),
+        ]
+        pose_count = max(3, ask_int("측정 자세 수", 3))
+        frame = ask_text(
+            "측정 좌표계(base_link 또는 gripper_link)",
+            "base_link",
         )
-        defaults = [0.0, 0.8, close_q3]
-        raw_q3 = ask_text(
-            "측정 q3 목록(rad, 쉼표 구분)",
-            ",".join(f"{value:.6f}" for value in defaults),
-        )
-        q3_values = [float(value.strip()) for value in raw_q3.split(",")]
-        frame = ask_text("측정 좌표계(base_link 또는 wrist)", "base_link")
-        if frame not in {"base_link", "wrist"}:
-            raise ValueError("measurement frame must be base_link or wrist")
+        if frame not in {"base_link", "gripper_link"}:
+            raise ValueError("measurement frame must be base_link or gripper_link")
 
         samples = []
-        for q3 in q3_values:
-            automatic = self._execute_and_review((q1, q2, q3), f"grasp frame q3={q3:.3f}")
+        for index in range(pose_count):
+            default_q = defaults[index] if index < len(defaults) else current
+            q = ask_q(f"측정 자세 {{index + 1}}/{{pose_count}}", default_q)
+            automatic = self._execute_and_review(q, f"serial grasp-frame sample {{index + 1}}")
             print(
-                "두 clamp의 실제 접촉 중심을 측정하세요. "
+                "두 clamp 사이의 실제 파지 중심을 3차원으로 측정하세요. "
                 "입력 단위는 mm이며 보고서에는 m로 저장됩니다."
             )
             measured_x_mm = ask_float("측정 X", allow_blank=False)
+            measured_y_mm = ask_float("측정 Y", allow_blank=False)
             measured_z_mm = ask_float("측정 Z", allow_blank=False)
-            measured_y_mm = optional_measurement("측정 Y", "mm")
             gap_mm = optional_measurement("실제 clamp 간격", "mm")
-            sample: Dict[str, Any] = {
-                "q1": q1,
-                "q2": q2,
-                "q3": q3,
-                "measurement_frame": frame,
-                "measured_x": float(measured_x_mm) / 1000.0,
-                "measured_z": float(measured_z_mm) / 1000.0,
-                "measured_y": (
-                    float(measured_y_mm) / 1000.0
-                    if measured_y_mm is not None
-                    else None
-                ),
-                "measured_gap": (
-                    float(gap_mm) / 1000.0 if gap_mm is not None else None
-                ),
-                "model_tool_pose": automatic.get("tool_pose"),
-                "automatic": automatic,
-                "notes": ask_text("메모", "", True),
-            }
-            samples.append(sample)
+            samples.append(
+                {
+                    "q1": q[0],
+                    "q2": q[1],
+                    "q3": q[2],
+                    "measurement_frame": frame,
+                    "measured_x": float(measured_x_mm) / 1000.0,
+                    "measured_y": float(measured_y_mm) / 1000.0,
+                    "measured_z": float(measured_z_mm) / 1000.0,
+                    "measured_gap": (
+                        float(gap_mm) / 1000.0 if gap_mm is not None else None
+                    ),
+                    "model_tool_pose": automatic.get("tool_pose"),
+                    "automatic": automatic,
+                    "notes": ask_text("메모", "", True),
+                }
+            )
 
-        reference = GeometryReference(
-            pivot_x=float(ask_float("pivot_x", 0.02095)),
-            pivot_z=float(ask_float("pivot_z", 0.064595)),
-            main_link_length=float(ask_float("main_link_length", 0.10000)),
-        )
         fit_samples = [
             {key: value for key, value in sample.items() if value is not None}
             for sample in samples
         ]
-        fitted = fit_grasp_frame(fit_samples, reference)
-        print("\n추천 기하값:")
-        for key in (
-            "tool_offset_x",
-            "tool_offset_z",
-            "gripper_link_length",
-            "gripper_base_separation",
-            "rms_error_m",
-            "max_error_m",
-        ):
+        fitted = fit_grasp_frame(fit_samples)
+        print("\\n추천 gripper_link -> grasp_nominal 고정 offset:")
+        print(f"  grasp_origin_xyz: {{fitted['grasp_origin_xyz']}}")
+        print(f"  rms_error_m: {{fitted['rms_error_m']}}")
+        print(f"  max_error_m: {{fitted['max_error_m']}}")
+        for key in ("gripper_open_gap_m", "gripper_closed_gap_m", "gap_fit_warning"):
             if key in fitted:
-                print(f"  {key}: {fitted[key]}")
+                print(f"  {{key}}: {{fitted[key]}}")
+        print(
+            "이 값은 URDF의 grasp_nominal_fixed_joint와 kinematics.yaml에 함께 반영한 뒤 "
+            "MoveIt/safe-region/PICK·PLACE 경로를 다시 검증해야 합니다."
+        )
         self.report.complete_section(
-            "grasp_frame_calibration",
+            "grasp_frame_calibration_serial_2r",
             {
-                "reference_geometry": reference.__dict__,
                 "samples": samples,
                 "fit": fitted,
-                "recommended_kinematics_parameters": {
-                    key: fitted[key]
-                    for key in (
-                        "tool_offset_x",
-                        "tool_offset_z",
-                        "gripper_link_length",
-                        "gripper_base_separation",
-                    )
-                    if key in fitted
+                "recommended_description_parameters": {
+                    "grasp_origin_xyz": fitted["grasp_origin_xyz"],
+                    **(
+                        {"gripper_open_gap_m": fitted["gripper_open_gap_m"]}
+                        if "gripper_open_gap_m" in fitted
+                        else {}
+                    ),
+                    **(
+                        {"gripper_closed_gap_m": fitted["gripper_closed_gap_m"]}
+                        if "gripper_closed_gap_m" in fitted
+                        else {}
+                    ),
                 },
+                "requires_moveit_and_safe_region_regeneration": True,
+                "requires_pick_place_revalidation": True,
             },
         )
+
 
     def primitive_test(self) -> None:
         if not self._require_motion():

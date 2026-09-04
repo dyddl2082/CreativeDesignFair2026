@@ -17,7 +17,7 @@ from std_srvs.srv import Trigger
 from visualization_msgs.msg import Marker, MarkerArray
 import yaml
 
-from macrobot_arm_kinematics.model import ArmGeometry, JointLimits, MacRobotArmModel
+from .serial2r_model_config import build_arm_model
 
 from .planner import DetectionSample, PickPlan, StablePointFilter, build_pick_plan
 from .profiles import PickProfile, PickProfileRepository, Q, Vector3
@@ -133,31 +133,9 @@ class PickCoordinatorNode(Node):
             str(self.get_parameter("kinematics_file").value)
         ).expanduser().resolve()
         params = _ros_params(kinematics_file)
-        geometry = ArmGeometry(
-            pivot_x=float(params.get("pivot_x", 0.02095)),
-            pivot_y=float(params.get("pivot_y", 0.06340)),
-            pivot_z=float(params.get("pivot_z", 0.064595)),
-            main_link_length=float(params.get("main_link_length", 0.10000)),
-            tool_offset_x=float(params.get("tool_offset_x", -0.184756)),
-            tool_offset_z=float(params.get("tool_offset_z", -0.006000)),
-            tool_y=float(params.get("tool_y", 0.064500)),
-            gripper_link_length=float(params.get("gripper_link_length", 0.03000)),
-            gripper_base_separation=float(
-                params.get("gripper_base_separation", 0.01000)
-            ),
-        )
-        limits = JointLimits(
-            arm_lift_min=float(params.get("arm_lift_min", -1.0)),
-            arm_lift_max=float(params.get("arm_lift_max", 1.0)),
-            wrist_pitch_min=float(params.get("wrist_pitch_min", -1.30)),
-            wrist_pitch_max=float(params.get("wrist_pitch_max", 1.30)),
-            tool_pitch_min=float(params.get("tool_pitch_min", -2.0)),
-            tool_pitch_max=float(params.get("tool_pitch_max", 2.0)),
-            four_bar_margin=float(params.get("four_bar_margin", math.radians(10.0))),
-            gripper_min=float(params.get("gripper_min", 0.0)),
-            gripper_max=float(params.get("gripper_max", math.pi / 2.0)),
-        )
-        self.model = MacRobotArmModel(geometry, limits)
+        self.model = build_arm_model(params)
+        # The active arm is planar after the corrected shoulder transform.
+        self.arm_plane_y = self.model.forward(0.0, 0.0, 0.0).y
         self.profiles = PickProfileRepository(
             str(self.get_parameter("profile_file").value),
             str(self.get_parameter("commissioning_report").value),
@@ -459,14 +437,14 @@ class PickCoordinatorNode(Node):
     ) -> None:
         assert self.profile is not None
         grasp_y = point[1] + self.profile.grasp_offset_base[1]
-        lateral_error = grasp_y - self.model.geometry.tool_y
+        lateral_error = grasp_y - self.arm_plane_y
         if abs(lateral_error) > self.profile.lateral_tolerance_m:
             request = {
                 "ok": False,
                 "event": "base_alignment_required",
                 "object_name": self.object_name,
                 "target_point_base": {"x": point[0], "y": point[1], "z": point[2]},
-                "arm_plane_y": self.model.geometry.tool_y,
+                "arm_plane_y": self.arm_plane_y,
                 "lateral_error_m": lateral_error,
                 "reason": "target_outside_arm_plane",
             }
@@ -481,7 +459,7 @@ class PickCoordinatorNode(Node):
 
         # Plan with the ideal arm-plane Y after checking that chassis alignment
         # is already close enough. The reduced arm IK is planar in base X/Z.
-        planning_point: Vector3 = (point[0], self.model.geometry.tool_y, point[2])
+        planning_point: Vector3 = (point[0], self.arm_plane_y, point[2])
         try:
             self.plan = build_pick_plan(
                 self.model,

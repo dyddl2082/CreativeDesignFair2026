@@ -1,1 +1,0 @@
-macrobot_pick_pipeline

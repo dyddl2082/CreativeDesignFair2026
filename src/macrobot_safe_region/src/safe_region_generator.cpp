@@ -144,9 +144,6 @@ private:
     declare_parameter<double>("q1_step_rad", 0.0872664626);
     declare_parameter<double>("q2_step_rad", 0.0872664626);
     declare_parameter<double>("q3_step_rad", 0.0872664626);
-    declare_parameter<double>("tool_pitch_min", -2.0);
-    declare_parameter<double>("tool_pitch_max", 2.0);
-    declare_parameter<double>("four_bar_margin_rad", 0.1745329252);
     declare_parameter<double>("home_q1", 0.0);
     declare_parameter<double>("home_q2", 0.0);
     declare_parameter<double>("home_q3", 0.0);
@@ -286,15 +283,13 @@ private:
     output_directory_ = fs::path(expandUser(p<std::string>("output_directory")));
     robot_model_mode_ = p<std::string>("robot_model_mode");
     model_revision_ = p<std::string>("model_revision");
-    if (robot_model_mode_ != "reduced" && robot_model_mode_ != "full_mapped")
-      throw std::invalid_argument("robot_model_mode must be reduced or full_mapped");
+    if (robot_model_mode_ != "serial_2r" && robot_model_mode_ != "reduced" && robot_model_mode_ != "full_mapped")
+      throw std::invalid_argument("robot_model_mode must be serial_2r, reduced, or full_mapped");
     q1_min_ = p<double>("q1_min"); q1_max_ = p<double>("q1_max");
     q2_min_ = p<double>("q2_min"); q2_max_ = p<double>("q2_max");
     q3_min_ = p<double>("q3_min"); q3_max_ = p<double>("q3_max");
     q1_step_ = p<double>("q1_step_rad"); q2_step_ = p<double>("q2_step_rad");
     q3_step_ = p<double>("q3_step_rad");
-    tool_pitch_min_ = p<double>("tool_pitch_min"); tool_pitch_max_ = p<double>("tool_pitch_max");
-    four_bar_margin_ = p<double>("four_bar_margin_rad");
     home_q1_ = p<double>("home_q1"); home_q2_ = p<double>("home_q2"); home_q3_ = p<double>("home_q3");
 
     lift_zero_ = p<double>("lift_zero_deg"); lift_sign_ = p<double>("lift_sign");
@@ -318,69 +313,16 @@ private:
 
   std::vector<std::string> requiredVariables() const
   {
-    if (robot_model_mode_ == "reduced")
-      return { "arm_lift_joint", "wrist_pitch_joint", "gripper_joint" };
-
-    return {
-      "servo_left_gear_joint",
-      "servo_right_gear_joint",
-      "ratio_left_gear_joint",
-      "ratio_right_gear_joint",
-      "ratio_left_gear_back_link_joint",
-      "back_link_top_link_joint",
-      "gripper_servo_joint",
-      "gripper_left_gear_joint",
-      "gripper_right_gear_joint",
-      "gripper_left_addition_joint",
-      "gripper_right_addition_joint",
-      "clamp_left_addition_joint",
-      "clamp_right_addition_joint",
-      "front_left_wheel_joint",
-      "back_left_wheel_joint",
-      "front_right_wheel_joint",
-      "back_right_wheel_joint",
-    };
+    return { "arm_lift_joint", "wrist_pitch_joint", "gripper_joint" };
   }
 
   void setStateFromLogical(
     moveit::core::RobotState& state, const double q1, const double q2, const double q3) const
   {
     state.setToDefaultValues();
-
-    if (robot_model_mode_ == "reduced")
-    {
-      state.setVariablePosition("arm_lift_joint", q1);
-      state.setVariablePosition("wrist_pitch_joint", q2);
-      state.setVariablePosition("gripper_joint", q3);
-      return;
-    }
-
-    // Corrected physical conventions:
-    // q1 positive -> left servo CCW -> arm tilts forward.
-    // rear_lift_angle=q1+q2 positive -> right servo CW -> rear rises.
-    // q3 positive -> gripper servo CCW -> gripper closes.
-    const double rear_lift_angle = q1 + q2;
-    state.setVariablePosition("servo_left_gear_joint", lift_multiplier_ * q1);
-    state.setVariablePosition("servo_right_gear_joint", tilt_multiplier_ * rear_lift_angle);
-    state.setVariablePosition("ratio_left_gear_joint", q1);
-    state.setVariablePosition("ratio_right_gear_joint", rear_lift_angle);
-    state.setVariablePosition("ratio_left_gear_back_link_joint", q2);
-    state.setVariablePosition("back_link_top_link_joint", q2);
-
-    // gripper_servo_joint has axis -Z, so physical CCW is a negative URDF
-    // coordinate. The driven gears counter-rotate through the 1:2 pair.
-    state.setVariablePosition("gripper_servo_joint", -grip_multiplier_ * q3);
-    state.setVariablePosition("gripper_left_gear_joint", -q3);
-    state.setVariablePosition("gripper_right_gear_joint", q3);
-    state.setVariablePosition("gripper_left_addition_joint", -q3);
-    state.setVariablePosition("gripper_right_addition_joint", q3);
-    state.setVariablePosition("clamp_left_addition_joint", q3);
-    state.setVariablePosition("clamp_right_addition_joint", -q3);
-
-    for (const auto& wheel : {
-           "front_left_wheel_joint", "back_left_wheel_joint",
-           "front_right_wheel_joint", "back_right_wheel_joint" })
-      state.setVariablePosition(wheel, 0.0);
+    state.setVariablePosition("arm_lift_joint", q1);
+    state.setVariablePosition("wrist_pitch_joint", q2);
+    state.setVariablePosition("gripper_joint", q3);
   }
 
   void addFloor()
@@ -410,23 +352,12 @@ private:
   {
     Evaluation out;
     out.lift_cmd = lift_zero_ + lift_sign_ * radToDeg(lift_multiplier_ * q1);
-    out.tilt_cmd = tilt_zero_ + tilt_sign_ * radToDeg(tilt_multiplier_ * (q1 + q2));
+    out.tilt_cmd = tilt_zero_ + tilt_sign_ * radToDeg(tilt_multiplier_ * q2);
     out.grip_cmd = grip_zero_ + grip_sign_ * radToDeg(grip_multiplier_ * q3);
 
     if (q1 < q1_min_ || q1 > q1_max_ || q2 < q2_min_ || q2 > q2_max_ || q3 < q3_min_ || q3 > q3_max_)
     {
       out.reason = "logical_joint_limit";
-      return out;
-    }
-    const double rear_lift_angle = q1 + q2;
-    if (rear_lift_angle < tool_pitch_min_ || rear_lift_angle > tool_pitch_max_)
-    {
-      out.reason = "rear_lift_angle_limit";
-      return out;
-    }
-    if (std::abs(q2) > kPi / 2.0 - four_bar_margin_)
-    {
-      out.reason = "four_bar_toggle_margin";
       return out;
     }
     if (out.lift_cmd < lift_min_cmd_ || out.lift_cmd > lift_max_cmd_)
@@ -587,7 +518,7 @@ private:
     std::ofstream file(path);
     if (!file)
       throw std::runtime_error("Cannot write " + path.string());
-    file << "q1_rad,q2_rad,q3_rad,left_tilt_servo_deg,right_lift_servo_deg,gripper_servo_deg,safe,connected,reason,contacts\n";
+    file << "q1_rad,q2_rad,q3_rad,shoulder_servo_deg,wrist_servo_deg,gripper_servo_deg,safe,connected,reason,contacts\n";
     file << std::setprecision(10);
     for (const auto& sample : samples_)
     {
@@ -653,8 +584,8 @@ private:
     file << "  q2: {min: " << q2_min_ << ", max: " << q2_max_ << ", step: " << q2_step_ << "}\n";
     file << "  q3: {min: " << q3_min_ << ", max: " << q3_max_ << ", step: " << q3_step_ << "}\n";
     file << "initial_servo_commands_deg:\n";
-    file << "  left_tilt_mg996r: " << lift_zero_ << "\n";
-    file << "  right_lift_mg996r: " << tilt_zero_ << "\n";
+    file << "  left_shoulder_mg996r: " << lift_zero_ << "\n";
+    file << "  right_wrist_mg996r: " << tilt_zero_ << "\n";
     file << "  gripper_mg90s_open: " << grip_zero_ << "\n";
     file << "  gripper_mg90s_closed: "
          << (grip_zero_ + grip_sign_ * radToDeg(grip_multiplier_ * q3_max_)) << "\n";
@@ -667,7 +598,7 @@ private:
       grip_zero_, grip_sign_ * grip_multiplier_ * 180.0 / kPi, grip_min_cmd_, grip_max_cmd_);
     file << "actuator_implied_logical_ranges_rad:\n";
     file << "  q1_from_left_tilt_servo: [" << q1_servo_range.first << ", " << q1_servo_range.second << "]\n";
-    file << "  rear_lift_angle_from_right_servo: [" << pitch_servo_range.first << ", " << pitch_servo_range.second << "]\n";
+    file << "  q2_from_wrist_servo: [" << pitch_servo_range.first << ", " << pitch_servo_range.second << "]\n";
     file << "  q3_from_gripper_servo: [" << q3_servo_range.first << ", " << q3_servo_range.second << "]\n";
 
     bool have_connected = false;
@@ -715,7 +646,6 @@ private:
   std::string model_revision_{ "unknown" };
   double q1_min_, q1_max_, q2_min_, q2_max_, q3_min_, q3_max_;
   double q1_step_, q2_step_, q3_step_;
-  double tool_pitch_min_, tool_pitch_max_, four_bar_margin_;
   double home_q1_, home_q2_, home_q3_;
   double lift_zero_, lift_sign_, lift_multiplier_, lift_min_cmd_, lift_max_cmd_;
   double tilt_zero_, tilt_sign_, tilt_multiplier_, tilt_min_cmd_, tilt_max_cmd_;

@@ -1,6 +1,0 @@
-source;share/pico_debug/hook/pythonpath.ps1
-source;share/pico_debug/hook/pythonpath.dsv
-source;share/pico_debug/hook/pythonpath.sh
-source;share/pico_debug/hook/ament_prefix_path.ps1
-source;share/pico_debug/hook/ament_prefix_path.dsv
-source;share/pico_debug/hook/ament_prefix_path.sh

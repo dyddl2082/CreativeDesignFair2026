@@ -1,0 +1,477 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="macrobot_2axis_full" params="prefix include_wheels">
+    <!-- Reviewed current model: two independent arm joints plus one logical gripper joint. -->
+    <!-- Model revision: macrobot-serial-2axis-2026-09-04-r4 -->
+    <material name="material">
+      <color rgba="0.627 0.627 0.627 1.0"/>
+    </material>
+
+    <link name="${prefix}base_link">
+      <inertial>
+        <origin xyz="0.074613 0.068148 0.064319" rpy="0.000000 0.000000 0.000000"/>
+        <mass value="3.496760"/>
+        <inertia ixx="1.428406e-02" ixy="1.472034e-03" ixz="-4.731327e-03" iyy="1.935554e-02" iyz="1.056261e-03" izz="1.432474e-02"/>
+      </inertial>
+      <visual>
+        <origin xyz="-0.360034 -0.056971 0.117663" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/base_link.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="material"/>
+      </visual>
+      <collision>
+        <origin xyz="-0.360034 -0.056971 0.117663" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/base_link_collision.stl" scale="1 1 1"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="${prefix}camera_link">
+      <inertial>
+        <origin xyz="0.000000 0.000000 0.000000" rpy="0.000000 0.000000 0.000000"/>
+        <mass value="0.001000"/>
+        <inertia ixx="1.000000e-06" ixy="0.000000e+00" ixz="0.000000e+00" iyy="1.000000e-06" iyz="0.000000e+00" izz="1.000000e-06"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.067650 -0.079323 -0.025820" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/camera_link.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="material"/>
+      </visual>
+      <collision>
+        <origin xyz="0.067650 -0.079323 -0.025820" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/camera_link_collision.stl" scale="1 1 1"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="${prefix}front_left_wheel">
+      <inertial>
+        <origin xyz="0.000000 0.006000 0.000000" rpy="0.000000 0.000000 0.000000"/>
+        <mass value="0.109612"/>
+        <inertia ixx="1.158027e-05" ixy="-5.019984e-21" ixz="8.645529e-22" iyy="2.052987e-05" iyz="-3.388132e-21" izz="1.158028e-05"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.000000 0.000000 -0.019300" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/front_left_wheel.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="material"/>
+      </visual>
+      <collision>
+        <origin xyz="0.000000 0.000000 -0.019300" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/front_left_wheel_collision.stl" scale="1 1 1"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="${prefix}front_right_wheel">
+      <inertial>
+        <origin xyz="0.000000 -0.006000 0.000000" rpy="0.000000 0.000000 0.000000"/>
+        <mass value="0.109612"/>
+        <inertia ixx="1.158027e-05" ixy="1.427908e-20" ixz="-9.928414e-21" iyy="2.052987e-05" iyz="5.421011e-20" izz="1.158028e-05"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.000000 -0.167400 -0.019300" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/front_right_wheel.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="material"/>
+      </visual>
+      <collision>
+        <origin xyz="0.000000 -0.167400 -0.019300" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/front_right_wheel_collision.stl" scale="1 1 1"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="${prefix}back_left_wheel">
+      <inertial>
+        <origin xyz="0.000000 0.006000 0.000000" rpy="0.000000 0.000000 0.000000"/>
+        <mass value="0.109612"/>
+        <inertia ixx="1.158027e-05" ixy="2.032879e-20" ixz="2.710505e-20" iyy="2.052987e-05" iyz="-1.694066e-21" izz="1.158028e-05"/>
+      </inertial>
+      <visual>
+        <origin xyz="-0.086000 0.000000 -0.019300" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/back_left_wheel.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="material"/>
+      </visual>
+      <collision>
+        <origin xyz="-0.086000 0.000000 -0.019300" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/back_left_wheel_collision.stl" scale="1 1 1"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="${prefix}back_right_wheel">
+      <inertial>
+        <origin xyz="0.000000 -0.006000 0.000000" rpy="0.000000 0.000000 0.000000"/>
+        <mass value="0.109612"/>
+        <inertia ixx="1.158027e-05" ixy="-4.336809e-19" ixz="-2.710505e-20" iyy="2.052987e-05" iyz="-1.084202e-19" izz="1.158028e-05"/>
+      </inertial>
+      <visual>
+        <origin xyz="-0.086000 -0.167400 -0.019300" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/back_right_wheel.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="material"/>
+      </visual>
+      <collision>
+        <origin xyz="-0.086000 -0.167400 -0.019300" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/back_right_wheel_collision.stl" scale="1 1 1"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="${prefix}robot_arm_link">
+      <inertial>
+        <origin xyz="0.102670 -0.000857 0.024891" rpy="0.000000 0.000000 0.000000"/>
+        <mass value="1.110983"/>
+        <inertia ixx="4.747553e-04" ixy="2.116747e-04" ixz="-2.405824e-04" iyy="4.030443e-03" iyz="1.481253e-06" izz="3.843086e-03"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.000000 0.000000 -0.011300" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/robot_arm_link.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="material"/>
+      </visual>
+      <collision>
+        <origin xyz="0.000000 0.000000 -0.011300" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/robot_arm_link_collision.stl" scale="1 1 1"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="${prefix}gripper_link">
+      <inertial>
+        <origin xyz="0.019437 0.081150 0.000114" rpy="0.000000 0.000000 0.000000"/>
+        <mass value="0.748771"/>
+        <inertia ixx="2.990810e-03" ixy="-6.776506e-05" ixz="2.487471e-06" iyy="3.227377e-04" iyz="1.032303e-04" izz="3.211737e-03"/>
+      </inertial>
+      <visual>
+        <origin xyz="-0.004500 0.160300 -0.004500" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_link.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="material"/>
+      </visual>
+      <collision>
+        <origin xyz="-0.004500 0.160300 -0.004500" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_link_collision.stl" scale="1 1 1"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="${prefix}gripper_servo_gear">
+      <inertial>
+        <origin xyz="-0.000016 0.000000 0.005600" rpy="0.000000 0.000000 0.000000"/>
+        <mass value="0.005385"/>
+        <inertia ixx="1.000000e-06" ixy="1.786405e-11" ixz="6.233987e-11" iyy="1.000000e-06" iyz="-6.488219e-13" izz="1.000000e-06"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.030641 -0.021579 0.002460" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_servo_gear.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="material"/>
+      </visual>
+      <collision>
+        <origin xyz="0.030641 -0.021579 0.002460" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_servo_gear_collision.stl" scale="1 1 1"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="${prefix}gripper_left_gear">
+      <inertial>
+        <origin xyz="-0.005942 0.000000 0.000205" rpy="0.000000 0.000000 0.000000"/>
+        <mass value="0.015694"/>
+        <inertia ixx="1.000000e-06" ixy="1.067814e-15" ixz="-1.840374e-07" iyy="2.064126e-06" iyz="6.739151e-16" izz="2.329471e-06"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.037200 -0.038349 -0.004000" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_left_gear.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="material"/>
+      </visual>
+      <collision>
+        <origin xyz="0.037200 -0.038349 -0.004000" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_left_gear_collision.stl" scale="1 1 1"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="${prefix}gripper_right_gear">
+      <inertial>
+        <origin xyz="0.005924 0.000000 0.000201" rpy="0.000000 0.000000 0.000000"/>
+        <mass value="0.015645"/>
+        <inertia ixx="1.000000e-06" ixy="-1.388592e-15" ixz="1.844147e-07" iyy="2.062285e-06" iyz="6.129918e-16" izz="2.327511e-06"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.013200 -0.038349 -0.004000" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_right_gear.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="material"/>
+      </visual>
+      <collision>
+        <origin xyz="0.013200 -0.038349 -0.004000" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_right_gear_collision.stl" scale="1 1 1"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="${prefix}gripper_left_addition">
+      <inertial>
+        <origin xyz="-0.015000 0.000000 -0.002000" rpy="0.000000 0.000000 0.000000"/>
+        <mass value="0.005805"/>
+        <inertia ixx="1.000000e-06" ixy="1.129942e-18" ixz="3.176374e-22" iyy="1.000000e-06" iyz="1.588187e-22" izz="1.000000e-06"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.030200 -0.053349 -0.003500" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_left_addition.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="material"/>
+      </visual>
+      <collision>
+        <origin xyz="0.030200 -0.053349 -0.003500" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_left_addition_collision.stl" scale="1 1 1"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="${prefix}gripper_right_addition">
+      <inertial>
+        <origin xyz="0.015000 0.000000 -0.002000" rpy="0.000000 0.000000 0.000000"/>
+        <mass value="0.005805"/>
+        <inertia ixx="1.000000e-06" ixy="1.128460e-18" ixz="2.646978e-22" iyy="1.000000e-06" iyz="-5.293956e-23" izz="1.000000e-06"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.020200 -0.053349 -0.003500" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_right_addition.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="material"/>
+      </visual>
+      <collision>
+        <origin xyz="0.020200 -0.053349 -0.003500" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_right_addition_collision.stl" scale="1 1 1"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="${prefix}gripper_clamp_left">
+      <inertial>
+        <origin xyz="0.000612 0.023868 -0.008897" rpy="0.000000 0.000000 0.000000"/>
+        <mass value="0.011841"/>
+        <inertia ixx="2.717208e-06" ixy="-2.405366e-07" ixz="4.658296e-08" iyy="1.000000e-06" iyz="3.638982e-07" izz="2.380502e-06"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.060200 -0.053349 -0.003500" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_clamp_left.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="material"/>
+      </visual>
+      <collision>
+        <origin xyz="0.060200 -0.053349 -0.003500" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_clamp_left_collision.stl" scale="1 1 1"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="${prefix}gripper_clamp_right">
+      <inertial>
+        <origin xyz="-0.000612 0.023868 -0.008897" rpy="0.000000 0.000000 0.000000"/>
+        <mass value="0.011841"/>
+        <inertia ixx="2.717208e-06" ixy="2.405366e-07" ixz="-4.658296e-08" iyy="1.000000e-06" iyz="3.638982e-07" izz="2.380502e-06"/>
+      </inertial>
+      <visual>
+        <origin xyz="-0.009800 -0.053349 -0.003500" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_clamp_right.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="material"/>
+      </visual>
+      <collision>
+        <origin xyz="-0.009800 -0.053349 -0.003500" rpy="0.000000 0.000000 0.000000"/>
+        <geometry>
+          <mesh filename="package://macrobot_description/meshes/macrobot/gripper_clamp_right_collision.stl" scale="1 1 1"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="${prefix}gripper_command_link">
+      <inertial>
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+        <mass value="0.000001"/>
+        <inertia ixx="1.0e-12" ixy="0.0" ixz="0.0" iyy="1.0e-12" iyz="0.0" izz="1.0e-12"/>
+      </inertial>
+    </link>
+    <link name="${prefix}tool0"/>
+    <link name="${prefix}grasp_nominal"/>
+
+    <joint name="${prefix}gripper_joint" type="revolute">
+      <parent link="${prefix}gripper_link"/>
+      <child link="${prefix}gripper_command_link"/>
+      <origin xyz="0.000000 0.000000 0.000000" rpy="0.000000 0.000000 0.000000"/>
+      <axis xyz="0.000000 0.000000 1.000000"/>
+      <limit lower="0.000000000000" upper="1.570796326795" effort="20.000000" velocity="2.000000"/>
+    </joint>
+    <joint name="${prefix}camera_fix_joint" type="fixed">
+      <parent link="${prefix}base_link"/>
+      <child link="${prefix}camera_link"/>
+      <origin xyz="-0.030650 0.060623 0.025820" rpy="0.000000 0.000000 0.000000"/>
+    </joint>
+        <xacro:if value="${include_wheels}">
+    <joint name="${prefix}front_left_wheel_joint" type="continuous">
+            <parent link="${prefix}base_link"/>
+            <child link="${prefix}front_left_wheel"/>
+            <origin xyz="0.037000 -0.018700 0.019300" rpy="0.000000 0.000000 0.000000"/>
+            <axis xyz="0.000000 -1.000000 0.000000"/>
+            <limit effort="100.0" velocity="1.0"/>
+          </joint>
+        </xacro:if>
+        <xacro:unless value="${include_wheels}">
+    <joint name="${prefix}front_left_wheel_joint" type="fixed">
+            <parent link="${prefix}base_link"/>
+            <child link="${prefix}front_left_wheel"/>
+            <origin xyz="0.037000 -0.018700 0.019300" rpy="0.000000 0.000000 0.000000"/>
+          </joint>
+        </xacro:unless>
+        <xacro:if value="${include_wheels}">
+    <joint name="${prefix}front_right_wheel_joint" type="continuous">
+            <parent link="${prefix}base_link"/>
+            <child link="${prefix}front_right_wheel"/>
+            <origin xyz="0.037000 0.148700 0.019300" rpy="0.000000 0.000000 0.000000"/>
+            <axis xyz="0.000000 1.000000 0.000000"/>
+            <limit effort="100.0" velocity="1.0"/>
+          </joint>
+        </xacro:if>
+        <xacro:unless value="${include_wheels}">
+    <joint name="${prefix}front_right_wheel_joint" type="fixed">
+            <parent link="${prefix}base_link"/>
+            <child link="${prefix}front_right_wheel"/>
+            <origin xyz="0.037000 0.148700 0.019300" rpy="0.000000 0.000000 0.000000"/>
+          </joint>
+        </xacro:unless>
+        <xacro:if value="${include_wheels}">
+    <joint name="${prefix}back_left_wheel_joint" type="continuous">
+            <parent link="${prefix}base_link"/>
+            <child link="${prefix}back_left_wheel"/>
+            <origin xyz="0.123000 -0.018700 0.019300" rpy="0.000000 0.000000 0.000000"/>
+            <axis xyz="0.000000 -1.000000 0.000000"/>
+            <limit effort="100.0" velocity="1.0"/>
+          </joint>
+        </xacro:if>
+        <xacro:unless value="${include_wheels}">
+    <joint name="${prefix}back_left_wheel_joint" type="fixed">
+            <parent link="${prefix}base_link"/>
+            <child link="${prefix}back_left_wheel"/>
+            <origin xyz="0.123000 -0.018700 0.019300" rpy="0.000000 0.000000 0.000000"/>
+          </joint>
+        </xacro:unless>
+        <xacro:if value="${include_wheels}">
+    <joint name="${prefix}back_right_wheel_joint" type="continuous">
+            <parent link="${prefix}base_link"/>
+            <child link="${prefix}back_right_wheel"/>
+            <origin xyz="0.123000 0.148700 0.019300" rpy="0.000000 0.000000 0.000000"/>
+            <axis xyz="0.000000 1.000000 0.000000"/>
+            <limit effort="100.0" velocity="1.0"/>
+          </joint>
+        </xacro:if>
+        <xacro:unless value="${include_wheels}">
+    <joint name="${prefix}back_right_wheel_joint" type="fixed">
+            <parent link="${prefix}base_link"/>
+            <child link="${prefix}back_right_wheel"/>
+            <origin xyz="0.123000 0.148700 0.019300" rpy="0.000000 0.000000 0.000000"/>
+          </joint>
+        </xacro:unless>
+    <joint name="${prefix}arm_lift_joint" type="revolute">
+      <parent link="${prefix}base_link"/>
+      <child link="${prefix}robot_arm_link"/>
+      <origin xyz="0.030000 0.093700 0.057900" rpy="-1.637996 -1.570796 -3.074393"/>
+      <axis xyz="0.000000 0.000000 -1.000000"/>
+      <limit lower="-1.000000000000" upper="1.000000000000" effort="100.000000" velocity="1.000000"/>
+    </joint>
+    <joint name="${prefix}wrist_pitch_joint" type="revolute">
+      <parent link="${prefix}robot_arm_link"/>
+      <child link="${prefix}gripper_link"/>
+      <origin xyz="0.161000 0.000400 0.010000" rpy="0.000000 -1.570796 0.000000"/>
+      <axis xyz="-1.000000 0.000000 0.000000"/>
+      <limit lower="-1.300000000000" upper="1.300000000000" effort="100.000000" velocity="1.000000"/>
+    </joint>
+    <joint name="${prefix}gripper_servo_joint" type="revolute">
+      <parent link="${prefix}gripper_link"/>
+      <child link="${prefix}gripper_servo_gear"/>
+      <origin xyz="0.026141 0.176579 -0.006540" rpy="3.141593 0.000000 -3.141593"/>
+      <axis xyz="0.000000 0.000000 1.000000"/>
+      <limit lower="0.000000000000" upper="3.141592653590" effort="100.000000" velocity="1.000000"/>
+      <mimic joint="${prefix}gripper_joint" multiplier="2.000000000000" offset="0.000000000000"/>
+    </joint>
+    <joint name="${prefix}gripper_left_gear_joint" type="revolute">
+      <parent link="${prefix}gripper_link"/>
+      <child link="${prefix}gripper_left_gear"/>
+      <origin xyz="0.032700 0.193349 -0.012500" rpy="3.141593 0.000000 -3.141593"/>
+      <axis xyz="0.000000 0.000000 1.000000"/>
+      <limit lower="-1.570796326795" upper="0.000000000000" effort="100.000000" velocity="1.000000"/>
+      <mimic joint="${prefix}gripper_joint" multiplier="-1.000000000000" offset="0.000000000000"/>
+    </joint>
+    <joint name="${prefix}gripper_right_gear_joint" type="revolute">
+      <parent link="${prefix}gripper_link"/>
+      <child link="${prefix}gripper_right_gear"/>
+      <origin xyz="0.008700 0.193349 -0.012500" rpy="3.141593 0.000000 -3.141593"/>
+      <axis xyz="0.000000 0.000000 1.000000"/>
+      <limit lower="0.000000000000" upper="1.570796326795" effort="100.000000" velocity="1.000000"/>
+      <mimic joint="${prefix}gripper_joint" multiplier="1.000000000000" offset="0.000000000000"/>
+    </joint>
+    <joint name="${prefix}gripper_left_addition_joint" type="revolute">
+      <parent link="${prefix}gripper_link"/>
+      <child link="${prefix}gripper_left_addition"/>
+      <origin xyz="0.025700 0.208349 -0.012500" rpy="3.141593 0.000000 -3.141593"/>
+      <axis xyz="0.000000 0.000000 1.000000"/>
+      <limit lower="-1.570796326795" upper="0.000000000000" effort="100.000000" velocity="1.000000"/>
+      <mimic joint="${prefix}gripper_joint" multiplier="-1.000000000000" offset="0.000000000000"/>
+    </joint>
+    <joint name="${prefix}gripper_right_addition_joint" type="revolute">
+      <parent link="${prefix}gripper_link"/>
+      <child link="${prefix}gripper_right_addition"/>
+      <origin xyz="0.015700 0.208349 -0.012500" rpy="3.141593 0.000000 -3.141593"/>
+      <axis xyz="0.000000 0.000000 1.000000"/>
+      <limit lower="0.000000000000" upper="1.570796326795" effort="100.000000" velocity="1.000000"/>
+      <mimic joint="${prefix}gripper_joint" multiplier="1.000000000000" offset="0.000000000000"/>
+    </joint>
+    <joint name="${prefix}clamp_left_addition_joint" type="revolute">
+      <parent link="${prefix}gripper_left_addition"/>
+      <child link="${prefix}gripper_clamp_left"/>
+      <origin xyz="-0.030000 0.000000 0.000000" rpy="0.000000 0.000000 0.000000"/>
+      <axis xyz="0.000000 0.000000 1.000000"/>
+      <limit lower="0.000000000000" upper="1.570796326795" effort="100.000000" velocity="1.000000"/>
+      <mimic joint="${prefix}gripper_joint" multiplier="1.000000000000" offset="0.000000000000"/>
+    </joint>
+    <joint name="${prefix}clamp_right_addition_joint" type="revolute">
+      <parent link="${prefix}gripper_right_addition"/>
+      <child link="${prefix}gripper_clamp_right"/>
+      <origin xyz="0.030000 0.000000 0.000000" rpy="0.000000 0.000000 0.000000"/>
+      <axis xyz="0.000000 0.000000 1.000000"/>
+      <limit lower="-1.570796326795" upper="0.000000000000" effort="100.000000" velocity="1.000000"/>
+      <mimic joint="${prefix}gripper_joint" multiplier="-1.000000000000" offset="0.000000000000"/>
+    </joint>
+    <joint name="${prefix}tool0_fixed_joint" type="fixed">
+      <parent link="${prefix}gripper_link"/>
+      <child link="${prefix}tool0"/>
+      <origin xyz="0.000000 0.000000 0.000000" rpy="0.000000 0.000000 0.000000"/>
+    </joint>
+    <joint name="${prefix}grasp_nominal_fixed_joint" type="fixed">
+      <parent link="${prefix}gripper_link"/>
+      <child link="${prefix}grasp_nominal"/>
+      <origin xyz="0.020700 0.211500 -0.008098" rpy="0.000000 0.000000 0.000000"/>
+    </joint>
+  </xacro:macro>
+</robot>
