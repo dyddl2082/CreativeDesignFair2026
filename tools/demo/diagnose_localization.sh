@@ -69,13 +69,16 @@ sample_field() {
   local seconds="${4:-5}"
   local reliability="${5:-best_effort}"
   local output
-  if output="$(timeout "${seconds}s" ros2 topic echo "$topic" --once \
-      --qos-reliability "$reliability" --field "$field" 2>&1)"; then
+
+  if output="$("$SCRIPT_DIR/ros2_wait_for_one.py" "$topic" \
+      --field "$field" --timeout "$seconds" \
+      --reliability "$reliability" 2>&1)"; then
     ok "$label"
     printf '%s\n' "$output" | sed 's/^/  /'
     return 0
   fi
-  fail "$label: no sample within ${seconds}s"
+
+  fail "$label: no valid sample within ${seconds}s"
   printf '%s\n' "$output" | sed 's/^/  /' >&2
   return 1
 }
@@ -85,28 +88,42 @@ sample_string() {
   local topic="$2"
   local seconds="${3:-7}"
   local output
-  if output="$(timeout "${seconds}s" ros2 topic echo "$topic" --once \
-      --field data --full-length 2>&1)"; then
+
+  if output="$("$SCRIPT_DIR/ros2_wait_for_one.py" "$topic" \
+      --field data --timeout "$seconds" \
+      --reliability best_effort 2>&1)"; then
     ok "$label"
     printf '%s\n' "$output" | sed 's/^/  /'
     return 0
   fi
-  warn "$label: no sample within ${seconds}s"
+
+  warn "$label: no valid sample within ${seconds}s"
+  printf '%s\n' "$output" | sed 's/^/  /' >&2
   return 1
 }
 
 check_tf() {
   local parent="$1"
   local child="$2"
-  local output
-  output="$(timeout 5s ros2 run tf2_ros tf2_echo "$parent" "$child" 2>&1 || true)"
-  if printf '%s' "$output" | grep -q 'Translation:'; then
-    ok "TF $parent -> $child"
-    printf '%s\n' "$output" | grep -E 'Translation:|Rotation:' | head -n 2 | sed 's/^/  /'
-    return 0
-  fi
+  local output=""
+  local attempt
+
+  for attempt in 1 2 3 4 5; do
+    output="$(timeout --signal=INT --kill-after=1s 2s \
+      ros2 run tf2_ros tf2_echo "$parent" "$child" 2>&1 || true)"
+    if printf '%s' "$output" | grep -q 'Translation:'; then
+      ok "TF $parent -> $child"
+      printf '%s\n' "$output" \
+        | grep -E 'Translation:|Rotation:' \
+        | head -n 2 \
+        | sed 's/^/  /'
+      return 0
+    fi
+    sleep 0.5
+  done
+
   fail "TF $parent -> $child unavailable"
-  printf '%s\n' "$output" | tail -n 8 | sed 's/^/  /' >&2
+  printf '%s\n' "$output" | tail -n 10 | sed 's/^/  /' >&2
   return 1
 }
 
@@ -154,6 +171,10 @@ else
     $SCRIPT_DIR/04_pi_robot_stack.sh dry /dev/ttyACM0
 MSG
 fi
+
+section "TF publishers"
+show_nodes_matching "Robot-state publisher" '/.*robot_state_publisher.*$'
+show_nodes_matching "Camera-TF publisher" '/.*camera.*tf.*$'
 
 section "Camera and TF"
 sample_field "Color CameraInfo" /camera/camera/color/camera_info header.frame_id 7 best_effort || true
