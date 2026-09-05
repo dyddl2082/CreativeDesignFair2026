@@ -159,6 +159,22 @@ def build_parser() -> argparse.ArgumentParser:
     capture.add_argument("stage", choices=_STAGES)
     _add_object_reference_arguments(capture)
 
+    lock_reference = sub.add_parser(
+        "lock-reference",
+        help=(
+            "Lock one fresh live object point for the whole keyframe teaching "
+            "session. The base and object must remain stationary until finalize."
+        ),
+    )
+    lock_reference.add_argument("profile")
+    lock_reference.add_argument("object_name")
+
+    reference_status = sub.add_parser("reference-status")
+    reference_status.add_argument("profile", nargs="?", default="")
+
+    clear_reference = sub.add_parser("clear-reference")
+    clear_reference.add_argument("profile", nargs="?", default="")
+
     finalize = sub.add_parser("finalize")
     finalize.add_argument("profile")
 
@@ -205,6 +221,28 @@ def main(argv=None) -> None:
             }
         )
         _attach_object_reference(payload, args)
+    elif args.command == "lock-reference":
+        payload.update(
+            {
+                "action": "lock_reference",
+                "profile": args.profile,
+                "object_name": args.object_name,
+            }
+        )
+    elif args.command == "reference-status":
+        payload.update(
+            {
+                "action": "reference_status",
+                "profile": args.profile,
+            }
+        )
+    elif args.command == "clear-reference":
+        payload.update(
+            {
+                "action": "clear_reference",
+                "profile": args.profile,
+            }
+        )
     elif args.command in {"play", "preflight", "place", "preflight-place"}:
         action = "preflight_place" if args.command == "preflight-place" else args.command
         payload.update(

@@ -171,6 +171,9 @@ class GraspKeyframeNode(Node):
 
         self.current_q: Q = (0.0, 0.0, 0.0)
         self.latest_detection: Optional[dict[str, Any]] = None
+        # Process-local by design: one stationary object point is reused during
+        # this teaching session, but never silently survives a node restart.
+        self.capture_reference_locks: dict[str, dict[str, Any]] = {}
         self.state = "IDLE"
         self.command_id = ""
         self.plan: Optional[SemanticGraspPlan] = None
@@ -246,9 +249,18 @@ class GraspKeyframeNode(Node):
             raise ValueError("localized_object_unavailable")
         if str(payload.get("object_name", "")).casefold() != object_name.casefold():
             raise ValueError("localized_object_name_mismatch")
-        stamp = float(payload.get("stamp_sec", 0.0))
-        if stamp <= 0.0 or time.time() - stamp > float(
-            self.get_parameter("detection_max_age_sec").value
+        source_stamp = float(payload.get("stamp_sec", 0.0) or 0.0)
+        published_stamp = float(payload.get("published_at_sec", 0.0) or 0.0)
+        freshness_stamp = (
+            published_stamp
+            if math.isfinite(published_stamp) and published_stamp > 0.0
+            else source_stamp
+        )
+        age_sec = time.time() - freshness_stamp
+        if (
+            not math.isfinite(age_sec)
+            or age_sec < -1.0
+            or age_sec > float(self.get_parameter("detection_max_age_sec").value)
         ):
             raise ValueError("localized_object_stale")
         localization = payload.get("localization", {})
@@ -259,6 +271,236 @@ class GraspKeyframeNode(Node):
         if depth_std > float(self.get_parameter("maximum_depth_std_m").value):
             raise ValueError("depth_uncertainty_too_high")
         return payload["_point"], payload
+
+
+    @staticmethod
+    def _capture_reference_key(profile_name: str) -> str:
+        return str(profile_name).strip().casefold()
+
+    def _set_capture_reference(
+        self,
+        *,
+        profile_name: str,
+        object_name: str,
+        point: Vector3,
+        detection: Optional[dict[str, Any]],
+        source: str,
+    ) -> dict[str, Any]:
+        reference = {
+            "profile": str(profile_name),
+            "object_name": str(object_name),
+            "point": tuple(float(value) for value in point),
+            "detection": dict(detection or {}),
+            "source": str(source),
+            "locked_at_sec": time.time(),
+        }
+        self.capture_reference_locks[
+            self._capture_reference_key(profile_name)
+        ] = reference
+        return reference
+
+    def _get_capture_reference(
+        self,
+        profile_name: str,
+        object_name: str,
+    ) -> Optional[dict[str, Any]]:
+        reference = self.capture_reference_locks.get(
+            self._capture_reference_key(profile_name)
+        )
+        if reference is None:
+            return None
+        if str(reference.get("object_name", "")).casefold() != object_name.casefold():
+            raise ValueError("capture_reference_object_name_mismatch")
+        point = _point(reference.get("point"))
+        if point is None:
+            raise ValueError("capture_reference_invalid")
+        return reference
+
+    def _capture_reference_result(self, reference: dict[str, Any]) -> dict[str, Any]:
+        point = _point(reference.get("point"))
+        return {
+            "profile": str(reference.get("profile", "")),
+            "object_name": str(reference.get("object_name", "")),
+            "point_base": None if point is None else list(point),
+            "source": str(reference.get("source", "")),
+            "locked_at_sec": float(reference.get("locked_at_sec", 0.0) or 0.0),
+        }
+
+    def _lock_reference(self, data: dict[str, Any]) -> None:
+        profile_name = str(data.get("profile", "")).strip()
+        object_name = str(data.get("object_name", profile_name)).strip()
+        if not profile_name or not object_name:
+            raise ValueError("profile and object_name are required")
+        direct_point = _point(data.get("object_point_base"))
+        point, detection = self._fresh_detection(object_name, direct_point)
+        reference = self._set_capture_reference(
+            profile_name=profile_name,
+            object_name=object_name,
+            point=point,
+            detection=detection,
+            source=(
+                "explicit_object_point_base"
+                if direct_point is not None
+                else "live_localized_detection"
+            ),
+        )
+        self._result(
+            "grasp_keyframe_capture_reference_locked",
+            True,
+            **self._capture_reference_result(reference),
+        )
+
+    def _reference_status(self, data: dict[str, Any]) -> None:
+        profile_name = str(data.get("profile", "")).strip()
+        if profile_name:
+            reference = self.capture_reference_locks.get(
+                self._capture_reference_key(profile_name)
+            )
+            self._result(
+                "grasp_keyframe_capture_reference_status",
+                True,
+                profile=profile_name,
+                locked=reference is not None,
+                reference=(
+                    None
+                    if reference is None
+                    else self._capture_reference_result(reference)
+                ),
+            )
+            return
+        references = [
+            self._capture_reference_result(reference)
+            for _, reference in sorted(self.capture_reference_locks.items())
+        ]
+        self._result(
+            "grasp_keyframe_capture_reference_status",
+            True,
+            locked=bool(references),
+            references=references,
+        )
+
+    def _clear_reference(self, data: dict[str, Any]) -> None:
+        profile_name = str(data.get("profile", "")).strip()
+        if profile_name:
+            removed = self.capture_reference_locks.pop(
+                self._capture_reference_key(profile_name),
+                None,
+            )
+            self._result(
+                "grasp_keyframe_capture_reference_cleared",
+                True,
+                profile=profile_name,
+                cleared=removed is not None,
+            )
+            return
+        count = len(self.capture_reference_locks)
+        self.capture_reference_locks.clear()
+        self._result(
+            "grasp_keyframe_capture_reference_cleared",
+            True,
+            profile="",
+            cleared=count > 0,
+            cleared_count=count,
+        )
+
+    def _resolve_capture_reference(
+        self,
+        *,
+        profile_name: str,
+        object_name: str,
+        stage_name: str,
+        direct_point: Optional[Vector3],
+    ) -> tuple[Optional[Vector3], dict[str, Any], str]:
+        if stage_name == "CLOSE":
+            return None, {}, "not_required"
+
+        if stage_name == "OPEN":
+            # OPEN is gripper-only. When the object is already visible, however,
+            # opportunistically lock its point before the arm starts occluding it.
+            # OPEN itself still succeeds when perception is unavailable.
+            reference = self._get_capture_reference(profile_name, object_name)
+            if reference is not None:
+                point = _point(reference.get("point"))
+                assert point is not None
+                return (
+                    point,
+                    dict(reference.get("detection", {})),
+                    "locked_session_reference",
+                )
+            try:
+                point, detection = self._fresh_detection(object_name, direct_point)
+            except ValueError:
+                # OPEN is gripper-only. A missing, stale, mismatched, or low-quality
+                # detection must not prevent recording the gripper-open value.
+                return None, {}, "not_required_reference_not_locked"
+            self._set_capture_reference(
+                profile_name=profile_name,
+                object_name=object_name,
+                point=point,
+                detection=detection,
+                source="live_localized_detection",
+            )
+            return point, detection, "live_localized_detection_locked_on_open"
+
+        if direct_point is not None:
+            reference = self._set_capture_reference(
+                profile_name=profile_name,
+                object_name=object_name,
+                point=direct_point,
+                detection={},
+                source="explicit_object_point_base",
+            )
+            return direct_point, {}, str(reference["source"])
+
+        reference = self._get_capture_reference(profile_name, object_name)
+        if reference is not None:
+            point = _point(reference.get("point"))
+            assert point is not None
+            return (
+                point,
+                dict(reference.get("detection", {})),
+                "locked_session_reference",
+            )
+
+        if stage_name == "LIFT":
+            try:
+                draft = self.store.get(profile_name)
+            except KeyError as error:
+                raise ValueError(
+                    "capture_reference_unavailable_lock_reference_first"
+                ) from error
+            if draft.object_name.casefold() != object_name.casefold():
+                raise ValueError("lift_reference_object_name_mismatch")
+            point, source_stage = recover_lift_capture_reference(
+                self.model,
+                draft,
+                consistency_tolerance_m=float(
+                    self.get_parameter(
+                        "lift_capture_reference_consistency_tolerance_m"
+                    ).value
+                ),
+            )
+            return point, {}, f"profile:{source_stage}"
+
+        try:
+            point, detection = self._fresh_detection(object_name)
+        except ValueError as error:
+            if str(error) in {
+                "localized_object_unavailable",
+                "localized_object_stale",
+            }:
+                raise ValueError(
+                    "capture_reference_unavailable_lock_reference_while_object_visible"
+                ) from error
+            raise
+        self._set_capture_reference(
+            profile_name=profile_name,
+            object_name=object_name,
+            point=point,
+            detection=detection,
+            source="live_localized_detection",
+        )
+        return point, detection, "live_localized_detection_locked"
 
     def _command_callback(self, message: String) -> None:
         action = ""
@@ -281,6 +523,12 @@ class GraspKeyframeNode(Node):
                     return
             if action == "capture":
                 self._capture(data)
+            elif action == "lock_reference":
+                self._lock_reference(data)
+            elif action == "reference_status":
+                self._reference_status(data)
+            elif action == "clear_reference":
+                self._clear_reference(data)
             elif action == "finalize":
                 self._finalize(data)
             elif action in {"play", "preflight", "place", "preflight_place"}:
@@ -290,11 +538,21 @@ class GraspKeyframeNode(Node):
             elif action == "list":
                 self._result("grasp_keyframe_profiles", True, profiles=self.store.mappings())
             elif action == "delete":
-                deleted = self.store.delete(str(data.get("profile", "")))
+                profile_name = str(data.get("profile", ""))
+                deleted = self.store.delete(profile_name)
+                self.capture_reference_locks.pop(
+                    self._capture_reference_key(profile_name),
+                    None,
+                )
                 self._result("grasp_keyframe_profile_deleted", deleted)
             elif action == "reload":
                 self.store.reload()
-                self._result("grasp_keyframe_profiles_reloaded", True)
+                self.capture_reference_locks.clear()
+                self._result(
+                    "grasp_keyframe_profiles_reloaded",
+                    True,
+                    capture_references_cleared=True,
+                )
             elif action in {"stop", "cancel"}:
                 self._stop("user_cancel")
             else:
@@ -310,36 +568,13 @@ class GraspKeyframeNode(Node):
         stage_name = str(data.get("stage", "")).strip().upper()
         if not profile_name or not object_name:
             raise ValueError("profile and object_name are required")
-        point: Optional[Vector3] = None
-        detection: dict[str, Any] = {}
-        object_reference_source = "not_required"
         direct_point = _point(data.get("object_point_base"))
-        if stage_name == "LIFT" and direct_point is None:
-            try:
-                draft = self.store.get(profile_name)
-            except KeyError as error:
-                raise ValueError(
-                    "lift_reference_unavailable_capture_grasp_open_first"
-                ) from error
-            if draft.object_name.casefold() != object_name.casefold():
-                raise ValueError("lift_reference_object_name_mismatch")
-            point, source_stage = recover_lift_capture_reference(
-                self.model,
-                draft,
-                consistency_tolerance_m=float(
-                    self.get_parameter(
-                        "lift_capture_reference_consistency_tolerance_m"
-                    ).value
-                ),
-            )
-            object_reference_source = f"profile:{source_stage}"
-        elif stage_name not in {"OPEN", "CLOSE"}:
-            point, detection = self._fresh_detection(object_name, direct_point)
-            object_reference_source = (
-                "explicit_object_point_base"
-                if direct_point is not None
-                else "live_localized_detection"
-            )
+        point, detection, object_reference_source = self._resolve_capture_reference(
+            profile_name=profile_name,
+            object_name=object_name,
+            stage_name=stage_name,
+            direct_point=direct_point,
+        )
         stage = capture_stage(
             stage_name=stage_name,
             current_q=self.current_q,
@@ -373,12 +608,17 @@ class GraspKeyframeNode(Node):
     def _finalize(self, data: dict[str, Any]) -> None:
         profile = self.store.get(str(data.get("profile", "")))
         profile.validate()
+        reference_cleared = self.capture_reference_locks.pop(
+            self._capture_reference_key(profile.name),
+            None,
+        ) is not None
         self._result(
             "grasp_keyframe_profile_finalized",
             True,
             profile=profile.name,
             stages=list(REQUIRED_STAGES),
             profile_file=str(self.store.path),
+            capture_reference_cleared=reference_cleared,
         )
 
     def _start_plan(
