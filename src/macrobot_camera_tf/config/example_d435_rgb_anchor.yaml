@@ -1,0 +1,12 @@
+# Example schema only. Do not use these identity values on hardware.
+# Generate a device-specific file with capture_d435_rgb_anchor.launch.py.
+schema_version: 1
+metadata:
+  example_only: true
+  urdf_anchor_frame: camera_link
+  anchor_assumption: camera_link is at the RGB lens center and uses ROS body axes
+transforms:
+  - parent: camera_link
+    child: camera_color_frame
+    xyz: [0.0, 0.0, 0.0]
+    quaternion_xyzw: [0.0, 0.0, 0.0, 1.0]
