@@ -5,6 +5,7 @@ import math
 from pathlib import Path
 import threading
 import time
+import uuid
 from typing import Any, Callable
 
 import rclpy
@@ -66,6 +67,10 @@ class MacRobotActionGatewayNode(Node):
         self.declare_parameter("alignment_result_topic", "/macrobot/base_alignment/result")
         self.declare_parameter("finder_result_topic", "/object_finder/result")
         self.declare_parameter("finder_status_topic", "/object_finder/status")
+        self.declare_parameter("stored_task_goal_topic", "/macrobot/stored_pick/goal")
+        self.declare_parameter("stored_task_cancel_topic", "/macrobot/stored_pick/cancel")
+        self.declare_parameter("stored_task_result_topic", "/macrobot/stored_pick/result")
+        self.declare_parameter("stored_task_status_topic", "/macrobot/stored_pick/status")
 
         settings_path = Path(str(self.get_parameter("settings_file").value)).expanduser()
         catalog_path = Path(str(self.get_parameter("object_catalog_file").value)).expanduser()
@@ -96,6 +101,9 @@ class MacRobotActionGatewayNode(Node):
         self.alignment_result_stream = EventStream()
         self.finder_result_stream = EventStream()
         self.finder_status_stream = EventStream()
+        self.stored_task_result_stream = EventStream()
+        self.stored_task_status_stream = EventStream()
+        self._active_place_request_id = ""
 
         self.pico_command_pub = self.create_publisher(
             String, str(self.get_parameter("pico_command_topic").value), 20
@@ -111,6 +119,12 @@ class MacRobotActionGatewayNode(Node):
         )
         self.alignment_cancel_pub = self.create_publisher(
             String, str(self.get_parameter("alignment_cancel_topic").value), 10
+        )
+        self.stored_task_goal_pub = self.create_publisher(
+            String, str(self.get_parameter("stored_task_goal_topic").value), 10
+        )
+        self.stored_task_cancel_pub = self.create_publisher(
+            String, str(self.get_parameter("stored_task_cancel_topic").value), 10
         )
 
         self.create_subscription(
@@ -159,6 +173,18 @@ class MacRobotActionGatewayNode(Node):
             String,
             str(self.get_parameter("finder_status_topic").value),
             self._finder_status_callback,
+            50,
+        )
+        self.create_subscription(
+            String,
+            str(self.get_parameter("stored_task_result_topic").value),
+            self._stored_task_result_callback,
+            50,
+        )
+        self.create_subscription(
+            String,
+            str(self.get_parameter("stored_task_status_topic").value),
+            self._stored_task_status_callback,
             50,
         )
 
@@ -244,6 +270,32 @@ class MacRobotActionGatewayNode(Node):
             self._last_topic_times["finder_status"] = time.monotonic()
             self.finder_status_stream.append(payload)
             self.runtime.state.update_perception_status()
+
+    def _stored_task_result_callback(self, msg: String) -> None:
+        payload = _json_object(msg.data)
+        if payload is not None:
+            self._last_topic_times["stored_task_result"] = time.monotonic()
+            self.stored_task_result_stream.append(payload)
+
+    def _stored_task_status_callback(self, msg: String) -> None:
+        payload = _json_object(msg.data)
+        if payload is None:
+            return
+        self._last_topic_times["stored_task_status"] = time.monotonic()
+        self.stored_task_status_stream.append(payload)
+        held = payload.get("held_object")
+        if not isinstance(held, dict):
+            return
+        state = str(held.get("state", "unknown")).strip().casefold()
+        if state == "empty":
+            self.runtime.state.set_held_object(None, known=True)
+            return
+        if state == "holding":
+            object_id = self._catalog_object_id(str(held.get("object_name", "")))
+            if object_id is not None:
+                self.runtime.state.set_held_object(object_id, known=True)
+                return
+        self.runtime.state.set_held_object(None, known=False)
 
     def _finder_result_callback(self, msg: String) -> None:
         payload = _json_object(msg.data)
@@ -495,28 +547,15 @@ class MacRobotActionGatewayNode(Node):
         cancel_event: threading.Event,
     ) -> BridgeOutcome:
         if not self.real_motion_enabled:
-            return self._dry_run_motion(
-                cancel_event,
-                "PICK" if execute_pick else "ALIGN",
-                details={"internal_motion_steps": 0},
-            )
-
+            return self._dry_run_motion(cancel_event, "PICK" if execute_pick else "ALIGN", details={"internal_motion_steps": 0})
         before = self.alignment_result_stream.last_sequence()
-        request_id = (
-            f"gateway-{'pick' if execute_pick else 'align'}-"
-            f"{object_id.value}-{int(time.time() * 1000)}"
-        )
         goal = String()
         goal.data = json.dumps(
             {
-                "request_id": request_id,
                 "object_name": object_id.value,
                 "alignment_profile": alignment_profile,
                 "pick_profile": pick_profile,
                 "execute_pick": execute_pick,
-                "mode": "full",
-                "start_finder": True,
-                "timeout_sec": timeout_s,
                 "search_timeout_sec": min(timeout_s, 60.0),
             },
             ensure_ascii=False,
@@ -524,21 +563,12 @@ class MacRobotActionGatewayNode(Node):
         self.align_pick_goal_pub.publish(goal)
         deadline = time.monotonic() + timeout_s
         expected = "align_pick_completed" if execute_pick else "alignment_completed"
-
         while time.monotonic() < deadline:
             if cancel_event.is_set():
                 self.cancel_align_pick()
-                return self._wait_align_pick_cancel(
-                    request_id=request_id,
-                    object_id=object_id,
-                    after_sequence=before,
-                    timed_out=False,
-                )
-
+                return BridgeOutcome(False, "RUN_CANCELED", "정렬/파지 액션이 취소되었습니다.", canceled=True, started=True)
             payload = self.alignment_result_stream.wait_for(
-                lambda item: str(item.get("request_id", "")) == request_id
-                and str(item.get("object_name", "")).casefold()
-                == object_id.value.casefold()
+                lambda item: str(item.get("object_name", "")).casefold() == object_id.value.casefold()
                 and (
                     str(item.get("event", "")) == expected
                     or item.get("ok") is False
@@ -550,104 +580,132 @@ class MacRobotActionGatewayNode(Node):
                 continue
             if payload.get("ok") is True and str(payload.get("event")) == expected:
                 iterations = int(payload.get("iterations", 0) or 0)
-                steps = payload.get("steps")
-                step_count = len(steps) if isinstance(steps, dict) else 0
+                pick_result = payload.get("pick_result")
+                pick_steps = 0
+                if isinstance(pick_result, dict):
+                    steps = pick_result.get("steps")
+                    if isinstance(steps, dict):
+                        pick_steps = len(steps)
                 details = dict(payload)
-                details["internal_motion_steps"] = max(0, iterations) + max(0, step_count)
+                details["internal_motion_steps"] = max(0, iterations) + max(0, pick_steps)
                 return BridgeOutcome(True, details=details)
-
-            action_state = str(payload.get("action_state", "")).upper()
             reason = str(payload.get("reason", payload.get("event", "alignment_failed")))
-            if action_state == "CANCELED":
-                return BridgeOutcome(
-                    False,
-                    "RUN_CANCELED",
-                    reason or "정렬/파지 액션이 취소되었습니다.",
-                    details=dict(payload),
-                    canceled=True,
-                    started=True,
-                )
-            if action_state == "TIMED_OUT":
-                return BridgeOutcome(
-                    False,
-                    "ACTION_HARD_TIMEOUT",
-                    reason or "정렬/파지 액션이 timeout되었습니다.",
-                    details=dict(payload),
-                    timed_out=True,
-                    started=True,
-                )
-            code = str(payload.get("error_code", "")) or self._align_error_code(reason)
-            return BridgeOutcome(
-                False,
-                code,
-                f"정렬/파지 실패: {reason}",
-                details=dict(payload),
-                started=True,
-            )
-
+            code = self._align_error_code(reason)
+            return BridgeOutcome(False, code, f"정렬/파지 실패: {reason}", details=payload, started=True)
         self.cancel_align_pick()
-        return self._wait_align_pick_cancel(
-            request_id=request_id,
-            object_id=object_id,
-            after_sequence=before,
-            timed_out=True,
-        )
+        return BridgeOutcome(False, "ACTION_HARD_TIMEOUT", "정렬/파지 hard timeout", timed_out=True, started=True)
 
-    def _wait_align_pick_cancel(
+    def execute_place_nextto(
         self,
+        reference_object_id: ObjectId,
         *,
-        request_id: str,
-        object_id: ObjectId,
-        after_sequence: int,
-        timed_out: bool,
+        reference_profile: str,
+        held_object_id: ObjectId,
+        placement_offset_base: tuple[float, float, float],
+        timeout_s: float,
+        cancel_event: threading.Event,
     ) -> BridgeOutcome:
-        cancel_timeout = float(
-            self._setting("control_timeouts.cancel_action_s", 4.0)
-        )
-        payload = self.alignment_result_stream.wait_for(
-            lambda item: str(item.get("request_id", "")) == request_id
-            and str(item.get("object_name", "")).casefold()
-            == object_id.value.casefold()
-            and str(item.get("action_state", "")).upper()
-            in {"CANCELED", "TIMED_OUT", "FAILED"},
-            after_sequence=after_sequence,
-            timeout_s=max(0.1, cancel_timeout),
-        )
-        if payload is None:
-            return BridgeOutcome(
-                False,
-                "SAFE_STOP_UNCONFIRMED",
-                "정렬/파지 취소 후 안전한 terminal 상태를 확인하지 못했습니다.",
-                details={"request_id": request_id},
-                started=True,
+        if not self.real_motion_enabled:
+            return self._dry_run_motion(
+                cancel_event,
+                "PLACE",
+                details={"internal_motion_steps": 4},
             )
-
-        action_state = str(payload.get("action_state", "")).upper()
-        if action_state == "CANCELED" and not timed_out:
-            return BridgeOutcome(
-                False,
-                "RUN_CANCELED",
-                str(payload.get("reason", "정렬/파지 액션이 취소되었습니다.")),
-                details=dict(payload),
-                canceled=True,
-                started=True,
-            )
-        if action_state in {"CANCELED", "TIMED_OUT"} and timed_out:
+        request_id = f"gateway-place-{uuid.uuid4().hex}"
+        self._active_place_request_id = request_id
+        before = self.stored_task_result_stream.last_sequence()
+        goal = String()
+        goal.data = json.dumps(
+            {
+                "task": "place",
+                "request_id": request_id,
+                "reference_object": reference_object_id.value,
+                "reference_profile": reference_profile,
+                "held_object": held_object_id.value,
+                "placement_offset_base": list(placement_offset_base),
+                "timeout_sec": timeout_s,
+                "start_finder": True,
+            },
+            ensure_ascii=False,
+        )
+        self.stored_task_goal_pub.publish(goal)
+        deadline = time.monotonic() + timeout_s
+        terminal_events = {
+            "stored_place_completed",
+            "stored_place_failed",
+            "stored_place_rejected",
+            "stored_place_timed_out",
+            "stored_place_cancelled",
+        }
+        try:
+            while time.monotonic() < deadline:
+                if cancel_event.is_set():
+                    self.cancel_place_nextto()
+                    return BridgeOutcome(
+                        False,
+                        "RUN_CANCELED",
+                        "배치 액션이 취소되었습니다.",
+                        canceled=True,
+                        started=True,
+                    )
+                payload = self.stored_task_result_stream.wait_for(
+                    lambda item: str(item.get("request_id", "")) == request_id
+                    and (
+                        str(item.get("event", "")) in terminal_events
+                        or item.get("ok") is False
+                    ),
+                    after_sequence=before,
+                    timeout_s=min(0.2, max(0.01, deadline - time.monotonic())),
+                )
+                if payload is None:
+                    continue
+                event = str(payload.get("event", ""))
+                if payload.get("ok") is True and event == "stored_place_completed":
+                    iterations = int(payload.get("iterations", 0) or 0)
+                    steps = payload.get("steps")
+                    place_steps = 4
+                    if isinstance(steps, dict):
+                        place_result = steps.get("place")
+                        if isinstance(place_result, dict):
+                            listed = place_result.get("steps")
+                            if isinstance(listed, (dict, list)):
+                                place_steps = len(listed)
+                    details = dict(payload)
+                    details["internal_motion_steps"] = max(0, iterations) + max(1, place_steps)
+                    return BridgeOutcome(True, details=details)
+                reason = str(payload.get("reason", payload.get("error_code", event or "place_failed")))
+                code = self._place_error_code(reason, event)
+                return BridgeOutcome(
+                    False,
+                    code,
+                    f"배치 실패: {reason}",
+                    details=payload,
+                    timed_out=event == "stored_place_timed_out",
+                    canceled=event == "stored_place_cancelled",
+                    started=True,
+                )
+            self.cancel_place_nextto()
             return BridgeOutcome(
                 False,
                 "ACTION_HARD_TIMEOUT",
-                "정렬/파지 hard timeout 후 하위 동작 정지를 확인했습니다.",
-                details=dict(payload),
+                "배치 hard timeout",
                 timed_out=True,
                 started=True,
             )
-        return BridgeOutcome(
-            False,
-            str(payload.get("error_code", "SAFE_STOP_UNCONFIRMED")),
-            str(payload.get("reason", "취소 처리 중 하위 액션이 실패했습니다.")),
-            details=dict(payload),
-            started=True,
+        finally:
+            if self._active_place_request_id == request_id:
+                self._active_place_request_id = ""
+
+    def cancel_place_nextto(self) -> None:
+        if not self.real_motion_enabled:
+            return
+        message = String()
+        message.data = (
+            "gateway_cancel"
+            if not self._active_place_request_id
+            else f"gateway_cancel:{self._active_place_request_id}"
         )
+        self.stored_task_cancel_pub.publish(message)
 
     def cancel_align_pick(self) -> None:
         if not self.real_motion_enabled:
@@ -666,6 +724,8 @@ class MacRobotActionGatewayNode(Node):
                 "arm_bridge": self._last_topic_times.get("arm_bridge"),
                 "finder_status": self._last_topic_times.get("finder_status"),
                 "finder_result": self._last_topic_times.get("finder_result"),
+                "stored_task_result": self._last_topic_times.get("stored_task_result"),
+                "stored_task_status": self._last_topic_times.get("stored_task_status"),
             }.items()
         }
         return {
@@ -675,6 +735,7 @@ class MacRobotActionGatewayNode(Node):
                 "pico_command": self.count_subscribers(str(self.get_parameter("pico_command_topic").value)),
                 "joint_goal": self.count_subscribers(str(self.get_parameter("joint_goal_topic").value)),
                 "align_pick_goal": self.count_subscribers(str(self.get_parameter("align_pick_goal_topic").value)),
+                "stored_task_goal": self.count_subscribers(str(self.get_parameter("stored_task_goal_topic").value)),
             },
         }
 
@@ -737,6 +798,29 @@ class MacRobotActionGatewayNode(Node):
         if "profile" in lowered:
             return "GRASP_PROFILE_NOT_FOUND"
         return "MOTION_EXECUTION_FAILED"
+
+    @staticmethod
+    def _place_error_code(reason: str, event: str = "") -> str:
+        lowered = f"{event} {reason}".casefold()
+        if "held" in lowered and "unknown" in lowered:
+            return "HELD_OBJECT_STATE_UNKNOWN"
+        if "not holding" in lowered or "no_held" in lowered:
+            return "NO_HELD_OBJECT"
+        if "not_found" in lowered or "search_timeout" in lowered:
+            return "REFERENCE_OBJECT_NOT_FOUND"
+        if "ambiguous" in lowered:
+            return "REFERENCE_OBJECT_AMBIGUOUS"
+        if "unsafe" in lowered or "preflight" in lowered:
+            return "PLACEMENT_PATH_UNSAFE"
+        if "unreachable" in lowered or "ik" in lowered:
+            return "PLACEMENT_TARGET_UNREACHABLE"
+        if "profile" in lowered:
+            return "PLACEMENT_PROFILE_NOT_FOUND"
+        if "timeout" in lowered:
+            return "ACTION_HARD_TIMEOUT"
+        if "cancel" in lowered:
+            return "RUN_CANCELED"
+        return "PLACEMENT_FAILED"
 
     def destroy_node(self):
         try:

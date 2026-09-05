@@ -5,6 +5,7 @@ from macrobot_pick_pipeline.grasp_keyframe_core import (
     GraspKeyframeProfile,
     SafeRegionLookup,
     build_semantic_grasp_plan,
+    build_semantic_place_plan,
     capture_stage,
 )
 
@@ -53,3 +54,31 @@ def test_semantic_plan_rejects_lateral_misalignment():
     import pytest
     with pytest.raises(ValueError, match="lateral_alignment_failed"):
         build_semantic_grasp_plan(model, profile, shifted, q, lateral_tolerance_m=0.02)
+
+
+def test_place_plan_is_cartesian_reverse_of_pick_semantics():
+    model = MacRobotArmModel()
+    q_open = (0.0, 0.0, 0.0)
+    q_closed = (0.0, 0.0, 0.5)
+    pose = model.forward(*q_open)
+    point = (pose.x, pose.y, pose.z)
+    stages = {
+        "OPEN": capture_stage(stage_name="OPEN", current_q=q_open, object_point_base=None, model=model),
+        "PRE_GRASP": capture_stage(stage_name="PRE_GRASP", current_q=q_open, object_point_base=point, model=model),
+        "GRASP_OPEN": capture_stage(stage_name="GRASP_OPEN", current_q=q_open, object_point_base=point, model=model),
+        "CLOSE": capture_stage(stage_name="CLOSE", current_q=q_closed, object_point_base=None, model=model),
+        "LIFT": capture_stage(stage_name="LIFT", current_q=q_open, object_point_base=point, model=model),
+    }
+    profile = GraspKeyframeProfile("Eraser", "Eraser", stages)
+    plan = build_semantic_place_plan(model, profile, point, q_closed)
+    assert plan.operation == "place"
+    assert [step.name for step in plan.steps] == [
+        "PLACE_ABOVE",
+        "PLACE_DESCEND",
+        "PLACE_RELEASE",
+        "PLACE_RETREAT",
+    ]
+    assert plan.steps[0].q[2] == 0.5
+    assert plan.steps[1].q[2] == 0.5
+    assert plan.steps[2].q[2] == 0.0
+    assert plan.steps[3].q[2] == 0.0

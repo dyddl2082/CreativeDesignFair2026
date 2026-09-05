@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>macrobot_pick_pipeline</name>
-  <version>0.7.0</version>
-  <description>Stored-object search pose recovery, cancellable visual alignment, validated recorded-grasp execution, camera localization, and arm demonstration recording for MacRobot.</description>
+  <version>0.8.0</version>
+  <description>Reboot-resilient, vision-led pick/place with delayed-perception compensation, safe semantic manipulation, and camera localization for MacRobot.</description>
   <maintainer email="dyddl2082@snu.ac.kr">MacRobot Team</maintainer>
   <license>MIT</license>
 

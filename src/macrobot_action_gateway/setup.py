@@ -7,7 +7,7 @@ package_name = "macrobot_action_gateway"
 
 setup(
     name=package_name,
-    version="0.1.1",
+    version="0.2.0",
     packages=find_packages(exclude=["test"]),
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
@@ -21,7 +21,7 @@ setup(
     zip_safe=True,
     maintainer="Kim Jinhyeong",
     maintainer_email="dyddl2082@snu.ac.kr",
-    description="Robot Action Gateway for MacRobot LLM API v0.2 with confirmed stored find-align-pick cancellation.",
+    description="Robot Action Gateway with resilient visual pick/place integration for MacRobot LLM API v0.2.",
     license="MIT",
     entry_points={
         "console_scripts": [

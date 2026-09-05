@@ -25,12 +25,29 @@ SETTINGS = {
     "arm_timeouts": {"set_arm_joints_s": 1.0},
     "gripper_limits": {"logical_deg": [0.0, 90.0]},
     "gripper_timeouts": {"set_gripper_s": 1.0},
-    "manipulation": {"pick_max_motion_steps_per_call": 8, "pick_hard_timeout_s": 2.0},
+    "manipulation": {
+        "pick_max_motion_steps_per_call": 8,
+        "place_max_motion_steps_per_call": 8,
+        "pick_hard_timeout_s": 2.0,
+        "place_hard_timeout_s": 2.0,
+        "default_placement_offset_base": [0.0, 0.12, 0.0],
+    },
     "perception": {"object_state_max_age_ms": 1500, "health_max_age_ms": 5000},
 }
 CATALOG = {
-    "BUDS3": {"runtime_name": "Buds3", "alignment_profile": "Buds3", "pick_profile": "Buds3"},
-    "CUP": {"runtime_name": "Cup", "alignment_profile": "Cup", "pick_profile": "Cup"},
+    "BUDS3": {
+        "runtime_name": "Buds3",
+        "alignment_profile": "Buds3",
+        "pick_profile": "Buds3",
+        "placement_profile": "Buds3",
+    },
+    "CUP": {
+        "runtime_name": "Cup",
+        "alignment_profile": "Cup",
+        "pick_profile": "Cup",
+        "placement_profile": "Cup",
+        "placement_offset_base": [0.0, 0.15, 0.0],
+    },
 }
 
 
@@ -39,6 +56,8 @@ def runtime():
     result = GatewayRuntime(bridge, SETTINGS, CATALOG)
     result.open_run("r")
     result.state.update_logical_joint_state(0.0, 0.0, 10.0)
+    # Production receives this state from the resilient task heartbeat.
+    result.state.set_held_object(None, known=True)
     return result, bridge
 
 
@@ -70,15 +89,43 @@ def test_arm_primitive_excludes_gripper_and_preserves_it():
     assert round(q_rad[2], 6) == round(40.0 * 3.141592653589793 / 180.0, 6)
 
 
-def test_pick_and_place_safe_failure():
-    gateway, _ = runtime()
+def test_pick_and_place_reverse_sequence_bridge():
+    gateway, bridge = runtime()
     pick = gateway.call("r", "PICK_OBJECT", {"object_id": ObjectId.BUDS3})
     assert wait(gateway, pick).state == ActionState.SUCCEEDED
     place = gateway.call("r", "PLACE_NEXTTO_OBJECT", {"reference_object_id": ObjectId.CUP})
     result = wait(gateway, place)
-    assert result.state == ActionState.FAILED
-    assert result.error_code == "PLACEMENT_PROFILE_NOT_FOUND"
+    assert result.state == ActionState.SUCCEEDED
+    assert bridge.calls[-1][0] == "PLACE"
+    assert bridge.calls[-1][1]["reference_object"] == "Cup"
+    assert bridge.calls[-1][1]["held_object"] == "Buds3"
+    assert bridge.calls[-1][1]["placement_offset_base"] == (0.0, 0.15, 0.0)
+    held, known = gateway.state.held_object()
+    assert known is True
+    assert held is None
 
+
+def test_place_rejects_empty_gripper():
+    gateway, _ = runtime()
+    place = gateway.call("r", "PLACE_NEXTTO_OBJECT", {"reference_object_id": ObjectId.CUP})
+    result = wait(gateway, place)
+    assert result.state == ActionState.FAILED
+    assert result.error_code == "NO_HELD_OBJECT"
+
+
+
+def test_pick_rejects_unknown_held_state_until_synchronized():
+    bridge = DryRunBridge()
+    gateway = GatewayRuntime(bridge, SETTINGS, CATALOG)
+    gateway.open_run("unknown-held")
+    pick = gateway.call(
+        "unknown-held", "PICK_OBJECT", {"object_id": ObjectId.BUDS3}
+    )
+    result = gateway.call(
+        "unknown-held", "WAIT_ACTION", {"action": pick, "timeout_s": 5.0}
+    )
+    assert result.state == ActionState.FAILED
+    assert result.error_code == "HELD_OBJECT_STATE_UNKNOWN"
 
 def test_stop_blocks_new_motion_in_same_run():
     gateway, _ = runtime()

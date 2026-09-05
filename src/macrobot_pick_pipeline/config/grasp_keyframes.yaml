@@ -11,7 +11,7 @@ macrobot_grasp_keyframes:
     bridge_status_topic: /macrobot/arm/servo_bridge/status
     arm_stop_topic: /macrobot/arm/stop
     profile_file: ~/MacRobot/data/grasp_keyframes/profiles.yaml
-    safe_region_csv: ""
+    safe_region_csv: ''
     require_safe_region_preflight: true
     safe_region_max_distance_rad: 0.06
     preflight_interpolation_step_rad: 0.025
@@ -19,12 +19,12 @@ macrobot_grasp_keyframes:
     minimum_localization_quality: 0.15
     maximum_depth_std_m: 0.035
     maximum_center_std_px: 20.0
-    lateral_tolerance_m: 0.020
+    lateral_tolerance_m: 0.02
     require_orientation_match: false
     auto_require_orientation_quality: 0.65
     minimum_orientation_quality: 0.25
     orientation_tolerance_deg: 25.0
     motion_timeout_sec: 20.0
     cancel_confirm_timeout_sec: 4.0
-    default_settle_sec: 0.10
+    default_settle_sec: 0.1
     timer_hz: 20.0

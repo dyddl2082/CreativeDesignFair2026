@@ -79,3 +79,30 @@ def test_localizer_strict_depth_mode_does_not_silently_use_candidate_depth():
     assert 'reason="aligned_depth_frame_not_synchronized"' in text
     assert 'source="unavailable"' in text
     assert 'source="finder_candidate_depth_fallback"' in text
+
+
+def test_distance_handoff_locks_far_detection_and_stops_requiring_dino_near_grasp():
+    text = _source("stored_object_pick_node.py")
+    assert "def _start_distance_handoff" in text
+    assert 'self._cancel_finder("far_target_locked")' in text
+    assert "close_range_reidentification_required=False" in text
+    assert "def _complete_distance_handoff" in text
+    assert "graspable_max_range_m" in text
+    assert "maximum_handoff_uncertainty_m" in text
+
+
+def test_two_stage_registration_is_available():
+    text = _source("stored_object_pick_node.py")
+    assert 'record_stage not in {"search", "grasp", "complete"}' in text
+    assert "def _complete_search_recording_with_odom" in text
+    assert "def _complete_grasp_recording_with_odom" in text
+    cli = _source("stored_object_pick_cli.py")
+    assert '"record-search"' in cli
+    assert '"record-grasp"' in cli
+
+
+def test_keyframe_cli_can_use_stored_close_reference_without_live_dino():
+    text = _source("grasp_keyframe_cli.py")
+    assert '"--stored-profile"' in text
+    assert 'payload["object_point_base"]' in text
+    assert '"stored_grasp_reference"' in text

@@ -7,7 +7,7 @@ package_name = "macrobot_pick_pipeline"
 
 setup(
     name=package_name,
-    version="0.7.0",
+    version="0.8.0",
     packages=find_packages(exclude=["test"]),
     data_files=[
         (
@@ -24,7 +24,7 @@ setup(
     zip_safe=True,
     maintainer="MacRobot Team",
     maintainer_email="dyddl2082@snu.ac.kr",
-    description="Stored-object search pose recovery, cancellable visual alignment, validated recorded-grasp execution, camera localization and arm demonstration recording for MacRobot",
+    description="Reboot-resilient vision-led pick/place, delayed-perception compensation, safe semantic manipulation, and camera localization for MacRobot",
     license="MIT",
     entry_points={
         "console_scripts": [
@@ -39,6 +39,8 @@ setup(
             "grasp_keyframe_node = macrobot_pick_pipeline.grasp_keyframe_node:main",
             "grasp_keyframe_cli = macrobot_pick_pipeline.grasp_keyframe_cli:main",
             "stored_object_pick_node = macrobot_pick_pipeline.stored_object_pick_node:main",
+            "resilient_object_task_node = macrobot_pick_pipeline.resilient_object_task_node:main",
+            "depth_clearance_node = macrobot_pick_pipeline.depth_clearance_node:main",
             "visible_pick_test_node = macrobot_pick_pipeline.visible_pick_test_node:main",
             "stored_object_pick_cli = macrobot_pick_pipeline.stored_object_pick_cli:main",
             "base_alignment_node = macrobot_pick_pipeline.base_alignment_node:main",

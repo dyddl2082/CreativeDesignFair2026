@@ -82,7 +82,7 @@ class AlignmentProfile:
     bearing_tolerance_deg: float = 2.0
     range_tolerance_m: float = 0.015
     height_tolerance_m: float = 0.030
-    max_turn_step_deg: float = 8.0
+    max_turn_step_deg: float = 4.0
     max_move_step_m: float = 0.040
     turn_speed: int = 150
     move_speed: int = 80
@@ -383,7 +383,7 @@ class AlignmentProfileStore:
 def planar_observation(
     point_base: Vector3,
     *,
-    forward_axis_sign: float = -1.0,
+    forward_axis_sign: float = 1.0,
     lateral_axis_sign: float = 1.0,
 ) -> PlanarObservation:
     if forward_axis_sign == 0.0 or lateral_axis_sign == 0.0:
@@ -407,7 +407,7 @@ def alignment_errors(
     current_point_base: Vector3,
     reference_point_base: Vector3,
     *,
-    forward_axis_sign: float = -1.0,
+    forward_axis_sign: float = 1.0,
     lateral_axis_sign: float = 1.0,
 ) -> AlignmentErrors:
     current = planar_observation(

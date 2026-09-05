@@ -419,7 +419,7 @@ class GatewayRuntime:
             self.state.mark_base_transient()
             outcome = self.bridge.execute_base_turn(
                 angle,
-                speed=int(self._get("base_motion.turn_speed", 150)),
+                speed=int(self._get("base_motion.turn_speed", 70)),
                 timeout_s=float(self._get("base_timeouts.turn_base_s", 15.0)),
                 cancel_event=record.cancel_event,
             )
@@ -464,7 +464,7 @@ class GatewayRuntime:
                     return ActionState.FAILED, "RUN_LIMIT_EXCEEDED", "run motion step 제한을 초과했습니다."
                 outcome = self.bridge.execute_base_turn(
                     first_turn,
-                    speed=int(self._get("base_motion.turn_speed", 150)),
+                    speed=int(self._get("base_motion.turn_speed", 70)),
                     timeout_s=min(float(self._get("base_timeouts.turn_base_s", 15.0)), max(0.1, hard_timeout - (time.monotonic() - start))),
                     cancel_event=record.cancel_event,
                 )
@@ -497,7 +497,7 @@ class GatewayRuntime:
                     return ActionState.FAILED, "RUN_LIMIT_EXCEEDED", "run motion step 제한을 초과했습니다."
                 outcome = self.bridge.execute_base_turn(
                     final_turn,
-                    speed=int(self._get("base_motion.turn_speed", 150)),
+                    speed=int(self._get("base_motion.turn_speed", 70)),
                     timeout_s=min(float(self._get("base_timeouts.turn_base_s", 15.0)), max(0.1, hard_timeout - (time.monotonic() - start))),
                     cancel_event=record.cancel_event,
                 )
@@ -593,28 +593,93 @@ class GatewayRuntime:
 
     def _place_nextto_object(self, run: RunRecord, args: Mapping[str, Any]) -> ActionHandle:
         reference = self._object_id(args.get("reference_object_id"))
-        if reference is None:
+        if reference is None or reference.name not in self.object_catalog:
             return self.actions.immediate_failure(
                 run.run_id,
                 "PLACE_NEXTTO_OBJECT",
-                "INVALID_ARGUMENT",
-                "유효한 reference_object_id가 필요합니다.",
+                "OBJECT_NOT_REGISTERED",
+                "등록된 reference_object_id가 필요합니다.",
             )
         held, known = self.state.held_object()
-        if known and held is None:
+        if not known:
+            return self.actions.immediate_failure(
+                run.run_id,
+                "PLACE_NEXTTO_OBJECT",
+                "HELD_OBJECT_STATE_UNKNOWN",
+                "현재 보유 물체 상태를 확인할 수 없습니다. 재확인 후 PLACE를 실행하십시오.",
+            )
+        if held is None:
             return self.actions.immediate_failure(
                 run.run_id,
                 "PLACE_NEXTTO_OBJECT",
                 "NO_HELD_OBJECT",
                 "현재 보유 중인 물체가 없습니다.",
             )
-        # The uploaded v0.2 spec explicitly leaves placement profile schema and
-        # verification policy TBD.  Safe-fail until that runtime exists.
-        return self.actions.immediate_failure(
+        if held == reference:
+            return self.actions.immediate_failure(
+                run.run_id,
+                "PLACE_NEXTTO_OBJECT",
+                "REFERENCE_OBJECT_IS_HELD",
+                "보유 중인 물체 자체를 배치 기준 물체로 사용할 수 없습니다.",
+            )
+
+        config = self.object_catalog[reference.name]
+        raw_offset = config.get(
+            "placement_offset_base",
+            self._get("manipulation.default_placement_offset_base", [0.0, 0.12, 0.0]),
+        )
+        try:
+            offset = tuple(float(value) for value in raw_offset)
+        except (TypeError, ValueError):
+            offset = ()
+        if len(offset) != 3 or not all(math.isfinite(value) for value in offset):
+            return self.actions.immediate_failure(
+                run.run_id,
+                "PLACE_NEXTTO_OBJECT",
+                "PLACEMENT_PROFILE_INVALID",
+                "placement_offset_base는 finite float 3개여야 합니다.",
+            )
+        max_steps = int(self._get("manipulation.place_max_motion_steps_per_call", 30))
+
+        def execute(record: ActionRecord, current_run: RunRecord):
+            current_held, current_known = self.state.held_object()
+            if not current_known or current_held != held:
+                return ActionState.FAILED, "HELD_OBJECT_STATE_CHANGED", "PLACE 시작 전에 보유 물체 상태가 변경되었습니다."
+            if current_run.remaining_motion_steps() < max_steps:
+                return ActionState.FAILED, "RUN_LIMIT_EXCEEDED", "PLACE의 최대 내부 motion budget이 부족합니다."
+            outcome = self.bridge.execute_place_nextto(
+                reference,
+                reference_profile=str(
+                    config.get("placement_profile", config.get("alignment_profile", reference.value))
+                ),
+                held_object_id=held,
+                placement_offset_base=(offset[0], offset[1], offset[2]),
+                timeout_s=float(self._get("manipulation.place_hard_timeout_s", 150.0)),
+                cancel_event=record.cancel_event,
+            )
+            actual_steps = int(outcome.details.get("internal_motion_steps", 0))
+            if actual_steps > 0 and not current_run.consume_motion_steps(actual_steps):
+                self.state.mark_base_unreliable()
+                self.state.set_held_object(None, known=False)
+                return ActionState.FAILED, "RUN_LIMIT_EXCEEDED", "PLACE 실행 중 run motion budget을 초과했습니다."
+            if outcome.success:
+                self.state.set_held_object(None, known=True)
+                return ActionState.SUCCEEDED, None, None
+            if outcome.started:
+                self.state.mark_base_unreliable()
+                self.state.set_held_object(None, known=False)
+            return self._action_state_from_outcome(outcome)
+
+        return self.actions.create(
             run.run_id,
             "PLACE_NEXTTO_OBJECT",
-            "PLACEMENT_PROFILE_NOT_FOUND",
-            "현재 프로젝트에는 placement profile/runtime이 아직 구현되지 않았습니다.",
+            [
+                ResourceId.BASE_MOTION,
+                ResourceId.ARM_MOTION,
+                ResourceId.GRIPPER_MOTION,
+                ResourceId.PICO_MOTION,
+            ],
+            execute,
         )
 
     # ------------------------------------------------------------------
@@ -637,7 +702,14 @@ class GatewayRuntime:
             )
         if execute_pick:
             held, known = self.state.held_object()
-            if known and held is not None:
+            if not known:
+                return self.actions.immediate_failure(
+                    run.run_id,
+                    action_name,
+                    "HELD_OBJECT_STATE_UNKNOWN",
+                    "보유 물체 상태가 동기화되지 않았습니다. task heartbeat 또는 운영자 확인 후 PICK을 실행하십시오.",
+                )
+            if held is not None:
                 return self.actions.immediate_failure(
                     run.run_id,
                     action_name,

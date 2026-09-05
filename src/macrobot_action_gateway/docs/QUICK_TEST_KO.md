@@ -65,3 +65,13 @@ ros2 launch macrobot_action_gateway action_gateway.launch.py \
 ```
 
 처음에는 `SET_GRIPPER`, 작은 `SET_ARM_JOINTS`, 짧은 `MOVE_BASE` 순으로 별도 승인 코드를 시험한다.
+
+
+## PICK 후 PLACE dry-run
+
+```bash
+SHARE="$(ros2 pkg prefix --share macrobot_action_gateway)"
+ros2 run macrobot_action_gateway robot_code_runner   --code "$SHARE/examples/pick_and_place_nextto.py"   --validate-only
+
+ros2 run macrobot_action_gateway robot_code_runner   --code "$SHARE/examples/pick_and_place_nextto.py"   --execute --approved
+```

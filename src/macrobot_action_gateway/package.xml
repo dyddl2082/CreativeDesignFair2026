@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>macrobot_action_gateway</name>
-  <version>0.1.1</version>
-  <description>Robot Action Gateway for MacRobot LLM API v0.2 with confirmed stored find-align-pick cancellation.</description>
+  <version>0.2.0</version>
+  <description>Robot Action Gateway with resilient visual pick/place integration for MacRobot LLM API v0.2.</description>
   <maintainer email="dyddl2082@snu.ac.kr">Kim Jinhyeong</maintainer>
   <license>MIT</license>
 

@@ -48,6 +48,10 @@ manipulation:
   place_hard_timeout_s: 150.0
   grasp_verification_policy: commanded_sequence_only
   placement_verification_policy: not_implemented
+  default_placement_offset_base:
+  - 0.0
+  - 0.12
+  - 0.0
 perception:
   object_state_max_age_ms: 1500
   health_max_age_ms: 5000

@@ -85,6 +85,7 @@ class SemanticGraspPlan:
     object_name: str
     object_point_base: Vector3
     steps: Tuple[SemanticPlanStep, ...]
+    operation: str = "pick"
 
 
 def capture_stage(
@@ -169,6 +170,109 @@ def build_semantic_grasp_plan(
         object_name=profile.object_name,
         object_point_base=object_point_base,
         steps=tuple(resolved[name] for name in REQUIRED_STAGES),
+        operation="pick",
+    )
+
+
+def _resolve_cartesian_stage(
+    model: MacRobotArmModel,
+    stage: GraspKeyframeStage,
+    object_point_base: Vector3,
+    *,
+    gripper_q: float,
+    fallback_q: Q,
+    lateral_tolerance_m: float,
+    output_name: str,
+) -> SemanticPlanStep:
+    if stage.representation == "object_relative_cartesian" and stage.object_offset is not None:
+        target = add3(object_point_base, stage.object_offset)
+        if abs(float(target[1]) - float(model.geometry.tool_y)) > float(lateral_tolerance_m):
+            raise ValueError(f"{output_name.lower()}_lateral_alignment_failed")
+        solution = solve_nearest(
+            model,
+            target,
+            seed_q=stage.seed_q or stage.q or fallback_q,
+            gripper_q=gripper_q,
+        )
+        if solution is None:
+            raise ValueError(f"{output_name.lower()}_ik_failed")
+        q: Q = (solution.q1, solution.q2, gripper_q)
+    else:
+        # Older profiles may contain a joint fallback.  Preserve the arm pose
+        # while explicitly overriding the gripper state required by PLACE.
+        q = (stage.q[0], stage.q[1], gripper_q)
+        target = None
+    if not model.limits.contains(*q):
+        raise ValueError(f"{output_name.lower()}_joint_limits_failed")
+    return SemanticPlanStep(output_name, q, target, stage.settle_sec)
+
+
+def build_semantic_place_plan(
+    model: MacRobotArmModel,
+    profile: GraspKeyframeProfile,
+    placement_point_base: Vector3,
+    current_q: Q,
+    *,
+    lateral_tolerance_m: float = 0.020,
+) -> SemanticGraspPlan:
+    """Build the safe reverse of the semantic pick sequence.
+
+    The held object approaches the target with the gripper closed, descends to
+    the recorded GRASP_OPEN relative pose, opens, and retreats to PRE_GRASP.
+    The plan intentionally does not assume that simply replaying joint angles in
+    reverse is valid; Cartesian keyframes are re-solved at the new placement
+    point before safe-region preflight.
+    """
+
+    profile.validate()
+    open_stage = profile.stages["OPEN"]
+    close_stage = profile.stages["CLOSE"]
+    open_q = float(
+        open_stage.gripper_q if open_stage.gripper_q is not None else open_stage.q[2]
+    )
+    close_q = float(
+        close_stage.gripper_q if close_stage.gripper_q is not None else close_stage.q[2]
+    )
+    previous: Q = tuple(float(value) for value in current_q)  # type: ignore[assignment]
+    above = _resolve_cartesian_stage(
+        model,
+        profile.stages["LIFT"],
+        placement_point_base,
+        gripper_q=close_q,
+        fallback_q=previous,
+        lateral_tolerance_m=lateral_tolerance_m,
+        output_name="PLACE_ABOVE",
+    )
+    descend = _resolve_cartesian_stage(
+        model,
+        profile.stages["GRASP_OPEN"],
+        placement_point_base,
+        gripper_q=close_q,
+        fallback_q=above.q,
+        lateral_tolerance_m=lateral_tolerance_m,
+        output_name="PLACE_DESCEND",
+    )
+    release_q: Q = (descend.q[0], descend.q[1], open_q)
+    if not model.limits.contains(*release_q):
+        raise ValueError("place_release_joint_limits_failed")
+    release = SemanticPlanStep(
+        "PLACE_RELEASE", release_q, descend.target_point_base, open_stage.settle_sec
+    )
+    retreat = _resolve_cartesian_stage(
+        model,
+        profile.stages["PRE_GRASP"],
+        placement_point_base,
+        gripper_q=open_q,
+        fallback_q=release.q,
+        lateral_tolerance_m=lateral_tolerance_m,
+        output_name="PLACE_RETREAT",
+    )
+    return SemanticGraspPlan(
+        profile_name=profile.name,
+        object_name=profile.object_name,
+        object_point_base=placement_point_base,
+        steps=(above, descend, release, retreat),
+        operation="place",
     )
 
 

@@ -73,7 +73,10 @@ class RobotStateStore:
         self._positions: dict[str, tuple[float, float, float]] = {}
         self._arm_primitives: dict[str, tuple[float, float]] = {}
         self._held_object: ObjectId | None = None
-        self._held_object_known = True
+        # Fail safe after Gateway restart. The resilient task node publishes a
+        # periodic held-object heartbeat and will explicitly synchronize this
+        # to empty, holding, or unknown.
+        self._held_object_known = False
 
     # ------------------------------------------------------------------
     # Base estimate

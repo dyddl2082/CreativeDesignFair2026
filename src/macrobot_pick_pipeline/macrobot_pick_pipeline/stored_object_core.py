@@ -203,7 +203,7 @@ def point_base_to_odom(
     point_base: Vector3,
     base_pose: OdomPose,
     *,
-    forward_axis_sign: float = -1.0,
+    forward_axis_sign: float = 1.0,
     lateral_axis_sign: float = 1.0,
 ) -> Vector3:
     forward_sign = _axis_sign(forward_axis_sign, "forward_axis_sign")
@@ -220,7 +220,7 @@ def point_odom_to_base(
     point_odom: Vector3,
     base_pose: OdomPose,
     *,
-    forward_axis_sign: float = -1.0,
+    forward_axis_sign: float = 1.0,
     lateral_axis_sign: float = 1.0,
 ) -> Vector3:
     """Transform a static object point in the Pico odom frame into base_link.
@@ -265,7 +265,7 @@ def translated_pose_for_object_shift(
 def planar_range_m(
     point_base: Vector3,
     *,
-    forward_axis_sign: float = -1.0,
+    forward_axis_sign: float = 1.0,
     lateral_axis_sign: float = 1.0,
 ) -> float:
     return planar_observation(
@@ -375,7 +375,7 @@ class StoredObjectRuntimeProfile:
     approach_position_tolerance_m: float = 0.012
     approach_angle_tolerance_deg: float = 2.0
     approach_max_move_step_m: float = 0.10
-    approach_max_turn_step_deg: float = 15.0
+    approach_max_turn_step_deg: float = 4.0
     approach_max_iterations: int = 16
     approach_max_total_move_m: float = 0.80
     approach_max_total_turn_deg: float = 180.0
@@ -533,7 +533,7 @@ class StoredObjectRuntimeProfile:
                 "distance_handoff.max_move_step_m",
             ),
             approach_max_turn_step_deg=finite_float(
-                handoff.get("max_turn_step_deg", 15.0),
+                handoff.get("max_turn_step_deg", 4.0),
                 "distance_handoff.max_turn_step_deg",
             ),
             approach_max_iterations=int(handoff.get("max_iterations", 16)),
@@ -635,7 +635,7 @@ class StoredObjectRuntimeProfile:
     def validate_for_execution(
         self,
         *,
-        forward_axis_sign: float = -1.0,
+        forward_axis_sign: float = 1.0,
         lateral_axis_sign: float = 1.0,
     ) -> None:
         self.validate()

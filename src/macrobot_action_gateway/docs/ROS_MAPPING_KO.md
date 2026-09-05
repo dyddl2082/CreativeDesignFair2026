@@ -103,26 +103,27 @@ arm_demo_cli jog
 /macrobot/arm/joint_goal 직접 publish
 ```
 
-## 저장 위치 기반 정식 node와 취소 확인
 
-현재 legacy topic 이름은 팀 API와의 호환을 위해 유지하지만 실제 consumer는 `stored_object_pick_node`다.
-
-```text
-/macrobot/align_pick/goal
-→ mode=full, start_finder=true
-→ 저장 odom 위치 coarse return
-→ bounded finder scan
-→ camera-relative alignment
-→ recorded grasp trajectory
-```
-
-Gateway는 각 요청에 `request_id`를 넣고 같은 ID의 결과만 수신한다.
+## PLACE runtime
 
 ```text
-cancel publish
-→ action_state=CANCEL_REQUESTED
-→ 하위 정지 확인
-→ CANCELED / TIMED_OUT / FAILED terminal result
+PLACE_NEXTTO_OBJECT(reference_object_id)
+  -> /macrobot/stored_pick/goal
+     {task: place, request_id, reference_object, reference_profile,
+      held_object, placement_offset_base, timeout_sec}
+  <- /macrobot/stored_pick/result
+     stored_place_completed | stored_place_failed | stored_place_timed_out
+  -> /macrobot/stored_pick/cancel      # cancel/timeout
 ```
 
-terminal 결과가 오지 않으면 `SAFE_STOP_UNCONFIRMED`이며 public action을 성공적으로 취소했다고 보고하지 않는다.
+Gateway는 `request_id`가 일치하는 결과만 수락한다. 성공하면 held-object state를 empty로, 동작이 시작된 뒤 실패하면 unknown으로 바꾼다.
+
+## held-object heartbeat
+
+```text
+/macrobot/stored_pick/status
+  event=resilient_state_heartbeat
+  held_object.state=empty | holding | unknown
+```
+
+Gateway는 시작 시 held-object state를 `unknown`으로 두고, 위 heartbeat를 받은 뒤에만 `PICK_OBJECT` 또는 `PLACE_NEXTTO_OBJECT`를 허용한다. `holding`일 때는 `held_object.object_name`을 object catalog의 ID로 변환한다.

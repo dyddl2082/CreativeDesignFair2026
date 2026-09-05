@@ -58,6 +58,13 @@ class _Client(Node):
             "stored_object_profile_deleted",
             "stored_object_profile_not_found",
             "stored_object_admin_failed",
+            "object_memory",
+            "object_location_forgotten",
+            "object_location_not_found",
+            "held_object_confirmed",
+            "held_object_cleared",
+            "held_object_marked_unknown",
+            "object_memory_admin_failed",
         }:
             self.result = payload
 
@@ -124,7 +131,7 @@ def _add_grasp_source(parser: argparse.ArgumentParser) -> None:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Record or run distance-aware stored-object picking"
+        description="Record, visually find, pick, place, and inspect MacRobot object memory"
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -181,13 +188,62 @@ def _parser() -> argparse.ArgumentParser:
 
     run = sub.add_parser(
         "run",
-        help="Return to far search pose, acquire, approach into arm reach, and grasp",
+        help="Find from the current view, replan after short motions, align, and grasp",
     )
     run.add_argument("object_name")
     run.add_argument("--profile", default="")
     run.add_argument("--align-only", action="store_true")
     run.add_argument("--rebuild-banks", action="store_true")
     run.add_argument("--timeout", type=float, default=180.0)
+
+    place = sub.add_parser(
+        "place",
+        help="Place the held object using the Cartesian reverse of its grasp keyframes",
+    )
+    place.add_argument(
+        "reference_object",
+        nargs="?",
+        default="",
+        help="Object to place next to; omit when --placement-point-base is used",
+    )
+    place.add_argument("--reference-profile", default="")
+    place.add_argument("--held-object", default="")
+    place.add_argument("--held-runtime-profile", default="")
+    place.add_argument("--grasp-keyframes", default="")
+    place.add_argument(
+        "--offset-base",
+        nargs=3,
+        type=float,
+        default=[0.0, 0.12, 0.0],
+        metavar=("X", "Y", "Z"),
+        help="Placement-point offset from the visually localized reference object",
+    )
+    place.add_argument(
+        "--placement-point-base",
+        nargs=3,
+        type=float,
+        metavar=("X", "Y", "Z"),
+        help="Direct placement point in base_link; skips reference-object search",
+    )
+    place.add_argument(
+        "--confirm-held",
+        action="store_true",
+        help="Operator confirms possession after a restart; requires --held-object",
+    )
+    place.add_argument("--no-finder", action="store_true")
+    place.add_argument("--timeout", type=float, default=180.0)
+
+    sub.add_parser("memory", help="Show epoch-scoped location hints and held-object state")
+    forget = sub.add_parser("forget-location", help="Delete only one volatile location hint")
+    forget.add_argument("object_name")
+    confirm = sub.add_parser(
+        "confirm-held",
+        help="Confirm that the gripper is holding an object after a restart",
+    )
+    confirm.add_argument("object_name")
+    confirm.add_argument("grasp_keyframe_profile")
+    sub.add_parser("clear-held", help="Mark the gripper as empty")
+    sub.add_parser("held-unknown", help="Mark held-object state as unknown")
 
     sub.add_parser("list", help="List stored runtime profiles")
     delete = sub.add_parser("delete", help="Delete a stored profile")
@@ -289,6 +345,74 @@ def main(argv=None) -> None:
             if not delivered:
                 print(f"stored-pick command delivery failed: {detail}", file=sys.stderr)
                 raise SystemExit(2)
+        elif args.command == "place":
+            if not args.reference_object and args.placement_point_base is None:
+                print(
+                    "place requires reference_object or --placement-point-base",
+                    file=sys.stderr,
+                )
+                raise SystemExit(2)
+            if args.confirm_held and not args.held_object:
+                print(
+                    "--confirm-held requires --held-object",
+                    file=sys.stderr,
+                )
+                raise SystemExit(2)
+            payload = {
+                "request_id": request_id,
+                "task": "place",
+                "reference_object": args.reference_object,
+                "reference_profile": (
+                    args.reference_profile or args.reference_object
+                ),
+                "held_object": args.held_object,
+                "held_runtime_profile": args.held_runtime_profile,
+                "grasp_keyframe_profile": args.grasp_keyframes,
+                "placement_offset_base": [float(v) for v in args.offset_base],
+                "confirm_held": bool(args.confirm_held),
+                "start_finder": (
+                    not args.no_finder and args.placement_point_base is None
+                ),
+                "timeout_sec": timeout,
+            }
+            if args.placement_point_base is not None:
+                payload["placement_point_base"] = [
+                    float(v) for v in args.placement_point_base
+                ]
+            delivered, detail = node.publish_with_ack(node.goal_pub, payload)
+            if not delivered:
+                print(f"place command delivery failed: {detail}", file=sys.stderr)
+                raise SystemExit(2)
+        elif args.command == "memory":
+            node.request_id = ""
+            node._publish(node.admin_pub, {"action": "memory"})
+            timeout = 3.0
+        elif args.command == "forget-location":
+            node.request_id = ""
+            node._publish(
+                node.admin_pub,
+                {"action": "forget_location", "object_name": args.object_name},
+            )
+            timeout = 3.0
+        elif args.command == "confirm-held":
+            node.request_id = ""
+            node._publish(
+                node.admin_pub,
+                {
+                    "action": "confirm_held",
+                    "object_name": args.object_name,
+                    "grasp_keyframe_profile": args.grasp_keyframe_profile,
+                },
+            )
+            timeout = 3.0
+        elif args.command == "clear-held":
+            node.request_id = ""
+            node._publish(node.admin_pub, {"action": "clear_held"})
+            timeout = 3.0
+        elif args.command == "held-unknown":
+            node.request_id = ""
+            node._publish(node.admin_pub, {"action": "held_unknown"})
+            timeout = 3.0
         elif args.command == "list":
             node.request_id = ""
             node._publish(node.admin_pub, {"action": "list"})

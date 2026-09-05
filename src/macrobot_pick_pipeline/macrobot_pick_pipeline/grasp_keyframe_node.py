@@ -22,6 +22,7 @@ from .grasp_keyframe_core import (
     SafeRegionLookup,
     SemanticGraspPlan,
     build_semantic_grasp_plan,
+    build_semantic_place_plan,
     capture_stage,
 )
 from .grasp_keyframe_store import GraspKeyframeStore
@@ -179,6 +180,7 @@ class GraspKeyframeNode(Node):
         self.next_step_not_before = 0.0
         self.cancel_deadline = 0.0
         self.cancel_reason = ""
+        self.last_result_payload: Optional[dict[str, Any]] = None
         self.create_timer(
             1.0 / max(2.0, float(self.get_parameter("timer_hz").value)),
             self._timer_callback,
@@ -203,46 +205,16 @@ class GraspKeyframeNode(Node):
             },
         )
 
-    def _result_for(
-        self,
-        command_id: str,
-        event: str,
-        ok: bool,
-        *,
-        state: Optional[str] = None,
-        **details: Any,
-    ) -> None:
-        """
-        특정 command_id에 대한 결과를 발행한다.
-
-        active command와 새로 거부된 command를 구분하기 위해
-        command_id를 명시적으로 받는다.
-        """
+    def _result(self, event: str, ok: bool, **details: Any) -> None:
         payload = {
-            "ok": bool(ok),
-            "event": str(event),
-            "state": self.state if state is None else str(state),
-            "command_id": str(command_id),
+            "ok": ok,
+            "event": event,
+            "state": self.state,
+            "command_id": self.command_id,
             **details,
         }
+        self.last_result_payload = dict(payload)
         self._json_publish(self.result_pub, payload)
-
-
-    def _result(
-        self,
-        event: str,
-        ok: bool,
-        **details: Any,
-    ) -> None:
-        """
-        현재 active command에 대한 결과를 발행한다.
-        """
-        self._result_for(
-            self.command_id,
-            event,
-            ok,
-            **details,
-        )
 
     def _state_callback(self, message: JointState) -> None:
         mapping = {name: float(value) for name, value in zip(message.name, message.position)}
@@ -288,134 +260,47 @@ class GraspKeyframeNode(Node):
 
     def _command_callback(self, message: String) -> None:
         action = ""
-        incoming_command_id = ""
-
         try:
             data = json.loads(message.data)
-
             if not isinstance(data, dict):
                 raise ValueError("command must be a JSON object")
-
             action = str(data.get("action", "")).strip().lower()
-
-            incoming_command_id = (
-                str(data.get("command_id", "")).strip()
-                or f"grasp-keyframes-{int(time.time() * 1000)}"
-            )
-            data["command_id"] = incoming_command_id
-
-            # 읽기 전용 list는 실행 중에도 허용한다.
-            # active command_id를 변경하지 않는다.
-            if action == "list":
-                self._result_for(
-                    incoming_command_id,
-                    "grasp_keyframe_profiles",
-                    True,
-                    state=self.state,
-                    profiles=self.store.mappings(),
-                    active_command_id=self.command_id,
-                )
-                return
-
-            # 취소/정지는 executor가 busy여도 항상 전달되어야 한다.
-            if action in {"stop", "cancel"}:
-                reason = (
-                    str(data.get("reason", "")).strip()
-                    or "user_cancel"
-                )
-                self._stop(reason)
-                return
-
-            executor_active = self.state in {
-                "PREFLIGHT",
-                "RUNNING",
-                "CANCEL_REQUESTED",
-            }
-
-            if executor_active:
-                # 같은 command_id의 재전송:
-                # 새 실행으로 취급하지 않고 기존 실행이 살아 있음을 알린다.
-                if incoming_command_id == self.command_id:
+            incoming_id = str(data.get("command_id", "")).strip()
+            if incoming_id and incoming_id == self.command_id:
+                if self.state in {"PREFLIGHT", "RUNNING", "CANCEL_REQUESTED"}:
                     self._status(
                         "grasp_keyframe_command_duplicate_running",
+                        action=action,
                         duplicate=True,
-                        duplicate_action=action,
-                        active_command_id=self.command_id,
                     )
                     return
-
-                # 실제로 다른 command_id가 들어온 경우에만 busy reject.
-                # 거부된 새 command_id로 FAILED 결과를 발행한다.
-                self._result_for(
-                    incoming_command_id,
-                    "grasp_keyframe_command_rejected",
-                    False,
-                    state="FAILED",
-                    reason="grasp_keyframe_executor_busy",
-                    executor_state=self.state,
-                    active_command_id=self.command_id,
-                    rejected_action=action,
-                )
-                return
-
-            # 이 지점부터는 새 명령을 실제로 받아들인다.
-            self.command_id = incoming_command_id
-
-            self._status(
-                "grasp_keyframe_command_acknowledged",
-                action=action,
-            )
-
+                if self.last_result_payload is not None:
+                    self._json_publish(self.result_pub, self.last_result_payload)
+                    return
             if action == "capture":
                 self._capture(data)
-
             elif action == "finalize":
                 self._finalize(data)
-
-            elif action in {"play", "preflight"}:
-                self._start_plan(
-                    data,
-                    execute=(action == "play"),
-                )
-
+            elif action in {"play", "preflight", "place", "preflight_place"}:
+                operation = "place" if action in {"place", "preflight_place"} else "pick"
+                execute = action in {"play", "place"}
+                self._start_plan(data, execute=execute, operation=operation)
+            elif action == "list":
+                self._result("grasp_keyframe_profiles", True, profiles=self.store.mappings())
             elif action == "delete":
-                deleted = self.store.delete(
-                    str(data.get("profile", ""))
-                )
-                self._result(
-                    "grasp_keyframe_profile_deleted",
-                    deleted,
-                )
-
+                deleted = self.store.delete(str(data.get("profile", "")))
+                self._result("grasp_keyframe_profile_deleted", deleted)
             elif action == "reload":
                 self.store.reload()
-                self._result(
-                    "grasp_keyframe_profiles_reloaded",
-                    True,
-                )
-
+                self._result("grasp_keyframe_profiles_reloaded", True)
+            elif action in {"stop", "cancel"}:
+                self._stop("user_cancel")
             else:
                 raise ValueError("unsupported action")
-
         except Exception as error:
-            executor_state = self.state
-
-            # preflight 도중 발생한 오류는 executor terminal 실패로 전환한다.
-            if (
-                action in {"play", "preflight"}
-                and self.state == "PREFLIGHT"
-            ):
+            if action in {"play", "preflight", "place", "preflight_place"} and self.state == "PREFLIGHT":
                 self.state = "FAILED"
-
-            self._result_for(
-                incoming_command_id or self.command_id,
-                "grasp_keyframe_command_rejected",
-                False,
-                state="FAILED",
-                reason=str(error),
-                executor_state=executor_state,
-                rejected_action=action,
-            )
+            self._result("grasp_keyframe_command_rejected", False, reason=str(error))
 
     def _capture(self, data: dict[str, Any]) -> None:
         profile_name = str(data.get("profile", "")).strip()
@@ -464,16 +349,28 @@ class GraspKeyframeNode(Node):
             profile_file=str(self.store.path),
         )
 
-    def _start_plan(self, data: dict[str, Any], *, execute: bool) -> None:
+    def _start_plan(
+        self,
+        data: dict[str, Any],
+        *,
+        execute: bool,
+        operation: str = "pick",
+    ) -> None:
+        if self.state not in {"IDLE", "SUCCEEDED", "FAILED", "CANCELED"}:
+            raise ValueError("grasp_keyframe_executor_busy")
+        self.command_id = str(data.get("command_id", "")).strip() or (
+            f"grasp-keyframes-{int(time.time() * 1000)}"
+        )
+        self.last_result_payload = None
         self.state = "PREFLIGHT"
         profile = self.store.get(str(data.get("profile", "")))
         profile.validate()
         object_name = str(data.get("object_name", profile.object_name)).strip()
         point, detection = self._fresh_detection(object_name, _point(data.get("object_point_base")))
-        require_orientation_match = bool(
-            self.get_parameter("require_orientation_match").value
-        ) or profile.reference_orientation_quality >= float(
-            self.get_parameter("auto_require_orientation_quality").value
+        require_orientation_match = operation != "place" and (
+            bool(self.get_parameter("require_orientation_match").value)
+            or profile.reference_orientation_quality
+            >= float(self.get_parameter("auto_require_orientation_quality").value)
         )
         if require_orientation_match:
             orientation = detection.get("orientation", {}) if isinstance(detection, dict) else {}
@@ -488,18 +385,35 @@ class GraspKeyframeNode(Node):
                 self.get_parameter("orientation_tolerance_deg").value
             ):
                 raise ValueError("object_orientation_angle_mismatch")
-        plan = build_semantic_grasp_plan(
-            self.model,
-            profile,
-            point,
-            self.current_q,
-            lateral_tolerance_m=float(self.get_parameter("lateral_tolerance_m").value),
-        )
+        if operation == "place":
+            plan = build_semantic_place_plan(
+                self.model,
+                profile,
+                point,
+                self.current_q,
+                lateral_tolerance_m=float(
+                    self.get_parameter("lateral_tolerance_m").value
+                ),
+            )
+        else:
+            plan = build_semantic_grasp_plan(
+                self.model,
+                profile,
+                point,
+                self.current_q,
+                lateral_tolerance_m=float(
+                    self.get_parameter("lateral_tolerance_m").value
+                ),
+            )
         preflight = self._preflight(plan)
         if not preflight[0]:
             self.state = "FAILED"
             self._result(
-                "grasp_keyframe_preflight_failed",
+                (
+                    "grasp_keyframe_place_preflight_failed"
+                    if operation == "place"
+                    else "grasp_keyframe_preflight_failed"
+                ),
                 False,
                 profile=profile.name,
                 failed_stage=preflight[1],
@@ -520,8 +434,13 @@ class GraspKeyframeNode(Node):
         if not execute:
             self.state = "SUCCEEDED"
             self._result(
-                "grasp_keyframe_preflight_succeeded",
+                (
+                    "grasp_keyframe_place_preflight_succeeded"
+                    if operation == "place"
+                    else "grasp_keyframe_preflight_succeeded"
+                ),
                 True,
+                operation=operation,
                 profile=profile.name,
                 object_point_base=list(point),
                 steps=plan_mapping,
@@ -531,7 +450,12 @@ class GraspKeyframeNode(Node):
         self.step_index = 0
         self.state = "RUNNING"
         self._status(
-            "grasp_keyframe_execution_started",
+            (
+                "grasp_keyframe_place_started"
+                if operation == "place"
+                else "grasp_keyframe_execution_started"
+            ),
+            operation=operation,
             profile=profile.name,
             object_point_base=list(point),
             steps=plan_mapping,
@@ -555,13 +479,20 @@ class GraspKeyframeNode(Node):
     def _send_step(self) -> None:
         if self.plan is None or self.step_index >= len(self.plan.steps):
             self.state = "SUCCEEDED"
+            operation = self.plan.operation if self.plan else "pick"
+            event = (
+                "grasp_keyframe_place_completed"
+                if operation == "place"
+                else "grasp_keyframe_execution_completed"
+            )
             self._result(
-                "grasp_keyframe_execution_completed",
+                event,
                 True,
+                operation=operation,
                 profile=(self.plan.profile_name if self.plan else ""),
                 final_q=list(self.current_q),
             )
-            self._status("grasp_keyframe_execution_completed")
+            self._status(event, operation=operation)
             self.plan = None
             return
         step = self.plan.steps[self.step_index]
@@ -724,11 +655,17 @@ class GraspKeyframeNode(Node):
 
     def _fail(self, reason: str, **details: Any) -> None:
         self.stop_pub.publish(Empty())
+        operation = self.plan.operation if self.plan is not None else "pick"
         self.state = "FAILED"
         self.pending_q = None
         self.plan = None
-        self._result("grasp_keyframe_execution_failed", False, reason=reason, **details)
-        self._status("grasp_keyframe_execution_failed", False, reason=reason)
+        event = (
+            "grasp_keyframe_place_failed"
+            if operation == "place"
+            else "grasp_keyframe_execution_failed"
+        )
+        self._result(event, False, operation=operation, reason=reason, **details)
+        self._status(event, False, operation=operation, reason=reason)
 
 
 def main(args=None) -> None:

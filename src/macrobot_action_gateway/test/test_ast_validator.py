@@ -91,3 +91,23 @@ def main() -> TaskOutcome:
     _, report = validate_source(source)
     assert not report.valid
     assert any(issue.code == "ASYNC_ACTION_UNMANAGED" for issue in report.issues)
+
+
+def test_pick_and_place_nextto_program_is_allowed():
+    source = '''
+def main() -> TaskOutcome:
+    pick = robot.PICK_OBJECT(object_id=ObjectId.BUDS3)
+    pick_result = robot.WAIT_ACTION(pick, timeout_s=180.0)
+    if pick_result.state != ActionState.SUCCEEDED:
+        return TaskOutcome(TaskStatus.FAILED, "pick failed")
+    place = robot.PLACE_NEXTTO_OBJECT(reference_object_id=ObjectId.CUP)
+    place_result = robot.WAIT_ACTION(place, timeout_s=180.0)
+    if place_result.state != ActionState.SUCCEEDED:
+        return TaskOutcome(TaskStatus.PARTIALLY_SUCCEEDED, "place failed")
+    return TaskOutcome(TaskStatus.SUCCEEDED, "done")
+'''
+    _, report = validate_source(source)
+    assert report.valid, report.summary()
+    assert "PICK_OBJECT" in report.robot_calls
+    assert "PLACE_NEXTTO_OBJECT" in report.robot_calls
+    compile_validated_source(source)

@@ -21,7 +21,7 @@
 | `SAVE_ARM_PRIMITIVE` | 구현 | Gateway session registry | arm 2축만 저장 |
 | `SET_ARM_PRIMITIVE` | 구현 | validator→servo bridge | 현재 gripper 보존 |
 | `PICK_OBJECT` | 구현 | align-and-pick stack | 필요 시 내부 ALIGN |
-| `PLACE_NEXTTO_OBJECT` | API 존재, safe-fail | 없음 | placement schema/runtime TBD |
+| `PLACE_NEXTTO_OBJECT` | 구현 | resilient stored-object PLACE runtime | 기준 물체 재탐색 후 역파지 4단계 |
 
 ## 사양과 현재 프로젝트의 핵심 mismatch 해결
 

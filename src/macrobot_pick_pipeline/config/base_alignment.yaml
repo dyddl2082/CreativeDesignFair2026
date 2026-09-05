@@ -21,7 +21,7 @@ macrobot_base_alignment:
     default_bearing_tolerance_deg: 2.0
     default_range_tolerance_m: 0.015
     default_height_tolerance_m: 0.03
-    default_max_turn_step_deg: 8.0
+    default_max_turn_step_deg: 4.0
     default_max_move_step_m: 0.04
     default_turn_speed: 150
     default_move_speed: 80

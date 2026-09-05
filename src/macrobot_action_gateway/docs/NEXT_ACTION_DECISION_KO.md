@@ -48,20 +48,18 @@
 | `GET_OBJECT_STATE` | `/object_finder/status`와 `/object_finder/result`의 최신 snapshot |
 | `GET_ROBOT_POS` | command history + `/macrobot/arm/logical_joint_states` |
 
-## 의도적으로 미완성으로 둔 항목
+## `PLACE_NEXTTO_OBJECT` 구현 결정
 
-### `PLACE_NEXTTO_OBJECT`
-
-공개 함수와 오류 계약은 구현했지만 현재 프로젝트에는 다음이 확정되지 않았다.
+배치 기준 물체는 기존 finder/localizer로 현재 위치를 다시 찾는다. 기준 물체 위치에 물체별 `placement_offset_base`를 더해 배치점을 만들고, 보유 물체의 semantic grasp profile을 다음과 같이 역방향 의미 단계로 재구성한다.
 
 ```text
-placement profile schema
-안전한 옆 배치 후보 생성
-release/post-place sequence
-placement verification policy
+LIFT(closed)       -> PLACE_ABOVE
+GRASP_OPEN(closed) -> PLACE_DESCEND
+OPEN               -> PLACE_RELEASE
+PRE_GRASP(open)    -> PLACE_RETREAT
 ```
 
-따라서 현재는 `PLACEMENT_PROFILE_NOT_FOUND`로 안전하게 실패한다.
+관절값을 단순 역재생하지 않고 각 Cartesian keyframe을 새 배치점에서 IK로 다시 계산한다. 전 단계와 보간 경로가 safe-region preflight를 통과한 뒤에만 실행하며, 기준 물체를 찾지 못하거나 보유 상태가 불명확하면 release를 시작하지 않는다.
 
 ### 실제 파지 검증
 

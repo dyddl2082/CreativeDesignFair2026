@@ -3,7 +3,17 @@ objects:
     runtime_name: Buds3
     alignment_profile: Buds3
     pick_profile: Buds3
+    placement_profile: Buds3
+    placement_offset_base:
+    - 0.0
+    - 0.12
+    - 0.0
   CUP:
     runtime_name: Cup
     alignment_profile: Cup
     pick_profile: Cup
+    placement_profile: Cup
+    placement_offset_base:
+    - 0.0
+    - 0.12
+    - 0.0

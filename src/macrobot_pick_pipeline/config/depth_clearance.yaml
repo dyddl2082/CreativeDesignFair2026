@@ -1,0 +1,12 @@
+macrobot_depth_clearance:
+  ros__parameters:
+    input_topic: /camera/camera/aligned_depth_to_color/image_raw
+    output_topic: /macrobot/perception/forward_clearance
+    width_fraction: 0.28
+    y_min_fraction: 0.35
+    y_max_fraction: 0.82
+    minimum_depth_m: 0.05
+    maximum_depth_m: 4.0
+    percentile: 10.0
+    minimum_valid_fraction: 0.05
+    publish_hz: 10.0

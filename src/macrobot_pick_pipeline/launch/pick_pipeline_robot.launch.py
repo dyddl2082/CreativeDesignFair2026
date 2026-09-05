@@ -33,6 +33,10 @@ def generate_launch_description():
     stored_object_profile_file = LaunchConfiguration("stored_object_profile_file")
     alignment_dry_run = LaunchConfiguration("alignment_dry_run")
     perception_input_mode = LaunchConfiguration("perception_input_mode")
+    task_executable = LaunchConfiguration("task_executable")
+    object_memory_file = LaunchConfiguration("object_memory_file")
+    start_depth_clearance = LaunchConfiguration("start_depth_clearance")
+    aligned_depth_topic = LaunchConfiguration("aligned_depth_topic")
 
     camera_teach_condition = IfCondition(
         PythonExpression([
@@ -54,6 +58,22 @@ def generate_launch_description():
         DeclareLaunchArgument("alignment_dry_run", default_value="false"),
         DeclareLaunchArgument("perception_input_mode", default_value="legacy"),
         DeclareLaunchArgument("allow_teach_motion", default_value="true"),
+        DeclareLaunchArgument(
+            "task_executable",
+            default_value="resilient_object_task_node",
+            description="Use stored_object_pick_node only for legacy rollback.",
+        ),
+        DeclareLaunchArgument("start_depth_clearance", default_value="true"),
+        DeclareLaunchArgument(
+            "aligned_depth_topic",
+            default_value="/camera/camera/aligned_depth_to_color/image_raw",
+        ),
+        DeclareLaunchArgument(
+            "object_memory_file",
+            default_value=str(
+                Path.home() / "MacRobot" / "data" / "object_memory" / "memory.yaml"
+            ),
+        ),
         DeclareLaunchArgument(
             "profile_file",
             default_value=str(package / "config" / "pick_profiles.yaml"),
@@ -125,6 +145,17 @@ def generate_launch_description():
         ),
         Node(
             package="macrobot_pick_pipeline",
+            executable="depth_clearance_node",
+            name="macrobot_depth_clearance",
+            output="screen",
+            condition=IfCondition(start_depth_clearance),
+            parameters=[
+                str(package / "config" / "depth_clearance.yaml"),
+                {"input_topic": aligned_depth_topic},
+            ],
+        ),
+        Node(
+            package="macrobot_pick_pipeline",
             executable="detection_localizer_node",
             name="macrobot_detection_localizer",
             output="screen",
@@ -164,7 +195,7 @@ def generate_launch_description():
         ),
         Node(
             package="macrobot_pick_pipeline",
-            executable="stored_object_pick_node",
+            executable=task_executable,
             name="macrobot_stored_object_pick",
             output="screen",
             condition=IfCondition(start_base_alignment),
@@ -174,6 +205,7 @@ def generate_launch_description():
                     "profile_file": stored_object_profile_file,
                     "recordings_dir": recordings_dir,
                     "grasp_keyframe_profile_file": grasp_keyframe_profile_file,
+                    "object_memory_file": object_memory_file,
                     "dry_run_base": ParameterValue(
                         alignment_dry_run, value_type=bool
                     ),

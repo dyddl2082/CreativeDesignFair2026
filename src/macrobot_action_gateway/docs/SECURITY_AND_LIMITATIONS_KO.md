@@ -40,5 +40,5 @@ Gateway socket만 bind mount
 - 부분 이동·취소·통신 실패 후 차체 pose는 `UNRELIABLE`이 된다.
 - 팔·그리퍼 상태는 encoder 실측이 아닌 commanded state다.
 - `PICK_OBJECT`의 기본 verification은 command sequence 완료다.
-- `PLACE_NEXTTO_OBJECT` runtime은 아직 없다.
+- `PLACE_NEXTTO_OBJECT`는 기준 물체를 재탐색한 뒤 semantic reverse-pick을 실행한다. 외부 물체 형상의 완전한 3D 충돌 지도와 release 센서 검증은 아직 없다.
 - system primitive 영구 목록과 placement profile schema는 별도 결정이 필요하다.
