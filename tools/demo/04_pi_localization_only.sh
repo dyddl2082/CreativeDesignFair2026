@@ -1,74 +1,101 @@
 #!/usr/bin/env bash
-# Start only the URDF/TF tree and detection localizer on the Raspberry Pi.
-# No Pico, base motion, arm motion, or stored-task node is started.
-
+# Start exactly one authoritative Pi MacRobot URDF publisher and the localizer.
+# This mode does not start Pico, chassis motion, arm motion, or stored tasks.
 set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck disable=SC1091
-source "$SCRIPT_DIR/macrobot_demo_env.sh"
+ENV_FILE="$SCRIPT_DIR/macrobot_demo_env.sh"
+WAIT_TF="$SCRIPT_DIR/wait_for_macrobot_tf.py"
 
-if ros2 node list 2>/dev/null | grep -Eq '/.*macrobot_detection_localizer.*$'; then
-  echo "ERROR: a detection-localizer node is already running" >&2
-  ros2 node list 2>/dev/null | grep -E '/.*macrobot_detection_localizer.*$' >&2 || true
+if [[ ! -f "$ENV_FILE" ]]; then
+  echo "ERROR: environment helper not found: $ENV_FILE" >&2
   exit 2
+fi
+if [[ ! -f "$WAIT_TF" ]]; then
+  echo "ERROR: TF wait helper not found: $WAIT_TF" >&2
+  exit 2
+fi
+
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+
+fresh_nodes() {
+  ros2 node list --no-daemon --spin-time 5.0 2>/dev/null || true
+}
+
+if fresh_nodes | grep -Fxq '/macrobot_detection_localizer'; then
+  echo "ERROR: /macrobot_detection_localizer is already running" >&2
+  exit 3
+fi
+
+mapfile -t LOCAL_RSP_LINES < <(
+  pgrep -af '/robot_state_publisher/robot_state_publisher([[:space:]]|$)' \
+    2>/dev/null || true
+)
+
+if (( ${#LOCAL_RSP_LINES[@]} > 0 )); then
+  echo "ERROR: a local robot_state_publisher is already running." >&2
+  echo "Stop its parent launch before starting localization-only mode:" >&2
+  printf '  %s\n' "${LOCAL_RSP_LINES[@]}" >&2
+  echo >&2
+  echo "Typical conflicting launches:" >&2
+  echo "  runtime_description.launch.py" >&2
+  echo "  display_full.launch.py" >&2
+  echo "  arm_pipeline.launch.py" >&2
+  echo "  pick_pipeline_robot.launch.py" >&2
+  exit 4
 fi
 
 DESCRIPTION_PID=""
 cleanup() {
   if [[ -n "$DESCRIPTION_PID" ]]; then
-    kill "$DESCRIPTION_PID" 2>/dev/null || true
+    kill -INT "$DESCRIPTION_PID" 2>/dev/null || true
     wait "$DESCRIPTION_PID" 2>/dev/null || true
   fi
 }
 trap cleanup EXIT INT TERM
 
-transform_ready() {
-  local output
-  output="$(timeout --signal=INT --kill-after=1s 2s \
-    ros2 run tf2_ros tf2_echo base_link camera_link 2>&1 || true)"
-  printf '%s' "$output" | grep -q 'Translation:'
-}
+echo "[localization-only] starting authoritative r4 MacRobot TF publisher"
+ros2 launch macrobot_description runtime_description.launch.py \
+  rsp_node_name:=macrobot_pi_robot_state_publisher &
+DESCRIPTION_PID=$!
 
-if transform_ready; then
-  echo "[localization-only] existing base_link -> camera_link TF found"
-else
-  if ros2 node list 2>/dev/null | grep -Eq '/.*robot_state_publisher.*$'; then
-    echo "[localization-only] robot_state_publisher exists; waiting for its TF tree"
-  else
-    echo "[localization-only] starting robot description / robot_state_publisher"
-    ros2 launch macrobot_description runtime_description.launch.py &
-    DESCRIPTION_PID=$!
-  fi
+if ! python3 "$WAIT_TF" \
+  base_link camera_link \
+  --timeout 25 \
+  --expect-x -0.030650 \
+  --expect-y 0.060623 \
+  --expect-z 0.025820 \
+  --translation-tolerance 0.002; then
+  echo >&2
+  echo "The authoritative RSP started, but the r4 camera anchor was not received." >&2
+  echo "Check its process log above and inspect the active Xacro:" >&2
+  echo '  xacro "$(ros2 pkg prefix --share macrobot_description)/urdf/macrobot_full_visual.urdf.xacro" > /tmp/macrobot_active.urdf' >&2
+  echo '  grep -n -A5 -B2 camera_fix_joint /tmp/macrobot_active.urdf' >&2
+  exit 5
+fi
 
-  ready=false
-  for _ in $(seq 1 20); do
-    if transform_ready; then
-      ready=true
-      break
-    fi
-    if [[ -n "$DESCRIPTION_PID" ]] && ! kill -0 "$DESCRIPTION_PID" 2>/dev/null; then
-      echo "ERROR: runtime_description.launch.py exited before TF became ready" >&2
-      wait "$DESCRIPTION_PID" 2>/dev/null || true
-      exit 2
-    fi
-    sleep 0.5
-  done
+if ! python3 "$WAIT_TF" \
+  base_link camera_color_optical_frame \
+  --timeout 25; then
+  echo "ERROR: base_link -> camera_link is correct, but the camera internal TF tree is disconnected." >&2
+  echo "Keep the RSP running and inspect macrobot_rgb_anchor_tf_publisher/calibration YAML." >&2
+  exit 6
+fi
 
-  if [[ "$ready" != true ]]; then
-    echo "ERROR: base_link -> camera_link TF is unavailable after waiting" >&2
-    echo "Visible TF-related nodes:" >&2
-    ros2 node list 2>/dev/null \
-      | grep -E 'robot_state_publisher|camera|tf' \
-      | sed 's/^/  /' >&2 || true
-    exit 2
-  fi
+mapfile -t GRAPH_RSP < <(
+  fresh_nodes | grep -E '/.*robot_state_publisher.*$' | sort || true
+)
+if (( ${#GRAPH_RSP[@]} > 1 )); then
+  echo "WARNING: more than one robot_state_publisher is visible in the ROS graph:" >&2
+  printf '  %s\n' "${GRAPH_RSP[@]}" >&2
+  echo "Stop RSP-containing launches on WSL2 or other hosts before real robot motion." >&2
 fi
 
 CONFIG_FILE="$(ros2 pkg prefix --share macrobot_pick_pipeline)/config/perception.yaml"
 if [[ ! -f "$CONFIG_FILE" ]]; then
   echo "ERROR: localizer parameter file not found: $CONFIG_FILE" >&2
-  exit 2
+  exit 7
 fi
 
 echo "[localization-only] starting detection_localizer_node"
