@@ -126,6 +126,73 @@ def capture_stage(
     )
 
 
+
+def _recorded_object_point_from_stage(
+    model: MacRobotArmModel,
+    stage: GraspKeyframeStage,
+) -> Vector3:
+    """Recover the original stationary object point used to capture a stage."""
+
+    if (
+        stage.representation != "object_relative_cartesian"
+        or stage.object_offset is None
+    ):
+        raise ValueError("stage_has_no_object_relative_reference")
+    pose = model.forward(*stage.q)
+    tool_point = (float(pose.x), float(pose.y), float(pose.z))
+    point: Vector3 = tuple(
+        tool_point[index] - float(stage.object_offset[index])
+        for index in range(3)
+    )  # type: ignore[assignment]
+    if not all(math.isfinite(float(value)) for value in point):
+        raise ValueError("recorded_object_reference_is_not_finite")
+    return point
+
+
+def recover_lift_capture_reference(
+    model: MacRobotArmModel,
+    profile: GraspKeyframeProfile,
+    *,
+    consistency_tolerance_m: float = 0.030,
+) -> tuple[Vector3, str]:
+    """Recover the pre-pick object point for LIFT without live vision.
+
+    LIFT is recorded after the object has been closed on and may already be
+    outside the camera view. Its Cartesian offset must still be measured from
+    the object's original stationary point, not from the lifted object's new
+    image position. GRASP_OPEN is authoritative; PRE_GRASP is a compatible
+    fallback and consistency cross-check.
+    """
+
+    tolerance = float(consistency_tolerance_m)
+    if not math.isfinite(tolerance) or tolerance < 0.0:
+        raise ValueError("lift_reference_consistency_tolerance_invalid")
+
+    candidates: list[tuple[str, Vector3]] = []
+    for stage_name in ("GRASP_OPEN", "PRE_GRASP"):
+        stage = profile.stages.get(stage_name)
+        if stage is None:
+            continue
+        try:
+            point = _recorded_object_point_from_stage(model, stage)
+        except ValueError:
+            continue
+        candidates.append((stage_name, point))
+
+    if not candidates:
+        raise ValueError(
+            "lift_reference_unavailable_capture_grasp_open_first"
+        )
+
+    source_name, reference = candidates[0]
+    for _, other in candidates[1:]:
+        if math.dist(reference, other) > tolerance:
+            raise ValueError(
+                "lift_reference_inconsistent_recapture_pre_grasp_and_grasp_open"
+            )
+
+    return reference, source_name
+
 def build_semantic_grasp_plan(
     model: MacRobotArmModel,
     profile: GraspKeyframeProfile,

@@ -24,6 +24,7 @@ from .grasp_keyframe_core import (
     build_semantic_grasp_plan,
     build_semantic_place_plan,
     capture_stage,
+    recover_lift_capture_reference,
 )
 from .grasp_keyframe_store import GraspKeyframeStore
 from .alignment_core import axial_orientation_error_deg
@@ -82,6 +83,7 @@ class GraspKeyframeNode(Node):
             "safe_region_max_distance_rad": 0.06,
             "preflight_interpolation_step_rad": 0.025,
             "detection_max_age_sec": 1.0,
+            "lift_capture_reference_consistency_tolerance_m": 0.030,
             "minimum_localization_quality": 0.15,
             "maximum_depth_std_m": 0.035,
             "maximum_center_std_px": 20.0,
@@ -310,8 +312,34 @@ class GraspKeyframeNode(Node):
             raise ValueError("profile and object_name are required")
         point: Optional[Vector3] = None
         detection: dict[str, Any] = {}
-        if stage_name not in {"OPEN", "CLOSE"}:
-            point, detection = self._fresh_detection(object_name, _point(data.get("object_point_base")))
+        object_reference_source = "not_required"
+        direct_point = _point(data.get("object_point_base"))
+        if stage_name == "LIFT" and direct_point is None:
+            try:
+                draft = self.store.get(profile_name)
+            except KeyError as error:
+                raise ValueError(
+                    "lift_reference_unavailable_capture_grasp_open_first"
+                ) from error
+            if draft.object_name.casefold() != object_name.casefold():
+                raise ValueError("lift_reference_object_name_mismatch")
+            point, source_stage = recover_lift_capture_reference(
+                self.model,
+                draft,
+                consistency_tolerance_m=float(
+                    self.get_parameter(
+                        "lift_capture_reference_consistency_tolerance_m"
+                    ).value
+                ),
+            )
+            object_reference_source = f"profile:{source_stage}"
+        elif stage_name not in {"OPEN", "CLOSE"}:
+            point, detection = self._fresh_detection(object_name, direct_point)
+            object_reference_source = (
+                "explicit_object_point_base"
+                if direct_point is not None
+                else "live_localized_detection"
+            )
         stage = capture_stage(
             stage_name=stage_name,
             current_q=self.current_q,
@@ -334,6 +362,10 @@ class GraspKeyframeNode(Node):
             profile=profile_name,
             object_name=object_name,
             stage=stage_name,
+            object_reference_source=object_reference_source,
+            object_reference_point_base=(
+                None if point is None else list(point)
+            ),
             captured_stages=sorted(profile.stages),
             profile_file=str(self.store.path),
         )
