@@ -1,5 +1,5 @@
 schema: macrobot.grasp_keyframes/v2
-updated_at: '2026-09-05T12:14:53.511603+00:00'
+updated_at: '2026-09-05T13:52:09.404753+00:00'
 profiles:
   Eraser:
     object_name: Eraser
@@ -78,7 +78,7 @@ profiles:
         settle_sec: 0.1
   Eraser_r4:
     object_name: Eraser
-    recorded_at: '2026-09-05T12:14:53.508822+00:00'
+    recorded_at: '2026-09-05T13:52:09.404512+00:00'
     reference_orientation_deg: 90.46956634521484
     reference_orientation_class: vertical
     reference_orientation_quality: 0.924885094165802
