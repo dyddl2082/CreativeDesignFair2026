@@ -381,7 +381,11 @@ class CameraGraspTeachClient(Node):
             "profile": runtime_profile,
             "grasp_keyframe_profile": keyframe_profile,
             "pick_profile": object_name,
-            "object_point_base": [float(value) for value in point],
+            "object_point_base": {
+                "x": float(point[0]),
+                "y": float(point[1]),
+                "z": float(point[2]),
+            },
             "object_orientation": dict(orientation),
             "score": float(reference.get("score", 0.0) or 0.0),
             "graspable_max_range_m": float(maximum_grasp_range_m),

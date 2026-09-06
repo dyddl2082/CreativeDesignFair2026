@@ -49,6 +49,25 @@ from .stored_object_pick_node import (
 )
 
 
+def _camera_grasp_point_from_payload(value: object):
+    # camera_grasp_point_payload_compatibility_v1
+    # The legacy stored-object parser accepts {"x", "y", "z"} mappings.
+    # Integrated teaching originally sent [x, y, z].  Accept both so mixed
+    # client/server versions cannot silently discard a valid camera point.
+    point = _point_from_payload(value)
+    if point is not None:
+        return point
+    if not isinstance(value, (list, tuple)) or len(value) != 3:
+        return None
+    try:
+        candidate = tuple(float(item) for item in value)
+    except (TypeError, ValueError):
+        return None
+    if not all(math.isfinite(item) for item in candidate):
+        return None
+    return candidate
+
+
 class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
     """Vision-first task node with no persistent-odometry navigation authority."""
 
@@ -262,7 +281,7 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
                 raise ValueError(
                     "object_name, profile and grasp_keyframe_profile are required"
                 )
-            point = _point_from_payload(request.get("object_point_base"))
+            point = _camera_grasp_point_from_payload(request.get("object_point_base"))
             if point is None:
                 raise ValueError("object_point_base is required")
             orientation_raw = request.get("object_orientation", {})
