@@ -27,6 +27,9 @@ class _Client(Node):
         self.create_subscription(String, "/macrobot/stored_pick/result", self._result_cb, 20)
         self.create_subscription(String, "/macrobot/visible_pick_test/result", self._result_cb, 20)
         self.create_subscription(String, "/macrobot/stored_pick/status", self._status_cb, 20)
+        self.create_subscription(
+            String, "/macrobot/visible_pick_test/status", self._status_cb, 20
+        )
 
     def _result_cb(self, msg: String) -> None:
         try:
@@ -320,16 +323,25 @@ def main(argv=None) -> None:
                 print(f"record command delivery failed: {detail}", file=sys.stderr)
                 raise SystemExit(2)
         elif args.command == "visible-test":
-            node._publish(
+            payload = {
+                "request_id": request_id,
+                "object_name": args.object_name,
+                "profile": args.profile or args.object_name,
+                "execute_pick": not args.align_only,
+                "start_finder": True,
+                "timeout_sec": timeout,
+            }
+            delivered, detail = node.publish_with_ack(
                 node.visible_goal_pub,
-                {
-                    "request_id": request_id,
-                    "object_name": args.object_name,
-                    "profile": args.profile or args.object_name,
-                    "execute_pick": not args.align_only,
-                    "timeout_sec": timeout,
-                },
+                payload,
+                acknowledgement_timeout=12.0,
             )
+            if not delivered:
+                print(
+                    f"visible-test command delivery failed: {detail}",
+                    file=sys.stderr,
+                )
+                raise SystemExit(2)
         elif args.command == "run":
             payload = {
                 "request_id": request_id,
@@ -431,7 +443,16 @@ def main(argv=None) -> None:
             node._publish(node.visible_cancel_pub, "user_cancel")
             timeout = 5.0
 
-        result = node.wait(timeout)
+        action_commands = {
+            "record-search",
+            "record-grasp",
+            "record",
+            "visible-test",
+            "run",
+            "place",
+        }
+        terminal_wait = timeout + 10.0 if args.command in action_commands else timeout
+        result = node.wait(terminal_wait)
         if result is None:
             print("No terminal result received before timeout", file=sys.stderr)
             raise SystemExit(2)

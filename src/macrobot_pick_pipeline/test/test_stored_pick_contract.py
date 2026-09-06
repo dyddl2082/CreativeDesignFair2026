@@ -31,12 +31,23 @@ def test_recorded_grasp_uses_validated_arm_demo_player():
     assert 'self.arm_stop_pub.publish(Empty())' in text
 
 
-def test_visible_test_is_a_thin_client_not_a_motion_controller():
+def test_visible_test_is_reliable_finder_backed_client_not_motion_controller():
     text = _source("visible_pick_test_node.py")
     assert '"mode": "visible_test"' in text
-    assert '"start_finder": False' in text
+    assert '"start_finder": start_finder' in text
+    assert '"visible_pick_test_command_acknowledged"' in text
+    assert '"preexisting_detection_is_not_required": True' in text
+    assert '"request_id": request_id' in text
+    assert 'stored_goal_retry_period_sec' in text
     assert '/pico_debug/cmd' not in text
     assert '/macrobot/arm/joint_goal' not in text
+
+
+def test_visible_test_cli_uses_request_id_handshake():
+    text = _source("stored_object_pick_cli.py")
+    assert '"/macrobot/visible_pick_test/status"' in text
+    assert 'node.publish_with_ack(\n                node.visible_goal_pub' in text
+    assert '"start_finder": True' in text
 
 
 def test_invalid_or_busy_goal_gets_terminal_result_with_same_request_id():
@@ -106,3 +117,11 @@ def test_keyframe_cli_can_use_stored_close_reference_without_live_dino():
     assert '"--stored-profile"' in text
     assert 'payload["object_point_base"]' in text
     assert '"stored_grasp_reference"' in text
+
+
+def test_resilient_search_is_rotation_first_with_conditional_backoff():
+    text = _source("resilient_object_task_node.py")
+    assert 'build_rotation_first_search' in text
+    assert '"search_policy": "rotation_first_visual_replanning"' in text
+    assert 'search_close_obstacle_backoff_started' in text
+    assert 'bearing_corrected_before_translation=True' in text

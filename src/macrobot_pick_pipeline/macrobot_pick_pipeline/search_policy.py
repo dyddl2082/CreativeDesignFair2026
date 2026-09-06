@@ -1,9 +1,18 @@
-"""Translation-dominant active visual-search policy.
+"""Rotation-first active visual-search policy.
 
-The pattern intentionally avoids using a large calibrated turn as a geometric
-measurement.  Turns are only small camera-view changes; every useful decision is
-made again from vision after the chassis stops.  Short forward probes are gated
-by the depth-clearance monitor and are reversed along the same corridor.
+The tracked chassis has floor-dependent translational and rotational error.  A
+search therefore does not use blind forward motion to discover an object.  It
+first observes the current view, optionally performs a *small conditional
+backoff* when aligned depth reports that something is too close to the camera,
+and then changes only the camera heading in bounded yaw steps.  Translation is
+reserved for the visual-alignment phase after the requested object has been
+identified and localized.
+
+The backoff actions are deliberately labelled ``close_obstacle_backoff_*``.
+They are conditional: :class:`ResilientObjectTaskNode` executes them only while
+a fresh central-corridor clearance sample is below the configured threshold.
+Because MacRobot has no rear depth sensor, the total reverse distance must stay
+small and the operator must keep the rear corridor clear during demonstrations.
 """
 
 from __future__ import annotations
@@ -26,10 +35,46 @@ class SearchAction:
             raise ValueError(f"unsupported search action: {self.kind}")
         if self.kind == "observe" and self.amount != 0.0:
             raise ValueError("observe action amount must be zero")
+        if self.kind != "observe" and self.observe_sec != 0.0:
+            raise ValueError("motion action observe_sec must be zero")
+
+
+@dataclass(frozen=True)
+class RotationFirstSearchConfig:
+    """Configuration for bounded rotation-first target acquisition."""
+
+    initial_observation_sec: float = 4.0
+    observation_sec: float = 3.0
+    backoff_step_m: float = 0.04
+    backoff_steps: int = 2
+    yaw_step_deg: float = 10.0
+    yaw_levels: int = 3
+    include_conditional_backoff: bool = True
+
+    def validate(self) -> None:
+        if self.initial_observation_sec <= 0.0:
+            raise ValueError("initial_observation_sec must be positive")
+        if self.observation_sec <= 0.0:
+            raise ValueError("observation_sec must be positive")
+        if not 0.0 <= self.backoff_step_m <= 0.04:
+            raise ValueError("backoff_step_m must be within 0.0 .. 0.04 m")
+        if not 0 <= self.backoff_steps <= 2:
+            raise ValueError("backoff_steps must be within 0 .. 2")
+        if not 0.0 <= self.yaw_step_deg <= 10.0:
+            raise ValueError("yaw_step_deg must be within 0.0 .. 10.0 deg")
+        if self.yaw_levels < 0:
+            raise ValueError("yaw_levels must be non-negative")
 
 
 @dataclass(frozen=True)
 class TranslationDominantSearchConfig:
+    """Deprecated compatibility schema.
+
+    Older callers may still construct this class.  Its former forward probe is
+    interpreted as a bounded conditional backoff so that no caller silently
+    re-enables translation-first search.
+    """
+
     forward_step_m: float = 0.08
     forward_steps: int = 2
     observation_sec: float = 2.0
@@ -51,13 +96,12 @@ class TranslationDominantSearchConfig:
 
 
 def _yaw_offsets(step_deg: float, levels: int) -> Tuple[float, ...]:
-    """Return a monotonic view sweep made only of one-step yaw changes.
+    """Return a monotonic, small-step camera-view sweep.
 
-    Alternating directly between +N and -N creates increasingly large turns
-    (for example +30 -> -30).  The tracked chassis is floor-sensitive, so the
-    camera instead sweeps gradually from center to one side, back through
-    center, and then to the other side.  The final pose need not reproduce an
-    exact yaw because every useful decision is visual.
+    Alternating directly between positive and negative extrema would command
+    increasingly large turns.  Instead the camera moves from centre to one
+    side, back through centre, and then to the other side.  Every useful
+    decision is made from a fresh stationary observation.
     """
 
     count = max(0, int(levels))
@@ -70,53 +114,33 @@ def _yaw_offsets(step_deg: float, levels: int) -> Tuple[float, ...]:
     return tuple([0.0, *positive, *return_to_center, *negative])
 
 
-def build_translation_dominant_search(
-    config: TranslationDominantSearchConfig,
+def build_rotation_first_search(
+    config: RotationFirstSearchConfig,
 ) -> Tuple[SearchAction, ...]:
+    """Build initial observation, conditional backoff, then yaw-only search."""
+
     config.validate()
     actions = [
         SearchAction(
             "observe",
             label="initial_view",
-            observe_sec=config.observation_sec,
+            observe_sec=config.initial_observation_sec,
         )
     ]
 
-    traveled = 0.0
-    for index in range(config.forward_steps):
-        if config.forward_step_m <= 0.0:
-            break
-        actions.append(
-            SearchAction(
-                "move",
-                amount=config.forward_step_m,
-                label=f"corridor_forward_{index + 1}",
-            )
-        )
-        traveled += config.forward_step_m
-        actions.append(
-            SearchAction(
-                "observe",
-                label=f"corridor_view_{index + 1}",
-                observe_sec=config.observation_sec,
-            )
-        )
-
-    if config.include_reverse_return and traveled > 0.0:
-        # Return in the same short increments so perception can still re-plan at
-        # every boundary and the rear motion stays on an already observed path.
-        for index in range(config.forward_steps):
+    if config.include_conditional_backoff and config.backoff_step_m > 0.0:
+        for index in range(config.backoff_steps):
             actions.append(
                 SearchAction(
                     "move",
-                    amount=-config.forward_step_m,
-                    label=f"corridor_reverse_{index + 1}",
+                    amount=-config.backoff_step_m,
+                    label=f"close_obstacle_backoff_{index + 1}",
                 )
             )
             actions.append(
                 SearchAction(
                     "observe",
-                    label=f"reverse_view_{index + 1}",
+                    label=f"post_backoff_view_{index + 1}",
                     observe_sec=config.observation_sec,
                 )
             )
@@ -136,6 +160,25 @@ def build_translation_dominant_search(
     for action in actions:
         action.validate()
     return tuple(actions)
+
+
+def build_translation_dominant_search(
+    config: TranslationDominantSearchConfig,
+) -> Tuple[SearchAction, ...]:
+    """Compatibility wrapper that now returns the safer rotation-first plan."""
+
+    config.validate()
+    return build_rotation_first_search(
+        RotationFirstSearchConfig(
+            initial_observation_sec=config.observation_sec,
+            observation_sec=config.observation_sec,
+            backoff_step_m=min(0.04, config.forward_step_m),
+            backoff_steps=min(2, config.forward_steps),
+            yaw_step_deg=min(10.0, config.yaw_step_deg),
+            yaw_levels=config.yaw_levels,
+            include_conditional_backoff=config.include_reverse_return,
+        )
+    )
 
 
 def total_motion_budget(actions: Iterable[SearchAction]) -> tuple[float, float]:

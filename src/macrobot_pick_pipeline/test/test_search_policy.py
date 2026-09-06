@@ -1,35 +1,76 @@
 from macrobot_pick_pipeline.search_policy import (
+    RotationFirstSearchConfig,
     TranslationDominantSearchConfig,
+    build_rotation_first_search,
     build_translation_dominant_search,
     total_motion_budget,
 )
 
 
-def test_search_observes_before_motion_and_reverses_same_corridor():
-    actions = build_translation_dominant_search(
-        TranslationDominantSearchConfig(
-            forward_step_m=0.08,
-            forward_steps=2,
-            observation_sec=1.0,
+def test_rotation_first_search_observes_then_conditionally_backs_off_then_turns():
+    actions = build_rotation_first_search(
+        RotationFirstSearchConfig(
+            initial_observation_sec=4.0,
+            observation_sec=3.0,
+            backoff_step_m=0.04,
+            backoff_steps=2,
             yaw_step_deg=10.0,
             yaw_levels=2,
         )
     )
     assert actions[0].kind == "observe"
-    forward = [a.amount for a in actions if a.label.startswith("corridor_forward")]
-    reverse = [a.amount for a in actions if a.label.startswith("corridor_reverse")]
-    assert forward == [0.08, 0.08]
-    assert reverse == [-0.08, -0.08]
-    assert sum(forward) + sum(reverse) == 0.0
+    assert actions[0].label == "initial_view"
+    backoffs = [
+        action for action in actions if action.label.startswith("close_obstacle_backoff")
+    ]
+    assert [action.amount for action in backoffs] == [-0.04, -0.04]
+    first_turn = next(index for index, action in enumerate(actions) if action.kind == "turn")
+    assert all(action.kind != "turn" for action in actions[:first_turn])
+    assert all(action.amount <= 0.0 for action in actions if action.kind == "move")
 
 
-def test_search_uses_small_view_turns_not_one_large_geometric_turn():
-    actions = build_translation_dominant_search(
-        TranslationDominantSearchConfig(yaw_step_deg=10.0, yaw_levels=3)
+def test_rotation_first_search_uses_small_yaw_steps_and_no_forward_probe():
+    actions = build_rotation_first_search(
+        RotationFirstSearchConfig(yaw_step_deg=10.0, yaw_levels=3)
     )
-    turns = [abs(a.amount) for a in actions if a.kind == "turn"]
+    turns = [abs(action.amount) for action in actions if action.kind == "turn"]
     assert turns
     assert max(turns) <= 10.0
+    assert not [action for action in actions if action.kind == "move" and action.amount > 0.0]
     move_budget, turn_budget = total_motion_budget(actions)
-    assert move_budget > 0.0
+    assert move_budget == 0.08
     assert turn_budget <= 100.0
+
+
+def test_legacy_translation_config_cannot_reenable_forward_search():
+    actions = build_translation_dominant_search(
+        TranslationDominantSearchConfig(
+            forward_step_m=0.08,
+            forward_steps=2,
+            observation_sec=2.0,
+            yaw_step_deg=10.0,
+            yaw_levels=1,
+        )
+    )
+    assert all(action.amount <= 0.0 for action in actions if action.kind == "move")
+    assert any(action.label.startswith("close_obstacle_backoff") for action in actions)
+
+
+def test_legacy_oversized_probe_is_capped_to_small_backoff():
+    actions = build_translation_dominant_search(
+        TranslationDominantSearchConfig(
+            forward_step_m=0.20,
+            forward_steps=7,
+            observation_sec=2.0,
+            yaw_step_deg=25.0,
+            yaw_levels=1,
+        )
+    )
+    backoffs = [
+        action.amount
+        for action in actions
+        if action.label.startswith("close_obstacle_backoff")
+    ]
+    turns = [abs(action.amount) for action in actions if action.kind == "turn"]
+    assert backoffs == [-0.04, -0.04]
+    assert max(turns) <= 10.0

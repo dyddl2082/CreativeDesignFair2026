@@ -5,8 +5,8 @@ its public topics and profile format, while changing the execution policy:
 
 * object-relative grasp skills remain persistent across reboots;
 * odometry locations are optional, epoch-scoped hints rather than truth;
-* search begins from the current camera view and uses a bounded,
-  translation-dominant pattern;
+* search begins from the current camera view, conditionally backs away from a
+  too-close central obstacle, then uses a bounded yaw-only acquisition sweep;
 * every base command is a short atomic chunk; perception continues in parallel;
 * delayed localized detections are transformed from camera time to the current
   base pose at the next chunk boundary;
@@ -43,9 +43,9 @@ from .planner import DetectionSample, StableDetection
 from .pose_history import PoseHistory
 from .runtime_epoch import RuntimeEpoch, read_host_boot_id
 from .search_policy import (
+    RotationFirstSearchConfig,
     SearchAction,
-    TranslationDominantSearchConfig,
-    build_translation_dominant_search,
+    build_rotation_first_search,
     total_motion_budget,
 )
 from .stored_object_core import (
@@ -159,12 +159,12 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         self._refresh_held_epoch_state()
         self._publish_status(
             "resilient_object_tasks_ready",
-            execution_policy="vision_led_chunked_replanning",
+            execution_policy="rotation_first_vision_led_replanning",
             object_memory_file=str(self.object_memory.path),
             host_boot_id=self.host_boot_id,
         )
         self.get_logger().info(
-            "Resilient object tasks ready: current-view search -> chunked visual servo -> pick/place"
+            "Resilient object tasks ready: current-view/backoff/yaw search -> visual distance alignment -> pick/place"
         )
 
     # ------------------------------------------------------------------
@@ -180,12 +180,17 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             "require_depth_clearance": True,
             "clearance_max_age_sec": 0.75,
             "clearance_stop_margin_m": 0.12,
-            "search_forward_step_m": 0.08,
-            "search_forward_steps": 2,
-            "search_observation_sec": 1.25,
+            "search_forward_step_m": 0.0,  # deprecated; forward search is disabled
+            "search_forward_steps": 0,  # deprecated; forward search is disabled
+            "search_initial_observation_sec": 4.0,
+            "search_observation_sec": 3.0,
+            "search_close_obstacle_backoff_enabled": True,
+            "search_close_obstacle_threshold_m": 0.38,
+            "search_close_obstacle_backoff_step_m": 0.04,
+            "search_close_obstacle_backoff_steps": 2,
             "search_yaw_step_deg": 10.0,
             "search_yaw_levels": 3,
-            "search_max_total_move_m": 0.50,
+            "search_max_total_move_m": 0.12,
             "search_max_total_turn_deg": 100.0,
             "use_same_epoch_location_hint": True,
             "location_hint_max_age_sec": 900.0,
@@ -220,7 +225,7 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         payload.update(
             {
                 "task": self.task_kind,
-                "search_policy": "translation_dominant_visual_replanning",
+                "search_policy": "rotation_first_visual_replanning",
                 "location_hint_state": self.location_hint_state,
                 "location_hint_reason": self.location_hint_reason,
                 "pending_delayed_detections": len(self.pending_detections),
@@ -743,7 +748,7 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         )
 
     # ------------------------------------------------------------------
-    # Search: current view, optional same-epoch hint, translation first
+    # Search: current view, conditional close-obstacle backoff, then yaw sweep
     # ------------------------------------------------------------------
     def _after_stow(self) -> None:
         self._request_odom("resilient_search_start")
@@ -764,14 +769,51 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         self.search_corridor_forward_m = 0.0
         self.search_observe_until = 0.0
 
-        config = TranslationDominantSearchConfig(
-            forward_step_m=float(self.get_parameter("search_forward_step_m").value),
-            forward_steps=int(self.get_parameter("search_forward_steps").value),
-            observation_sec=float(self.get_parameter("search_observation_sec").value),
-            yaw_step_deg=float(self.get_parameter("search_yaw_step_deg").value),
+        config = RotationFirstSearchConfig(
+            initial_observation_sec=float(
+                self.get_parameter("search_initial_observation_sec").value
+            ),
+            observation_sec=max(
+                float(self.get_parameter("search_observation_sec").value),
+                float(
+                    self.get_parameter("search_post_turn_detection_wait_sec").value
+                ),
+            ),
+            backoff_step_m=min(
+                0.04,
+                max(
+                    0.0,
+                    float(
+                        self.get_parameter(
+                            "search_close_obstacle_backoff_step_m"
+                        ).value
+                    ),
+                ),
+            ),
+            backoff_steps=min(
+                2,
+                max(
+                    0,
+                    int(
+                        self.get_parameter(
+                            "search_close_obstacle_backoff_steps"
+                        ).value
+                    ),
+                ),
+            ),
+            yaw_step_deg=min(
+                10.0,
+                max(
+                    0.0,
+                    float(self.get_parameter("search_yaw_step_deg").value),
+                ),
+            ),
             yaw_levels=int(self.get_parameter("search_yaw_levels").value),
+            include_conditional_backoff=bool(
+                self.get_parameter("search_close_obstacle_backoff_enabled").value
+            ),
         )
-        actions = list(build_translation_dominant_search(config))
+        actions = list(build_rotation_first_search(config))
 
         self.location_hint_state = "missing"
         self.location_hint_reason = "no_location_memory"
@@ -819,14 +861,25 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
                             ),
                         )
                         if abs(turn) >= self.profile.alignment.bearing_tolerance_deg:
+                            # Keep the current-view and close-obstacle checks first.
+                            # The odometry hint only chooses the first yaw view; it
+                            # never authorizes translation toward the old location.
+                            first_turn = next(
+                                (
+                                    index
+                                    for index, item in enumerate(actions)
+                                    if item.kind == "turn"
+                                ),
+                                len(actions),
+                            )
                             actions.insert(
-                                1,
+                                first_turn,
                                 SearchAction(
                                     "turn", turn, "same_epoch_hint_view"
                                 ),
                             )
                             actions.insert(
-                                2,
+                                first_turn + 1,
                                 SearchAction(
                                     "observe",
                                     label="same_epoch_hint_observe",
@@ -872,7 +925,7 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         if not self.search_actions:
             self._fail(
                 "OBJECT_NOT_FOUND",
-                reason="bounded translation-dominant visual search exhausted",
+                reason="bounded rotation-first visual search exhausted",
                 search_total_move_m=self.search_total_move_m,
                 search_total_turn_deg=self.search_total_turn_deg,
             )
@@ -890,6 +943,35 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             return
         if action.kind == "move":
             requested_amount = float(action.amount)
+            if action.label.startswith("close_obstacle_backoff"):
+                close, reason, clearance = self._close_obstacle_state()
+                if not bool(
+                    self.get_parameter(
+                        "search_close_obstacle_backoff_enabled"
+                    ).value
+                ):
+                    self._publish_status(
+                        "search_close_obstacle_backoff_skipped",
+                        label=action.label,
+                        reason="backoff_disabled",
+                    )
+                    return
+                if not close:
+                    self._publish_status(
+                        "search_close_obstacle_backoff_skipped",
+                        label=action.label,
+                        reason=reason,
+                        clearance=clearance,
+                    )
+                    return
+                self._publish_status(
+                    "search_close_obstacle_backoff_started",
+                    label=action.label,
+                    requested_move_m=requested_amount,
+                    clearance=clearance,
+                    rear_clearance_verified=False,
+                    safety_note="rear corridor must be kept clear by the operator",
+                )
             # A reverse corridor step is only allowed for distance that was
             # actually travelled forward.  This prevents an unsafe blind
             # reverse when a forward probe was skipped by the depth gate.
@@ -920,7 +1002,12 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
                 return
             self.search_total_move_m += abs(requested_amount)
             self.filter.clear()
-            self._send_move(requested_amount, "resilient_search_move")
+            purpose = (
+                "resilient_search_backoff"
+                if action.label.startswith("close_obstacle_backoff")
+                else "resilient_search_move"
+            )
+            self._send_move(requested_amount, purpose)
             return
         if (
             self.search_total_turn_deg + abs(action.amount)
@@ -1145,6 +1232,40 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             next="fresh_detection_or_bounded_near_projection",
         )
 
+    def _close_obstacle_state(self) -> tuple[bool, str, Dict[str, Any]]:
+        """Return whether fresh central depth indicates a too-close object.
+
+        This check authorizes only a short configured reverse step.  It does
+        not prove rear clearance because MacRobot currently has no rear depth
+        sensor; demonstrations must keep the rear corridor clear.
+        """
+
+        payload = self.last_clearance
+        if not payload or not bool(payload.get("available", False)):
+            return False, "forward_clearance_unavailable", dict(payload)
+        try:
+            stamp = float(payload.get("published_at_sec", 0.0) or 0.0)
+            clearance = float(payload.get("clearance_m", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            return False, "forward_clearance_invalid", dict(payload)
+        age = time.time() - stamp
+        if not math.isfinite(age) or age < -1.0 or age > float(
+            self.get_parameter("clearance_max_age_sec").value
+        ):
+            return False, "forward_clearance_stale", {**dict(payload), "age_sec": age}
+        threshold = max(
+            0.0,
+            float(
+                self.get_parameter("search_close_obstacle_threshold_m").value
+            ),
+        )
+        close = math.isfinite(clearance) and clearance > 0.0 and clearance < threshold
+        return close, ("close_obstacle" if close else "front_not_close"), {
+            **dict(payload),
+            "age_sec": age,
+            "threshold_m": threshold,
+        }
+
     def _clearance_allows(self, forward_distance_m: float) -> bool:
         if forward_distance_m <= 0.0:
             return True
@@ -1183,6 +1304,7 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             point_base=list(stable.point_base),
             finder_kept_active=self.finder_active,
             exact_stored_yaw_required=False,
+            bearing_corrected_before_translation=True,
             move_chunk_m=float(self.get_parameter("visual_move_chunk_m").value),
             turn_chunk_deg=float(self.get_parameter("visual_turn_chunk_deg").value),
         )
@@ -1637,7 +1759,7 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             self._publish_status(
                 "resilient_state_heartbeat",
                 active=self._is_busy(),
-                execution_policy="vision_led_chunked_replanning",
+                execution_policy="rotation_first_vision_led_replanning",
             )
 
         # Preserve delayed detections buffered during a short base motion.
