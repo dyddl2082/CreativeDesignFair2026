@@ -5,9 +5,9 @@ model_revision: macrobot-serial-2axis-2026-09-04-r4
 output_directory: /home/dyddl2082/MacRobot/data/safe_region_serial2r_r4_fine
 counts:
   total: 165908
-  safe: 61614
-  connected_to_home: 61614
-  safe_fraction: 0.3713744967
+  safe: 103336
+  connected_to_home: 101068
+  safe_fraction: 0.6228512187
 scan:
   q1: {min: -1, max: 1, step: 0.034906585}
   q2: {min: -1.3, max: 1.3, step: 0.034906585}
@@ -18,26 +18,34 @@ initial_servo_commands_deg:
   gripper_mg90s_open: 0
   gripper_mg90s_closed: 180
 actuator_implied_logical_ranges_rad:
-  q1_from_left_tilt_servo: [-0.7853981634, 0.7853981634]
-  q2_from_wrist_servo: [-0.7853981634, 0.7853981634]
+  q1_from_left_tilt_servo: [-1.570796327, 1.570796327]
+  q2_from_wrist_servo: [-1.570796327, 1.570796327]
   q3_from_gripper_servo: [0, 1.570796327]
 connected_component_bounds_rad:
-  q1: [-0.755653905, 0.74532925]
-  q2: [-0.776401225, 0.759488515]
+  q1: [-1, 0.74532925]
+  q2: [-1.3, 1.3]
   q3: [0, 1.527163096]
 reject_reason_counts:
-  collision: 13311
-  lift_servo_limit: 39368
-  safe: 61614
-  tilt_servo_limit: 51615
+  collision: 62572
+  safe: 103336
 top_collision_pairs:
-  - {pair: "floor|gripper_clamp_left", count: 7861}
-  - {pair: "floor|gripper_clamp_right", count: 7861}
-  - {pair: "floor|gripper_left_addition", count: 3790}
-  - {pair: "floor|gripper_right_addition", count: 3790}
-  - {pair: "base_link|gripper_link", count: 3034}
-  - {pair: "floor|gripper_left_gear", count: 3002}
-  - {pair: "floor|gripper_right_gear", count: 3002}
-  - {pair: "floor|gripper_link", count: 2516}
-  - {pair: "gripper_clamp_left|gripper_clamp_right", count: 2025}
-  - {pair: "floor|gripper_servo_gear", count: 377}
+  - {pair: "base_link|gripper_link", count: 31968}
+  - {pair: "floor|gripper_clamp_left", count: 25011}
+  - {pair: "floor|gripper_clamp_right", count: 25011}
+  - {pair: "floor|gripper_link", count: 18648}
+  - {pair: "floor|gripper_left_gear", count: 17691}
+  - {pair: "floor|gripper_right_gear", count: 17690}
+  - {pair: "floor|gripper_right_addition", count: 15077}
+  - {pair: "floor|gripper_left_addition", count: 15077}
+  - {pair: "floor|gripper_servo_gear", count: 8896}
+  - {pair: "gripper_clamp_left|gripper_clamp_right", count: 4484}
+  - {pair: "base_link|gripper_servo_gear", count: 2516}
+  - {pair: "camera_link|gripper_link", count: 2442}
+  - {pair: "base_link|gripper_right_gear", count: 1936}
+  - {pair: "base_link|gripper_left_gear", count: 1542}
+  - {pair: "camera_link|gripper_servo_gear", count: 481}
+  - {pair: "base_link|gripper_left_addition", count: 370}
+  - {pair: "base_link|gripper_right_addition", count: 369}
+  - {pair: "base_link|gripper_clamp_right", count: 255}
+  - {pair: "camera_link|gripper_left_gear", count: 185}
+  - {pair: "camera_link|gripper_right_gear", count: 80}
