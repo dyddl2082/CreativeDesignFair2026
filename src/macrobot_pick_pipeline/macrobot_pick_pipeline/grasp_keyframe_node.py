@@ -584,6 +584,39 @@ class GraspKeyframeNode(Node):
                 if self.last_result_payload is not None:
                     self._json_publish(self.result_pub, self.last_result_payload)
                     return
+            # grasp_keyframe_immediate_command_id_correlation_v1
+            # Immediate commands complete inside this callback.  Claim their
+            # incoming command_id before publishing a result so clients that
+            # correlate responses by ID do not wait until timeout.  Do not
+            # overwrite an active trajectory's command_id.
+            immediate_actions = {
+                "capture",
+                "lock_reference",
+                "reference_status",
+                "clear_reference",
+                "finalize",
+                "list",
+                "delete",
+                "reload",
+            }
+            if action in immediate_actions:
+                if self.state in {"PREFLIGHT", "RUNNING", "CANCEL_REQUESTED"}:
+                    self._json_publish(
+                        self.result_pub,
+                        {
+                            "ok": False,
+                            "event": "grasp_keyframe_command_rejected",
+                            "state": self.state,
+                            "command_id": incoming_id,
+                            "active_command_id": self.command_id,
+                            "reason": "grasp_keyframe_executor_busy",
+                        },
+                    )
+                    return
+                self.command_id = incoming_id or (
+                    f"grasp-keyframes-{action}-{int(time.time() * 1000)}"
+                )
+                self.last_result_payload = None
             if action == "capture":
                 self._capture(data)
             elif action == "lock_reference":
