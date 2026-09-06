@@ -1,33 +1,36 @@
 schema: macrobot.object_memory/v2
-updated_at: '2026-09-06T03:50:45.631558+00:00'
+updated_at: '2026-09-06T07:01:49.033491+00:00'
 observations:
   Eraser:
     object_name: Eraser
     object_point_odom:
-      x: 0.23330012325572722
-      y: 0.03432718324882875
-      z: 0.0388571694571075
+      x: 0.21450674770555567
+      y: 0.1095282511851222
+      z: 0.03246852502917187
     observer_pose_odom:
-      x_m: 0.11278886
-      y_m: 0.01582964
-      yaw_deg: 4.340257
+      x_m: 0.0266333108
+      y_m: -0.0019070478
+      yaw_deg: 15.680941
       reliable: true
-      pico_time_ms: 10106252
-    source_stamp_sec: 1788666643.356988
-    recorded_at: '2026-09-06T03:50:45Z'
+      pico_time_ms: 2160235
+    source_stamp_sec: 1788678090.866333
+    recorded_at: '2026-09-06T07:01:32Z'
     epoch:
-      host_boot_id: 934d3dd9-6049-404c-b194-df6b1d64525d
+      host_boot_id: f7e31dca-061d-43a9-8b7c-d8b0889e6732
       pico_boot_id: null
-      pico_time_ms: 10106252
-    score: 0.9780955016613007
-    localization_quality: 0.8064336180686951
-    depth_std_m: 0.0004768677754327655
-    confidence: 0.8922645598649979
+      pico_time_ms: 2160235
+    score: 0.8013001978397369
+    localization_quality: 0.7851627767086029
+    depth_std_m: 0.00038766610668972135
+    confidence: 0.7932314872741699
     source: visual_servo
 held_object:
-  state: empty
-  object_name: null
-  grasp_profile: null
-  updated_at: '2026-09-06T03:02:10.078389+00:00'
-  epoch: null
-  source: runtime
+  state: holding
+  object_name: Eraser
+  grasp_profile: Eraser_r4
+  updated_at: '2026-09-06T07:01:49.033188+00:00'
+  epoch:
+    host_boot_id: f7e31dca-061d-43a9-8b7c-d8b0889e6732
+    pico_boot_id: null
+    pico_time_ms: 2176926
+  source: pick_result
