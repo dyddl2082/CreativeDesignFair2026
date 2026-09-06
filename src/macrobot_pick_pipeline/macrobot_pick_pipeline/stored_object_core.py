@@ -337,12 +337,11 @@ def absolute_offsets_to_relative_turns(offsets: Iterable[float]) -> Tuple[float,
 
 @dataclass(frozen=True)
 class StoredObjectRuntimeProfile:
-    """Internal runtime adapter for two-distance recognition and grasping.
+    """Internal runtime adapter for object recognition and grasping.
 
-    ``search_pose_odom`` is intentionally farther from the object, where DINOv2
-    is reliable. ``grasp_pose_odom`` is the close pose where the arm can reach.
-    A positive far-range observation locks ``object_point_odom``; the finder can
-    then be stopped while encoder odometry moves the chassis into arm reach.
+    Legacy ``pico_odom_session`` profiles retain the two-distance handoff fields.
+    New ``camera_relative`` profiles keep those fields only as schema-compatible
+    placeholders; fresh RGB-D localization is the sole high-level pose authority.
     """
 
     name: str
@@ -576,18 +575,24 @@ class StoredObjectRuntimeProfile:
     def validate(self) -> None:
         if not self.name.strip() or not self.object_name.strip():
             raise ValueError("profile and object names must be non-empty")
-        if self.position_scope != "pico_odom_session":
-            raise ValueError("only pico_odom_session is currently supported")
-        if not self.search_pose_odom.reliable:
+        if self.position_scope not in {"pico_odom_session", "camera_relative"}:
+            raise ValueError(
+                "position_scope must be pico_odom_session or camera_relative"
+            )
+        if (
+            self.position_scope == "pico_odom_session"
+            and not self.search_pose_odom.reliable
+        ):
             raise ValueError("recorded search pose must be reliable")
         if self.recording_state not in {"search_only", "complete"}:
             raise ValueError("recording_state must be search_only or complete")
         if self.grasp_executor not in {"keyframes", "arm_demo", "pick_coordinator"}:
             raise ValueError("grasp_executor must be keyframes, arm_demo or pick_coordinator")
         if self.complete:
-            effective_grasp_pose = self.grasp_pose_odom or self.search_pose_odom
-            if not effective_grasp_pose.reliable:
-                raise ValueError("complete profile requires a reliable grasp pose")
+            if self.position_scope == "pico_odom_session":
+                effective_grasp_pose = self.grasp_pose_odom or self.search_pose_odom
+                if not effective_grasp_pose.reliable:
+                    raise ValueError("complete profile requires a reliable grasp pose")
             if self.grasp_executor == "keyframes" and not self.grasp_keyframe_profile:
                 raise ValueError("keyframe grasp requires grasp_keyframe_profile")
             if self.grasp_executor == "arm_demo" and not self.grasp_trajectory:
@@ -763,6 +768,10 @@ class StoredObjectRuntimeProfile:
         )
 
     def target_grasp_pose(self, current_object_point_odom: Vector3) -> OdomPose:
+        if self.position_scope != "pico_odom_session":
+            raise ValueError(
+                "camera-relative profiles do not define an odometry grasp pose"
+            )
         grasp_pose = self.grasp_pose_odom or self.search_pose_odom
         relocation = math.hypot(
             float(current_object_point_odom[0]) - float(self.object_point_odom[0]),
@@ -782,6 +791,11 @@ class StoredObjectRuntimeProfile:
             "recorded_at": self.recorded_at,
             "recording_state": self.recording_state,
             "position_scope": self.position_scope,
+            "execution_authority": (
+                "fresh_rgbd_localization"
+                if self.position_scope == "camera_relative"
+                else "pico_odom_session"
+            ),
             "search_pose_odom": self.search_pose_odom.to_mapping(),
             "object_point_odom": {
                 "x": self.object_point_odom[0],

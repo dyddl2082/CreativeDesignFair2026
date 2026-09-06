@@ -341,10 +341,31 @@ class GraspKeyframeNode(Node):
 
     def _capture_reference_result(self, reference: dict[str, Any]) -> dict[str, Any]:
         point = _point(reference.get("point"))
+        detection = reference.get("detection", {})
+        if not isinstance(detection, Mapping):
+            detection = {}
+        orientation = detection.get("orientation", {})
+        localization = detection.get("localization", {})
+        if not isinstance(orientation, Mapping):
+            orientation = {}
+        if not isinstance(localization, Mapping):
+            localization = {}
         return {
             "profile": str(reference.get("profile", "")),
             "object_name": str(reference.get("object_name", "")),
             "point_base": None if point is None else list(point),
+            "object_orientation": {
+                "angle_deg": float(orientation.get("angle_deg", 0.0) or 0.0),
+                "class": str(orientation.get("class", "unknown")),
+                "quality": float(orientation.get("quality", 0.0) or 0.0),
+            },
+            "localization": {
+                "quality": float(localization.get("quality", 0.0) or 0.0),
+                "method": str(localization.get("method", "")),
+            },
+            "score": float(detection.get("score", 0.0) or 0.0),
+            "depth_std_m": float(detection.get("depth_std_m", 0.0) or 0.0),
+            "center_std_px": float(detection.get("center_std_px", 0.0) or 0.0),
             "source": str(reference.get("source", "")),
             "locked_at_sec": float(reference.get("locked_at_sec", 0.0) or 0.0),
         }
@@ -355,7 +376,26 @@ class GraspKeyframeNode(Node):
         if not profile_name or not object_name:
             raise ValueError("profile and object_name are required")
         direct_point = _point(data.get("object_point_base"))
-        point, detection = self._fresh_detection(object_name, direct_point)
+        direct_orientation = (
+            data.get("object_orientation")
+            if isinstance(data.get("object_orientation"), Mapping)
+            else None
+        )
+        point, detection = self._fresh_detection(
+            object_name,
+            direct_point,
+            direct_orientation,
+        )
+        reference_metadata = data.get("reference_metadata")
+        if direct_point is not None and isinstance(reference_metadata, Mapping):
+            # Preserve the quality/statistics of the robust multi-frame camera
+            # reference.  The point and orientation remain the only values used
+            # for Cartesian keyframe capture, while these fields make the
+            # teaching record auditable and reusable by the integrated profile
+            # commit step.
+            detection.update(dict(reference_metadata))
+            if isinstance(direct_orientation, Mapping):
+                detection["orientation"] = dict(direct_orientation)
         reference = self._set_capture_reference(
             profile_name=profile_name,
             object_name=object_name,

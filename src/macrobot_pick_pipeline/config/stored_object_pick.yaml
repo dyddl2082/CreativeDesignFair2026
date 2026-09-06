@@ -62,7 +62,7 @@ macrobot_stored_object_pick:
     overall_timeout_sec: 180.0
     odom_request_timeout_sec: 2.0
     cancel_confirm_timeout_sec: 4.0
-    distance_handoff_enabled: true
+    distance_handoff_enabled: false
     recognition_min_range_m: 0.32
     recognition_max_range_m: 1.2
     graspable_min_range_m: 0.08
@@ -92,14 +92,14 @@ macrobot_stored_object_pick:
     search_yaw_levels: 3
     search_max_total_move_m: 0.12
     search_max_total_turn_deg: 395.0
-    use_same_epoch_location_hint: true
+    use_same_epoch_location_hint: false
     location_hint_max_age_sec: 900.0
     location_hint_max_bearing_deg: 40.0
     location_hint_turn_step_deg: 10.0
     resilient_stability_count: 2
     delayed_detection_max_age_sec: 8.0
     pose_history_stationary_tolerance_sec: 8.0
-    visual_move_chunk_m: 0.02
+    visual_move_chunk_m: 0.012
     visual_turn_chunk_deg: 4.0
     visual_reobserve_sec: 0.8
     visual_lost_timeout_sec: 8.0
@@ -114,11 +114,30 @@ macrobot_stored_object_pick:
     place_max_horizontal_offset_m: 0.25
     place_max_vertical_offset_m: 0.05
     state_heartbeat_sec: 2.0
+
+    # Camera-authoritative execution. Persistent odometry never selects a
+    # destination. Encoder feedback is used only inside one bounded motion;
+    # every motion is followed by a new RGB-D localization before replanning.
+    camera_authoritative_mode: true
+    camera_record_min_orientation_quality: 0.45
+    camera_record_max_point_radius_m: 0.008
+    camera_record_max_orientation_spread_deg: 8.0
+    camera_final_visual_confirmation_count: 2
+    camera_final_visual_lost_restart_sec: 8.0
+    camera_motion_frame_guard_sec: 0.25
+    camera_max_translation_chunk_m: 0.012
+    camera_search_backoff_chunk_m: 0.02
+    camera_max_turn_chunk_deg: 4.0
+    camera_search_turn_chunk_deg: 10.0
+    camera_disable_location_memory: true
+    camera_disable_distance_handoff: true
+    camera_allow_legacy_record_commands: false
+    camera_profile_position_scope: camera_relative
     timer_rate_hz: 20.0
     search_initial_observation_sec: 4.0
     search_close_obstacle_backoff_enabled: true
     search_close_obstacle_threshold_m: 0.38
-    search_close_obstacle_backoff_step_m: 0.04
+    search_close_obstacle_backoff_step_m: 0.02
     search_close_obstacle_backoff_steps: 2
     arm_execution_watchdog_sec: 180.0
     arm_preflight_watchdog_sec: 30.0

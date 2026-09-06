@@ -7,7 +7,7 @@ package_name = "macrobot_pick_pipeline"
 
 setup(
     name=package_name,
-    version="0.8.0",
+    version="0.9.0",
     packages=find_packages(exclude=["test"]),
     data_files=[
         (
@@ -40,6 +40,8 @@ setup(
             "grasp_keyframe_cli = macrobot_pick_pipeline.grasp_keyframe_cli:main",
             "stored_object_pick_node = macrobot_pick_pipeline.stored_object_pick_node:main",
             "resilient_object_task_node = macrobot_pick_pipeline.resilient_object_task_node:main",
+            "camera_grasp_teach_cli = macrobot_pick_pipeline.camera_grasp_teach_cli:main",
+            "camera_authoritative_task_node = macrobot_pick_pipeline.camera_authoritative_task_node:main",
             "depth_clearance_node = macrobot_pick_pipeline.depth_clearance_node:main",
             "visible_pick_test_node = macrobot_pick_pipeline.visible_pick_test_node:main",
             "stored_object_pick_cli = macrobot_pick_pipeline.stored_object_pick_cli:main",

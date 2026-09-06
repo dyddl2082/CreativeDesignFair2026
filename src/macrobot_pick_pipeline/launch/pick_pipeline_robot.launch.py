@@ -60,8 +60,12 @@ def generate_launch_description():
         DeclareLaunchArgument("allow_teach_motion", default_value="true"),
         DeclareLaunchArgument(
             "task_executable",
-            default_value="resilient_object_task_node",
-            description="Use stored_object_pick_node only for legacy rollback.",
+            default_value="camera_authoritative_task_node",
+            description=(
+                "Camera-authoritative task is the default. "
+                "Rollback with "
+                "task_executable:=resilient_object_task_node."
+            ),
         ),
         DeclareLaunchArgument("start_depth_clearance", default_value="true"),
         DeclareLaunchArgument(
