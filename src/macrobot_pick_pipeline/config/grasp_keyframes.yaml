@@ -24,7 +24,7 @@ macrobot_grasp_keyframes:
     require_orientation_match: false
     auto_require_orientation_quality: 0.45
     minimum_orientation_quality: 0.45
-    orientation_tolerance_deg: 8
+    orientation_tolerance_deg: 8.0
     motion_timeout_sec: 20.0
     cancel_confirm_timeout_sec: 4.0
     default_settle_sec: 0.1

@@ -26,8 +26,8 @@ macrobot_stored_object_pick:
     require_orientation_match: false
     minimum_orientation_quality: 0.45
     auto_require_orientation_quality: 0.45
-    orientation_tolerance_deg: 10
-    bearing_tolerance_deg: 1
+    orientation_tolerance_deg: 10.0
+    bearing_tolerance_deg: 1.0
     range_tolerance_m: 0.008
     height_tolerance_m: 0.03
     max_turn_step_deg: 4.0
@@ -44,7 +44,7 @@ macrobot_stored_object_pick:
     max_alignment_total_turn_deg: 120.0
     max_alignment_total_move_m: 0.6
     alignment_confirmation_count: 2
-    record_timeout_sec: 120
+    record_timeout_sec: 120.0
     visible_test_timeout_sec: 60.0
     full_search_timeout_sec: 0.0
     finder_initial_detection_wait_sec: 3.0
@@ -128,7 +128,7 @@ macrobot_stored_object_pick:
     orientation_probe_close_margin_m: 0.04
     orientation_probe_min_improvement: 0.04
     orientation_probe_move_m: 0.018
-    orientation_probe_turn_deg: 3
+    orientation_probe_turn_deg: 3.0
     post_motion_frame_guard_sec: 0.2
     recoverable_retry_sec: 1.0
     require_fresh_visual_for_translation: true
@@ -144,15 +144,15 @@ macrobot_stored_object_pick:
     precision_stability_count: 4
     precision_stability_window_sec: 2.5
     precision_stability_radius_m: 0.008
-    precision_bearing_tolerance_deg: 1
+    precision_bearing_tolerance_deg: 1.0
     precision_forward_tolerance_m: 0.008
     precision_lateral_tolerance_m: 0.008
     precision_turn_chunk_deg: 1.5
     precision_move_chunk_m: 0.012
     precision_confirmation_count: 3
     precision_orientation_min_quality: 0.45
-    precision_orientation_tolerance_deg: 8
-    orientation_probe_fine_turn_deg: 1
+    precision_orientation_tolerance_deg: 8.0
+    orientation_probe_fine_turn_deg: 1.0
     orientation_probe_fine_move_m: 0.01
 macrobot_visible_pick_test:
   ros__parameters:
