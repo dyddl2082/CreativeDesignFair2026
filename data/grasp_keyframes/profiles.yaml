@@ -1,5 +1,5 @@
 schema: macrobot.grasp_keyframes/v2
-updated_at: '2026-09-05T13:52:09.404753+00:00'
+updated_at: '2026-09-05T14:53:06.813788+00:00'
 profiles:
   Eraser:
     object_name: Eraser
@@ -78,7 +78,7 @@ profiles:
         settle_sec: 0.1
   Eraser_r4:
     object_name: Eraser
-    recorded_at: '2026-09-05T13:52:09.404512+00:00'
+    recorded_at: '2026-09-05T14:53:06.813544+00:00'
     reference_orientation_deg: 90.46956634521484
     reference_orientation_class: vertical
     reference_orientation_quality: 0.924885094165802
@@ -100,9 +100,9 @@ profiles:
         - 0.0
         - 0.0
         object_offset:
-        - -0.4312500569299118
-        - 0.018181532922816053
-        - 0.2002501070414006
+        - -0.3782500687316315
+        - 0.006538914960967167
+        - 0.18906514822943105
         seed_q:
         - 0.0
         - 0.0
@@ -112,26 +112,42 @@ profiles:
       GRASP_OPEN:
         representation: object_relative_cartesian
         q:
-        - -0.3353880913257672
-        - -0.15000000000000002
-        - 0.02010881332433362
+        - -0.2
+        - 0.05
+        - 0.024650545068119853
         object_offset:
-        - -0.4635671844254185
-        - 0.009152564409881984
-        - 0.07429824985022966
+        - -0.4090630805375539
+        - 0.006538919784211943
+        - 0.15407929251886016
         seed_q:
-        - -0.3353880913257672
-        - -0.15000000000000002
-        - 0.02010881332433362
-        gripper_q: 0.02010881332433362
+        - -0.2
+        - 0.05
+        - 0.024650545068119853
+        gripper_q: 0.024650545068119853
         settle_sec: 0.1
       CLOSE:
         representation: gripper_only
         q:
-        - -0.3353880913257672
-        - -0.15000000000000002
-        - 1.3074367186762563
+        - -0.2
+        - 0.05
+        - 1.383996308361093
         object_offset: null
         seed_q: null
-        gripper_q: 1.3074367186762563
+        gripper_q: 1.383996308361093
+        settle_sec: 0.1
+      LIFT:
+        representation: object_relative_cartesian
+        q:
+        - 0.04999999999999999
+        - -0.05
+        - 1.383996308361093
+        object_offset:
+        - -0.370202922186032
+        - 0.006538911349372893
+        - 0.18888393443610624
+        seed_q:
+        - 0.04999999999999999
+        - -0.05
+        - 1.383996308361093
+        gripper_q: 1.383996308361093
         settle_sec: 0.1

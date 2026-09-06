@@ -150,13 +150,13 @@ private:
 
     declare_parameter<double>("lift_zero_deg", 90.0);
     declare_parameter<double>("lift_sign", 1.0);
-    declare_parameter<double>("lift_model_multiplier", 2.0);
+    declare_parameter<double>("lift_model_multiplier", 1.0);
     declare_parameter<double>("lift_command_min_deg", 0.0);
     declare_parameter<double>("lift_command_max_deg", 180.0);
 
     declare_parameter<double>("tilt_zero_deg", 90.0);
     declare_parameter<double>("tilt_sign", 1.0);
-    declare_parameter<double>("tilt_model_multiplier", -2.0);
+    declare_parameter<double>("tilt_model_multiplier", 1.0);
     declare_parameter<double>("tilt_command_min_deg", 0.0);
     declare_parameter<double>("tilt_command_max_deg", 180.0);
 
