@@ -22,9 +22,9 @@ macrobot_grasp_keyframes:
     maximum_center_std_px: 20.0
     lateral_tolerance_m: 0.02
     require_orientation_match: false
-    auto_require_orientation_quality: 0.65
-    minimum_orientation_quality: 0.25
-    orientation_tolerance_deg: 25.0
+    auto_require_orientation_quality: 0.45
+    minimum_orientation_quality: 0.45
+    orientation_tolerance_deg: 8
     motion_timeout_sec: 20.0
     cancel_confirm_timeout_sec: 4.0
     default_settle_sec: 0.1

@@ -89,9 +89,9 @@ class GraspKeyframeNode(Node):
             "maximum_center_std_px": 20.0,
             "lateral_tolerance_m": 0.020,
             "require_orientation_match": False,
-            "auto_require_orientation_quality": 0.65,
-            "minimum_orientation_quality": 0.25,
-            "orientation_tolerance_deg": 25.0,
+            "auto_require_orientation_quality": 0.45,
+            "minimum_orientation_quality": 0.45,
+            "orientation_tolerance_deg": 8.0,
             "motion_timeout_sec": 20.0,
             "cancel_confirm_timeout_sec": 4.0,
             "default_settle_sec": 0.10,
@@ -668,9 +668,54 @@ class GraspKeyframeNode(Node):
             if isinstance(data.get("object_orientation"), Mapping)
             else None,
         )
+        reference_orientation = (
+            data.get("orientation_reference")
+            if isinstance(data.get("orientation_reference"), Mapping)
+            else {}
+        )
+        reference_angle = float(profile.reference_orientation_deg) % 180.0
+        reference_class = str(profile.reference_orientation_class)
+        reference_quality = max(
+            0.0,
+            min(1.0, float(profile.reference_orientation_quality)),
+        )
+        reference_source = "grasp_keyframe_profile"
+        if reference_orientation:
+            try:
+                candidate_angle = float(
+                    reference_orientation.get("angle_deg", reference_angle)
+                ) % 180.0
+                candidate_quality = max(
+                    0.0,
+                    min(
+                        1.0,
+                        float(
+                            reference_orientation.get(
+                                "quality", reference_quality
+                            )
+                        ),
+                    ),
+                )
+            except (TypeError, ValueError):
+                candidate_angle = reference_angle
+                candidate_quality = 0.0
+            if candidate_quality >= float(
+                self.get_parameter("auto_require_orientation_quality").value
+            ):
+                reference_angle = candidate_angle
+                reference_class = str(
+                    reference_orientation.get("class", reference_class)
+                )
+                reference_quality = candidate_quality
+                reference_source = str(
+                    reference_orientation.get(
+                        "source", "stored_alignment_profile"
+                    )
+                )
+
         require_orientation_match = operation != "place" and (
             bool(self.get_parameter("require_orientation_match").value)
-            or profile.reference_orientation_quality
+            or reference_quality
             >= float(self.get_parameter("auto_require_orientation_quality").value)
         )
         if require_orientation_match:
@@ -681,7 +726,7 @@ class GraspKeyframeNode(Node):
             if current_quality < float(self.get_parameter("minimum_orientation_quality").value):
                 raise ValueError("object_orientation_unreliable")
             orientation_error = axial_orientation_error_deg(
-                current_angle, profile.reference_orientation_deg
+                current_angle, reference_angle
             )
             # The coarse horizontal/vertical/diagonal class can flip at a bin
             # boundary even when the continuous axial angle is acceptable.
@@ -754,6 +799,12 @@ class GraspKeyframeNode(Node):
                     if isinstance(detection, dict)
                     else {}
                 ),
+                orientation_reference={
+                    "angle_deg": reference_angle,
+                    "class": reference_class,
+                    "quality": reference_quality,
+                    "source": reference_source,
+                },
                 steps=plan_mapping,
             )
             return
@@ -769,6 +820,12 @@ class GraspKeyframeNode(Node):
             operation=operation,
             profile=profile.name,
             object_point_base=list(point),
+            orientation_reference={
+                "angle_deg": reference_angle,
+                "class": reference_class,
+                "quality": reference_quality,
+                "source": reference_source,
+            },
             steps=plan_mapping,
         )
         self._send_step()

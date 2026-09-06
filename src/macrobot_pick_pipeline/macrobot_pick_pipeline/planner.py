@@ -117,7 +117,11 @@ class StablePointFilter:
             if item.orientation_quality > 0.0 and math.isfinite(item.orientation_deg)
         ]
         if orientation_usable:
-            weights = [max(item.orientation_quality, 1e-6) for item in orientation_usable]
+            raw_qualities = [
+                max(0.0, min(1.0, float(item.orientation_quality)))
+                for item in orientation_usable
+            ]
+            weights = [max(value, 1e-6) for value in raw_qualities]
             axis_x = sum(
                 weight * math.cos(math.radians(2.0 * item.orientation_deg))
                 for item, weight in zip(orientation_usable, weights)
@@ -127,10 +131,18 @@ class StablePointFilter:
                 for item, weight in zip(orientation_usable, weights)
             )
             orientation_deg = (0.5 * math.degrees(math.atan2(axis_y, axis_x))) % 180.0
-            orientation_quality = min(
+
+            # The former implementation reported only angular coherence.  A
+            # set of mutually consistent but individually poor patch estimates
+            # therefore became quality=1.0 and could prematurely authorize a
+            # grasp.  Preserve both pieces of evidence: raw patch confidence and
+            # cross-frame axial agreement.
+            coherence = min(
                 1.0,
                 math.hypot(axis_x, axis_y) / max(sum(weights), 1e-9),
             )
+            raw_quality = float(statistics.median(raw_qualities))
+            orientation_quality = max(0.0, min(1.0, raw_quality * coherence))
             if orientation_deg <= 25.0 or orientation_deg >= 155.0:
                 orientation_class = "horizontal"
             elif 65.0 <= orientation_deg <= 115.0:

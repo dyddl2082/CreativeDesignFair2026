@@ -156,17 +156,33 @@ def _parser() -> argparse.ArgumentParser:
 
     grasp = sub.add_parser(
         "record-grasp",
-        help="At the close arm-reachable pose, store odom-derived grasp reference",
+        help=(
+            "At the close arm-reachable pose, store a fresh visual grasp "
+            "reference; odometry is only a coarse fallback"
+        ),
     )
     grasp.add_argument("object_name")
     grasp.add_argument("--profile", default="")
     _add_grasp_source(grasp)
     grasp.add_argument("--pick-profile", default="")
     grasp.add_argument("--max-grasp-range", type=float, default=0.30)
+    grasp.add_argument(
+        "--no-live-reference",
+        action="store_true",
+        help=(
+            "Use the legacy odometry-derived close reference. Not recommended "
+            "for final grasp calibration."
+        ),
+    )
+    grasp.add_argument(
+        "--rebuild-banks",
+        action="store_true",
+        help="Rebuild the target bank before close-range visual recording",
+    )
     orientation = grasp.add_mutually_exclusive_group()
     orientation.add_argument("--require-orientation", action="store_true")
     orientation.add_argument("--ignore-orientation", action="store_true")
-    grasp.add_argument("--timeout", type=float, default=20.0)
+    grasp.add_argument("--timeout", type=float, default=120.0)
 
     record = sub.add_parser(
         "record",
@@ -301,7 +317,9 @@ def main(argv=None) -> None:
                 "grasp_keyframe_profile": args.grasp_keyframes,
                 "grasp_trajectory": args.grasp_trajectory,
                 "pick_profile": args.pick_profile or args.object_name,
-                "start_finder": False,
+                "start_finder": not args.no_live_reference,
+                "use_live_visual": not args.no_live_reference,
+                "rebuild_banks": bool(args.rebuild_banks),
                 "graspable_max_range_m": args.max_grasp_range,
                 "require_orientation_match": (
                     True if args.require_orientation else (

@@ -41,9 +41,14 @@ from .alignment_core import (
 from .object_memory import ObjectMemoryStore, ObjectObservationMemory
 from .orientation_control import (
     OrientationAssessment,
+    adaptive_probe_steps,
     assess_orientation,
     choose_probe_direction,
     choose_probe_translation_m,
+)
+from .precision_docking import (
+    choose_precision_docking_action,
+    precision_errors,
 )
 from .planner import DetectionSample, StableDetection
 from .pose_history import PoseHistory
@@ -243,12 +248,31 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             "near_visual_handoff_range_m": 0.36,
             "maximum_near_deadreckon_m": 0.0,
             "resilient_alignment_confirmation_count": 2,
+
+            # Precision docking is the final authority before semantic grasp.
+            # It uses a denser visual median, direct base-frame x/y residuals,
+            # and smaller commands than coarse acquisition.
+            "precision_docking_enabled": True,
+            "precision_stability_count": 4,
+            "precision_stability_window_sec": 2.5,
+            "precision_stability_radius_m": 0.008,
+            "precision_bearing_tolerance_deg": 1.0,
+            "precision_forward_tolerance_m": 0.008,
+            "precision_lateral_tolerance_m": 0.008,
+            "precision_turn_chunk_deg": 1.5,
+            "precision_move_chunk_m": 0.012,
+            "precision_confirmation_count": 3,
+
             "orientation_alignment_enabled": True,
-            "orientation_auto_reference_quality": 0.65,
+            "orientation_auto_reference_quality": 0.45,
+            "precision_orientation_min_quality": 0.45,
+            "precision_orientation_tolerance_deg": 8.0,
             "orientation_probe_turn_deg": 3.0,
-            "orientation_probe_move_m": 0.02,
+            "orientation_probe_move_m": 0.018,
+            "orientation_probe_fine_turn_deg": 1.0,
+            "orientation_probe_fine_move_m": 0.010,
             "orientation_probe_close_margin_m": 0.04,
-            "orientation_probe_min_improvement": 0.05,
+            "orientation_probe_min_improvement": 0.04,
             "recoverable_retry_sec": 1.0,
             "arm_preflight_watchdog_sec": 30.0,
             "arm_execution_watchdog_sec": 180.0,
@@ -816,10 +840,45 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         if self.profile is None:
             return None
         alignment = self.profile.alignment
-        minimum_count = min(
-            alignment.stability_count,
-            max(1, int(self.get_parameter("resilient_stability_count").value)),
-        )
+        precision = bool(
+            self.get_parameter("precision_docking_enabled").value
+        ) and self.phase in {"align", "align_settle"}
+        if precision:
+            minimum_count = max(
+                2,
+                int(self.get_parameter("precision_stability_count").value),
+            )
+            window_sec = max(
+                alignment.stability_window_sec,
+                float(
+                    self.get_parameter(
+                        "precision_stability_window_sec"
+                    ).value
+                ),
+            )
+            radius_m = min(
+                alignment.stability_radius_m,
+                float(
+                    self.get_parameter(
+                        "precision_stability_radius_m"
+                    ).value
+                ),
+            )
+        else:
+            minimum_count = min(
+                alignment.stability_count,
+                max(
+                    1,
+                    int(
+                        self.get_parameter(
+                            "resilient_stability_count"
+                        ).value
+                    ),
+                ),
+            )
+            window_sec = max(alignment.stability_window_sec, 2.0)
+            radius_m = alignment.stability_radius_m
+
         # Orientation is deliberately not used as an eligibility filter here.
         # A low-quality or mismatched orientation is a control input for active
         # viewpoint recovery, not a reason to make the target disappear.
@@ -828,8 +887,8 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             object_name=self.object_name,
             minimum_score=alignment.minimum_score,
             minimum_count=minimum_count,
-            window_sec=max(alignment.stability_window_sec, 2.0),
-            radius_m=alignment.stability_radius_m,
+            window_sec=window_sec,
+            radius_m=radius_m,
             minimum_localization_quality=alignment.minimum_localization_quality,
             maximum_depth_std_m=alignment.maximum_depth_std_m,
             maximum_center_std_px=alignment.maximum_center_std_px,
@@ -1472,6 +1531,18 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             orientation_is_active_control_signal=self._orientation_required(),
             move_chunk_m=float(self.get_parameter("visual_move_chunk_m").value),
             turn_chunk_deg=float(self.get_parameter("visual_turn_chunk_deg").value),
+            precision_docking_enabled=bool(
+                self.get_parameter("precision_docking_enabled").value
+            ),
+            precision_move_chunk_m=float(
+                self.get_parameter("precision_move_chunk_m").value
+            ),
+            precision_turn_chunk_deg=float(
+                self.get_parameter("precision_turn_chunk_deg").value
+            ),
+            precision_confirmation_count=int(
+                self.get_parameter("precision_confirmation_count").value
+            ),
             visual_confirmation_required_after_every_motion=True,
             odometry_role="short_motion_bookkeeping_only",
         )
@@ -1612,7 +1683,44 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
                 forward_axis_sign=self.forward_axis_sign,
                 lateral_axis_sign=self.lateral_axis_sign,
             )
-            decision = choose_alignment_action(errors, self.profile.alignment)
+            coarse_decision = choose_alignment_action(
+                errors, self.profile.alignment
+            )
+            if coarse_decision.action == "reject":
+                decision = coarse_decision
+            elif bool(
+                self.get_parameter("precision_docking_enabled").value
+            ):
+                decision = choose_precision_docking_action(
+                    errors,
+                    bearing_tolerance_deg=float(
+                        self.get_parameter(
+                            "precision_bearing_tolerance_deg"
+                        ).value
+                    ),
+                    forward_tolerance_m=float(
+                        self.get_parameter(
+                            "precision_forward_tolerance_m"
+                        ).value
+                    ),
+                    lateral_tolerance_m=float(
+                        self.get_parameter(
+                            "precision_lateral_tolerance_m"
+                        ).value
+                    ),
+                    max_turn_step_deg=float(
+                        self.get_parameter(
+                            "precision_turn_chunk_deg"
+                        ).value
+                    ),
+                    max_move_step_m=float(
+                        self.get_parameter(
+                            "precision_move_chunk_m"
+                        ).value
+                    ),
+                )
+            else:
+                decision = coarse_decision
         except Exception as error:
             self._enter_recovery_hold(
                 "TARGET_POSE_INVALID",
@@ -1621,6 +1729,7 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             )
             return
         self.last_errors = errors
+        precise_errors = precision_errors(errors)
 
         if decision.action == "reject":
             if decision.reason == "object_not_in_front_half_plane":
@@ -1705,6 +1814,15 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             fresh_visual=True,
             deadreckon_since_visual_m=0.0,
             errors=self._error_mapping(errors),
+            precision_errors={
+                "bearing_error_deg": precise_errors.bearing_error_deg,
+                "forward_error_m": precise_errors.forward_error_m,
+                "lateral_error_m": precise_errors.lateral_error_m,
+                "range_error_m": precise_errors.range_error_m,
+                "planar_position_error_m": (
+                    precise_errors.planar_position_error_m
+                ),
+            },
             orientation=(
                 None
                 if assessment is None
@@ -1721,13 +1839,16 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
 
         if decision.action == "aligned":
             self.aligned_confirmations += 1
+            confirmation_parameter = (
+                "precision_confirmation_count"
+                if bool(
+                    self.get_parameter("precision_docking_enabled").value
+                )
+                else "resilient_alignment_confirmation_count"
+            )
             required = max(
                 2,
-                int(
-                    self.get_parameter(
-                        "resilient_alignment_confirmation_count"
-                    ).value
-                ),
+                int(self.get_parameter(confirmation_parameter).value),
             )
             if self.aligned_confirmations >= required:
                 self._alignment_complete()
@@ -1813,7 +1934,20 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             0.0,
             min(1.0, float(keyframe_profile.reference_orientation_quality)),
         )
-        if quality <= 0.0:
+        minimum_reference_quality = float(
+            self.get_parameter(
+                "orientation_auto_reference_quality"
+            ).value
+        )
+        # The close-range record-grasp observation is the docking authority: it
+        # was measured from the exact chassis pose where the taught grasp works.
+        # Use the keyframe capture only as a fallback when that close reference
+        # is unavailable or too weak.
+        close_reference_is_reliable = (
+            self.orientation_reference_quality >= minimum_reference_quality
+            and self.orientation_reference_class != "unknown"
+        )
+        if close_reference_is_reliable or quality < minimum_reference_quality:
             return
         self.orientation_reference_deg = float(
             keyframe_profile.reference_orientation_deg
@@ -1843,12 +1977,34 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
     ) -> OrientationAssessment:
         assert self.profile is not None
         alignment = self.profile.alignment
+        precision = bool(
+            self.get_parameter("precision_docking_enabled").value
+        )
+        minimum_quality = alignment.minimum_orientation_quality
+        tolerance_deg = alignment.orientation_tolerance_deg
+        if precision:
+            minimum_quality = max(
+                minimum_quality,
+                float(
+                    self.get_parameter(
+                        "precision_orientation_min_quality"
+                    ).value
+                ),
+            )
+            tolerance_deg = min(
+                tolerance_deg,
+                float(
+                    self.get_parameter(
+                        "precision_orientation_tolerance_deg"
+                    ).value
+                ),
+            )
         return assess_orientation(
             current_deg=stable.orientation_deg,
             current_quality=stable.orientation_quality,
             reference_deg=self.orientation_reference_deg,
-            minimum_quality=alignment.minimum_orientation_quality,
-            tolerance_deg=alignment.orientation_tolerance_deg,
+            minimum_quality=minimum_quality,
+            tolerance_deg=tolerance_deg,
         )
 
     @staticmethod
@@ -1859,6 +2015,19 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             "angle_deg": float(stable.orientation_deg) % 180.0,
             "class": str(stable.orientation_class),
             "quality": max(0.0, min(1.0, float(stable.orientation_quality))),
+        }
+
+    def _orientation_reference_payload(self) -> Dict[str, Any]:
+        if self.orientation_reference_quality <= 0.0:
+            return {}
+        return {
+            "angle_deg": float(self.orientation_reference_deg) % 180.0,
+            "class": str(self.orientation_reference_class),
+            "quality": max(
+                0.0,
+                min(1.0, float(self.orientation_reference_quality)),
+            ),
+            "source": str(self.orientation_reference_source),
         }
 
     def _reset_orientation_recovery(self, *, keep_direction: bool = False) -> None:
@@ -1874,6 +2043,25 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
     ) -> None:
         assert self.profile is not None
         alignment = self.profile.alignment
+        probe_turn_deg, probe_move_m = adaptive_probe_steps(
+            assessment,
+            coarse_turn_deg=float(
+                self.get_parameter("orientation_probe_turn_deg").value
+            ),
+            coarse_move_m=float(
+                self.get_parameter("orientation_probe_move_m").value
+            ),
+            fine_turn_deg=float(
+                self.get_parameter(
+                    "orientation_probe_fine_turn_deg"
+                ).value
+            ),
+            fine_move_m=float(
+                self.get_parameter(
+                    "orientation_probe_fine_move_m"
+                ).value
+            ),
+        )
         if self.orientation_probe_stage == "after_turn":
             current_range = planar_range_m(
                 stable.point_base,
@@ -1885,10 +2073,7 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
                 forward_axis_sign=self.forward_axis_sign,
                 lateral_axis_sign=self.lateral_axis_sign,
             )
-            step = min(
-                0.02,
-                max(0.0, float(self.get_parameter("orientation_probe_move_m").value)),
-            )
+            step = min(0.02, max(0.0, probe_move_m))
             forward_allowed = self._clearance_allows(step)
             amount = choose_probe_translation_m(
                 current_range_m=current_range,
@@ -1936,10 +2121,9 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
                     self.get_parameter("orientation_probe_min_improvement").value
                 ),
             )
-            turn = min(
-                4.0,
-                max(0.5, float(self.get_parameter("orientation_probe_turn_deg").value)),
-            ) * self.orientation_probe_direction
+            turn = min(4.0, max(0.5, probe_turn_deg)) * (
+                self.orientation_probe_direction
+            )
             self.orientation_probe_baseline_cost = assessment.cost
             self.orientation_probe_stage = "after_turn"
             self.orientation_probe_count += 1
@@ -1951,6 +2135,8 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
                 requested_turn_deg=turn,
                 baseline_cost=assessment.cost,
                 assessment=dict(self.orientation_last_assessment),
+                adaptive_turn_step_deg=probe_turn_deg,
+                adaptive_move_step_m=probe_move_m,
                 controller="measured_improvement_hill_climb",
             )
             self._send_turn(turn, "resilient_orientation_probe_turn")
@@ -2051,14 +2237,18 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             "object_point_base": list(self.last_object_point),
         }
         orientation = self._orientation_payload(self.latest_stable_detection)
+        orientation_reference = self._orientation_reference_payload()
         if orientation:
             payload["object_orientation"] = orientation
+        if orientation_reference:
+            payload["orientation_reference"] = orientation_reference
         self._publish_json(self.keyframe_command_pub, payload)
         self._publish_status(
             "semantic_grasp_preflight_started",
             grasp_keyframe_profile=self.profile.grasp_keyframe_profile,
             align_only=not self.execute_pick,
             object_orientation=orientation,
+            orientation_reference=orientation_reference,
         )
 
     def _start_grasp(self) -> None:
@@ -2085,13 +2275,17 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             "object_point_base": list(self.last_object_point),
         }
         orientation = self._orientation_payload(self.latest_stable_detection)
+        orientation_reference = self._orientation_reference_payload()
         if orientation:
             payload["object_orientation"] = orientation
+        if orientation_reference:
+            payload["orientation_reference"] = orientation_reference
         self._publish_json(self.keyframe_command_pub, payload)
         self._publish_status(
             "semantic_grasp_started",
             grasp_keyframe_profile=self.profile.grasp_keyframe_profile,
             object_orientation=orientation,
+            orientation_reference=orientation_reference,
         )
 
     def _alignment_complete(self) -> None:

@@ -130,3 +130,31 @@ def choose_probe_translation_m(
     if current <= reference + max(0.0, float(close_margin_m)):
         return -step
     return step if bool(forward_clearance_ok) else -step
+
+
+def adaptive_probe_steps(
+    assessment: OrientationAssessment,
+    *,
+    coarse_turn_deg: float,
+    coarse_move_m: float,
+    fine_turn_deg: float,
+    fine_move_m: float,
+) -> tuple[float, float]:
+    """Return smaller viewpoint steps as orientation approaches the target.
+
+    Large, low-confidence errors need a visible baseline change.  Near the
+    desired axis, the former fixed 3-degree/2-centimetre probe was too coarse
+    and could step across the optimum repeatedly.  This helper reduces both
+    commands in the final band without ever increasing the configured limits.
+    """
+
+    coarse_turn = max(0.5, abs(float(coarse_turn_deg)))
+    coarse_move = max(0.0, abs(float(coarse_move_m)))
+    fine_turn = min(coarse_turn, max(0.5, abs(float(fine_turn_deg))))
+    fine_move = min(coarse_move, max(0.0, abs(float(fine_move_m))))
+
+    if assessment.state == "quality_low" or assessment.absolute_error_deg > 20.0:
+        return coarse_turn, coarse_move
+    if assessment.absolute_error_deg > 10.0:
+        return max(fine_turn, 0.75 * coarse_turn), max(fine_move, 0.75 * coarse_move)
+    return fine_turn, fine_move

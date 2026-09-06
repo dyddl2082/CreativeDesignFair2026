@@ -79,3 +79,38 @@ def test_probe_translation_prefers_backoff_near_target():
         step_m=0.02,
         forward_clearance_ok=False,
     ) == -0.02
+
+
+def test_adaptive_probe_steps_get_smaller_near_target():
+    from macrobot_pick_pipeline.orientation_control import adaptive_probe_steps
+
+    far = assess_orientation(
+        current_deg=40.0,
+        current_quality=0.8,
+        reference_deg=90.0,
+        minimum_quality=0.45,
+        tolerance_deg=8.0,
+    )
+    near = assess_orientation(
+        current_deg=84.0,
+        current_quality=0.8,
+        reference_deg=90.0,
+        minimum_quality=0.45,
+        tolerance_deg=8.0,
+    )
+    far_steps = adaptive_probe_steps(
+        far,
+        coarse_turn_deg=3.0,
+        coarse_move_m=0.018,
+        fine_turn_deg=1.0,
+        fine_move_m=0.010,
+    )
+    near_steps = adaptive_probe_steps(
+        near,
+        coarse_turn_deg=3.0,
+        coarse_move_m=0.018,
+        fine_turn_deg=1.0,
+        fine_move_m=0.010,
+    )
+    assert near_steps[0] < far_steps[0]
+    assert near_steps[1] < far_steps[1]

@@ -360,6 +360,7 @@ class StoredObjectPickNode(Node):
         self.record_grasp_trajectory = ""
         self.record_grasp_keyframe_profile = ""
         self.record_require_orientation_match: Optional[bool] = None
+        self.record_grasp_live_visual = True
         self.record_stable_detection: Optional[StableDetection] = None
         self.record_pick_profile = ""
         self.record_stage = "complete"
@@ -499,11 +500,11 @@ class StoredObjectPickNode(Node):
             "maximum_depth_std_m": 0.035,
             "maximum_center_std_px": 20.0,
             "require_orientation_match": False,
-            "minimum_orientation_quality": 0.25,
-            "auto_require_orientation_quality": 0.65,
-            "orientation_tolerance_deg": 25.0,
-            "bearing_tolerance_deg": 2.0,
-            "range_tolerance_m": 0.015,
+            "minimum_orientation_quality": 0.45,
+            "auto_require_orientation_quality": 0.45,
+            "orientation_tolerance_deg": 10.0,
+            "bearing_tolerance_deg": 1.0,
+            "range_tolerance_m": 0.008,
             "height_tolerance_m": 0.030,
             "max_turn_step_deg": 4.0,
             "max_move_step_m": 0.040,
@@ -523,7 +524,9 @@ class StoredObjectPickNode(Node):
             "max_alignment_total_turn_deg": 120.0,
             "max_alignment_total_move_m": 0.60,
             "alignment_confirmation_count": 2,
-            "record_timeout_sec": 30.0,
+            "record_timeout_sec": 120.0,
+            "record_grasp_live_visual": True,
+            "record_grasp_min_orientation_quality": 0.45,
             "visible_test_timeout_sec": 20.0,
             # Absolute search-phase guard only.  Normal failure is driven by
             # pipeline-stall detection or exhaustion of the bounded scan, not
@@ -954,7 +957,20 @@ class StoredObjectPickNode(Node):
             ).strip()
             grasp_trajectory = str(request.get("grasp_trajectory", "")).strip()
             pick_profile = str(request.get("pick_profile", object_name)).strip()
-            start_finder = _as_bool(request.get("start_finder"), record_stage != "grasp")
+            live_grasp_visual = _as_bool(
+                request.get("use_live_visual"),
+                bool(
+                    self.get_parameter(
+                        "record_grasp_live_visual"
+                    ).value
+                ),
+            )
+            default_start_finder = (
+                record_stage != "grasp" or live_grasp_visual
+            )
+            start_finder = _as_bool(
+                request.get("start_finder"), default_start_finder
+            )
             raw_require_orientation = request.get("require_orientation_match")
             require_orientation_match = (
                 None
@@ -989,9 +1005,9 @@ class StoredObjectPickNode(Node):
                     )
 
             if record_stage == "grasp":
-                # Search registration must already exist; no close-range DINO
-                # observation is required.  The object point is reconstructed
-                # from the stored odom point and the current Pico odometry.
+                # Search registration must already exist.  The default path
+                # now records a fresh close-range visual point and orientation;
+                # odometry reconstruction remains an explicit legacy fallback.
                 self.profile_store.get(profile_name, object_name)
 
             graspable_max_range_m = float(
@@ -1038,6 +1054,7 @@ class StoredObjectPickNode(Node):
         self.record_grasp_trajectory = grasp_trajectory
         self.record_grasp_keyframe_profile = grasp_keyframe_profile
         self.record_require_orientation_match = require_orientation_match
+        self.record_grasp_live_visual = bool(live_grasp_visual)
         self.record_pick_profile = pick_profile
         self.record_graspable_max_range_m = graspable_max_range_m
         self.mode = f"record_{record_stage}"
@@ -1050,13 +1067,17 @@ class StoredObjectPickNode(Node):
         self.filter.clear()
         self.last_stability_diagnostic_monotonic = 0.0
 
-        if record_stage == "grasp":
+        if record_stage == "grasp" and not self.record_grasp_live_visual:
+            # Legacy fallback retained only for environments where close-range
+            # localization is impossible.  It reconstructs the grasp point from
+            # wheel odometry and is therefore not the default precision path.
             self.phase = "record_grasp_wait_odom"
             self._publish_status(
                 "stored_object_command_acknowledged",
                 command="record",
                 record_stage=record_stage,
                 duplicate=False,
+                reference_source="odom_fallback",
             )
             self._request_odom("record_grasp")
         else:
@@ -1066,6 +1087,11 @@ class StoredObjectPickNode(Node):
                 command="record",
                 record_stage=record_stage,
                 duplicate=False,
+                reference_source=(
+                    "live_localized_detection"
+                    if record_stage == "grasp"
+                    else "live_search_detection"
+                ),
             )
             if start_finder:
                 self._start_finder(self.goal_deadline - self.goal_started)
@@ -1080,6 +1106,13 @@ class StoredObjectPickNode(Node):
             grasp_keyframe_profile=grasp_keyframe_profile,
             pick_profile=pick_profile,
             graspable_max_range_m=graspable_max_range_m,
+            grasp_reference_source=(
+                "live_localized_detection"
+                if record_stage == "grasp" and self.record_grasp_live_visual
+                else "odom_fallback"
+                if record_stage == "grasp"
+                else "live_search_detection"
+            ),
             position_scope="pico_odom_session",
         )
 
@@ -1507,6 +1540,8 @@ class StoredObjectPickNode(Node):
                     self._complete_search_recording_with_odom(odom)
                 elif purpose == "record_grasp":
                     self._complete_grasp_recording_with_odom(odom)
+                elif purpose == "record_grasp_live":
+                    self._complete_live_grasp_recording_with_odom(odom)
                 elif purpose == "coarse":
                     self._start_coarse_return(odom)
                 elif purpose == "handoff_acquire":
@@ -2649,6 +2684,123 @@ class StoredObjectPickNode(Node):
             profile_mapping=stored.to_mapping(),
         )
 
+    def _complete_live_grasp_recording_with_odom(
+        self, odom: OdomPose
+    ) -> None:
+        """Record the close grasp reference from fresh camera localization.
+
+        The previous record-grasp path reconstructed ``point_base`` from the
+        far search observation and wheel odometry.  That made the target itself
+        inherit MOVE_CM error.  Precision docking instead stores the median
+        localized point and orientation measured at the actual taught grasp
+        pose; odometry remains only a coarse future search hint.
+        """
+
+        stable = self.record_stable_detection
+        point_base = self.record_point
+        if stable is None or point_base is None:
+            self._fail(
+                "INTERNAL_ERROR",
+                reason="live grasp recording point disappeared",
+            )
+            return
+        if not odom.reliable:
+            self._fail(
+                "POSE_ESTIMATE_UNRELIABLE",
+                reason="Pico odometry is unreliable",
+            )
+            return
+        try:
+            existing = self.profile_store.get(
+                self.profile_name, self.object_name
+            )
+            if not pico_session_is_compatible(
+                existing.search_pose_odom.pico_time_ms,
+                odom.pico_time_ms,
+                tolerance_ms=int(
+                    self.get_parameter(
+                        "pico_reboot_tolerance_ms"
+                    ).value
+                ),
+            ):
+                raise ValueError(
+                    "Pico odometry session changed after record-search"
+                )
+            current_range = planar_range_m(
+                point_base,
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+            maximum_range = min(
+                float(self.record_graspable_max_range_m),
+                float(self.get_parameter("graspable_max_range_m").value),
+            )
+            minimum_range = float(
+                self.get_parameter("graspable_min_range_m").value
+            )
+            if current_range < minimum_range:
+                raise ValueError(
+                    f"grasp pose is too close ({current_range:.3f}m < "
+                    f"{minimum_range:.3f}m)"
+                )
+            if current_range > maximum_range:
+                raise ValueError(
+                    f"grasp pose remains outside arm reach "
+                    f"({current_range:.3f}m > {maximum_range:.3f}m)"
+                )
+            stored = existing.with_grasp_recording(
+                point_base=point_base,
+                grasp_pose=odom,
+                object_name=self.object_name,
+                grasp_executor=self.record_grasp_executor,
+                grasp_trajectory=self.record_grasp_trajectory,
+                grasp_keyframe_profile=(
+                    self.record_grasp_keyframe_profile
+                ),
+                pick_profile=self.record_pick_profile,
+                orientation_deg=stable.orientation_deg,
+                orientation_class=stable.orientation_class,
+                orientation_quality=stable.orientation_quality,
+                require_orientation_match=(
+                    self.record_require_orientation_match
+                ),
+                graspable_max_range_m=maximum_range,
+            )
+            self.profile_store.upsert(stored)
+        except Exception as exc:
+            self._fail("POSITION_STORE_ERROR", reason=str(exc))
+            return
+
+        self.profile = stored
+        self.last_object_point = point_base
+        self._cancel_finder("stored_object_live_grasp_pose_recorded")
+        self._clear_active_target()
+        self.state = "SUCCEEDED"
+        self.phase = "record_grasp_completed"
+        result_details = {
+            "profile_mapping": stored.to_mapping(),
+            "profile_file": str(self.profile_store.path),
+            "object_point_base": list(point_base),
+            "grasp_range_m": current_range,
+            "close_range_dino_used": True,
+            "reference_source": "live_localized_detection",
+            "orientation": {
+                "angle_deg": stable.orientation_deg,
+                "class": stable.orientation_class,
+                "quality": stable.orientation_quality,
+            },
+        }
+        self._publish_result(
+            "stored_object_grasp_pose_recorded",
+            True,
+            "alignment_profile_recorded",
+            **result_details,
+        )
+        self._publish_status(
+            "stored_object_grasp_pose_recorded",
+            **result_details,
+        )
+
     def _complete_grasp_recording_with_odom(self, odom: OdomPose) -> None:
         if not odom.reliable:
             self._fail("POSE_ESTIMATE_UNRELIABLE", reason="Pico odometry is unreliable")
@@ -3263,6 +3415,33 @@ class StoredObjectPickNode(Node):
         if self.phase == "record_wait_detection":
             stable = self._stable_detection()
             if stable is not None:
+                if (
+                    self.record_stage == "grasp"
+                    and self.record_grasp_live_visual
+                    and self.record_require_orientation_match is not False
+                ):
+                    required_quality = float(
+                        self.get_parameter(
+                            "record_grasp_min_orientation_quality"
+                        ).value
+                    )
+                    if (
+                        stable.orientation_class == "unknown"
+                        or stable.orientation_quality < required_quality
+                    ):
+                        self.filter.clear()
+                        self._publish_status(
+                            "record_grasp_waiting_for_reliable_orientation",
+                            current_orientation_deg=stable.orientation_deg,
+                            current_orientation_class=stable.orientation_class,
+                            current_orientation_quality=stable.orientation_quality,
+                            required_orientation_quality=required_quality,
+                            policy=(
+                                "keep_chassis_and_object_fixed_until_a_reliable_"
+                                "close_range_orientation_is_observed"
+                            ),
+                        )
+                        return
                 self.perception_timing.mark(
                     "stable_object_acquired", time.monotonic()
                 )
@@ -3270,9 +3449,13 @@ class StoredObjectPickNode(Node):
                 self.record_point = stable.point_base
                 self.record_stable_detection = stable
                 self.filter.clear()
-                self._request_odom(
-                    "record_search" if self.record_stage == "search" else "record"
-                )
+                if self.record_stage == "search":
+                    odom_purpose = "record_search"
+                elif self.record_stage == "grasp":
+                    odom_purpose = "record_grasp_live"
+                else:
+                    odom_purpose = "record"
+                self._request_odom(odom_purpose)
             else:
                 if now - self.last_stability_diagnostic_monotonic >= 1.0:
                     self.last_stability_diagnostic_monotonic = now
@@ -3584,6 +3767,9 @@ class StoredObjectPickNode(Node):
         self.record_grasp_trajectory = ""
         self.record_grasp_keyframe_profile = ""
         self.record_require_orientation_match = None
+        self.record_grasp_live_visual = bool(
+            self.get_parameter("record_grasp_live_visual").value
+        )
         self.record_pick_profile = ""
         self.record_stage = "complete"
         self.record_graspable_max_range_m = float(
