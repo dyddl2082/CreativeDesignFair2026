@@ -646,15 +646,21 @@ class StoredObjectRuntimeProfile:
         self.validate()
         if not self.complete:
             raise ValueError("stored object profile is incomplete; record grasp pose")
-        reference_range = planar_range_m(
-            self.alignment.reference_point_base,
-            forward_axis_sign=forward_axis_sign,
-            lateral_axis_sign=lateral_axis_sign,
-        )
-        if reference_range < self.graspable_min_range_m - 1e-9:
-            raise ValueError("recorded grasp reference is too close")
-        if reference_range > self.graspable_max_range_m + 1e-9:
-            raise ValueError("recorded grasp reference exceeds arm reach")
+        # camera_relative_no_fixed_distance_gate_v1
+        # Camera-relative profiles reproduce the camera-observed teaching point
+        # and rely on semantic-keyframe IK plus safe-region preflight for actual
+        # reachability.  The legacy 0.32 m / 0.30 m split remains enforced only
+        # for pico_odom_session profiles that still use distance handoff.
+        if self.position_scope != "camera_relative":
+            reference_range = planar_range_m(
+                self.alignment.reference_point_base,
+                forward_axis_sign=forward_axis_sign,
+                lateral_axis_sign=lateral_axis_sign,
+            )
+            if reference_range < self.graspable_min_range_m - 1e-9:
+                raise ValueError("recorded grasp reference is too close")
+            if reference_range > self.graspable_max_range_m + 1e-9:
+                raise ValueError("recorded grasp reference exceeds arm reach")
 
     def with_search_recording(
         self,
@@ -796,6 +802,13 @@ class StoredObjectRuntimeProfile:
                 if self.position_scope == "camera_relative"
                 else "pico_odom_session"
             ),
+            # Compatibility mirror.  The canonical schema remains
+            # grasp.keyframe_profile, but older diagnostics looked at this
+            # top-level name directly.
+            "grasp_keyframe_profile": self.grasp_keyframe_profile,
+            "fixed_distance_gate_enabled": (
+                self.position_scope != "camera_relative"
+            ),
             "search_pose_odom": self.search_pose_odom.to_mapping(),
             "object_point_odom": {
                 "x": self.object_point_odom[0],
@@ -852,6 +865,21 @@ class StoredObjectRuntimeProfile:
                 "maximum_object_relocation_m": self.maximum_object_relocation_m,
             },
         }
+        if self.position_scope == "camera_relative":
+            # Keep the legacy dataclass fields internally for schema loading,
+            # but do not serialize the obsolete two-distance thresholds into a
+            # camera-authoritative profile.
+            recognition = result.get("recognition", {})
+            if isinstance(recognition, dict):
+                recognition.pop("minimum_range_m", None)
+                recognition.pop("maximum_range_m", None)
+                recognition["fixed_range_gate_enabled"] = False
+            handoff = result.get("distance_handoff", {})
+            if isinstance(handoff, dict):
+                handoff.pop("graspable_min_range_m", None)
+                handoff.pop("graspable_max_range_m", None)
+                handoff["fixed_range_gate_enabled"] = False
+
         if self.grasp_pose_odom is not None:
             result["grasp_pose_odom"] = self.grasp_pose_odom.to_mapping()
         return result

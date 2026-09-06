@@ -363,9 +363,14 @@ class CameraGraspTeachClient(Node):
         runtime_profile: str,
         keyframe_profile: str,
         reference: Mapping[str, Any],
-        maximum_grasp_range_m: float,
+        maximum_grasp_range_m: Optional[float],
         timeout_sec: float,
     ) -> Dict[str, Any]:
+        # camera_profile_link_commit_contract_v1
+        # Kept in the signature only so older operator commands continue to
+        # parse.  Camera-authoritative teaching no longer uses a fixed maximum
+        # range; IK and safe-region preflight are authoritative.
+        del maximum_grasp_range_m
         self._wait_for_subscriber(self.stored_record_pub)
         point = reference.get("point_base")
         orientation = reference.get("object_orientation", {})
@@ -388,7 +393,7 @@ class CameraGraspTeachClient(Node):
             },
             "object_orientation": dict(orientation),
             "score": float(reference.get("score", 0.0) or 0.0),
-            "graspable_max_range_m": float(maximum_grasp_range_m),
+            "range_policy": "camera_reference_plus_ik_safe_region",
             "require_orientation_match": True,
         }
         self.stored_results.pop(request_id, None)
@@ -406,6 +411,27 @@ class CameraGraspTeachClient(Node):
                     raise RuntimeError(
                         "camera grasp profile commit failed: "
                         + str(result.get("reason", result.get("event")))
+                    )
+                profile_mapping = result.get("profile_mapping", {})
+                grasp_mapping = (
+                    profile_mapping.get("grasp", {})
+                    if isinstance(profile_mapping, Mapping)
+                    else {}
+                )
+                stored_keyframe = ""
+                if isinstance(grasp_mapping, Mapping):
+                    stored_keyframe = str(
+                        grasp_mapping.get("keyframe_profile", "")
+                    ).strip()
+                if not stored_keyframe and isinstance(profile_mapping, Mapping):
+                    stored_keyframe = str(
+                        profile_mapping.get("grasp_keyframe_profile", "")
+                    ).strip()
+                if stored_keyframe != keyframe_profile:
+                    raise RuntimeError(
+                        "camera grasp profile commit did not preserve the "
+                        f"keyframe link: expected={keyframe_profile!r}, "
+                        f"stored={stored_keyframe!r}"
                     )
                 return result
         raise RuntimeError("camera grasp profile commit timed out")
@@ -474,13 +500,29 @@ def build_parser() -> argparse.ArgumentParser:
     finish.add_argument("object_name")
     finish.add_argument("--profile", default="")
     finish.add_argument("--keyframes", default="")
-    finish.add_argument("--max-grasp-range", type=float, default=0.30)
+    finish.add_argument(
+        "--max-grasp-range",
+        type=float,
+        default=None,
+        help=(
+            "Deprecated compatibility option. Camera-authoritative teaching "
+            "uses the recorded RGB-D point plus IK/safe-region preflight."
+        ),
+    )
     finish.add_argument("--skip-preflight", action="store_true")
     finish.add_argument("--timeout", type=float, default=120.0)
 
     interactive = sub.add_parser("interactive")
     _common_start_arguments(interactive)
-    interactive.add_argument("--max-grasp-range", type=float, default=0.30)
+    interactive.add_argument(
+        "--max-grasp-range",
+        type=float,
+        default=None,
+        help=(
+            "Deprecated compatibility option. Camera-authoritative teaching "
+            "uses the recorded RGB-D point plus IK/safe-region preflight."
+        ),
+    )
     interactive.add_argument("--skip-preflight", action="store_true")
 
     status = sub.add_parser("status")
@@ -581,14 +623,6 @@ def main(argv=None) -> None:
             object_name, runtime_profile, keyframe_profile = _names(args)
             reference = node.reference_status(keyframe_profile)
             finalize_result = node.finalize(keyframe_profile)
-            commit_result = node.commit_runtime_profile(
-                object_name=object_name,
-                runtime_profile=runtime_profile,
-                keyframe_profile=keyframe_profile,
-                reference=reference,
-                maximum_grasp_range_m=float(args.max_grasp_range),
-                timeout_sec=float(args.timeout),
-            )
             preflight_result = None
             if not args.skip_preflight:
                 preflight_result = node.preflight(
@@ -597,6 +631,14 @@ def main(argv=None) -> None:
                     reference=reference,
                     timeout_sec=min(60.0, float(args.timeout)),
                 )
+            commit_result = node.commit_runtime_profile(
+                object_name=object_name,
+                runtime_profile=runtime_profile,
+                keyframe_profile=keyframe_profile,
+                reference=reference,
+                maximum_grasp_range_m=args.max_grasp_range,
+                timeout_sec=float(args.timeout),
+            )
             _print(
                 {
                     "ok": True,
@@ -632,14 +674,6 @@ def main(argv=None) -> None:
 
             reference = node.reference_status(keyframe_profile)
             finalize_result = node.finalize(keyframe_profile)
-            commit_result = node.commit_runtime_profile(
-                object_name=object_name,
-                runtime_profile=runtime_profile,
-                keyframe_profile=keyframe_profile,
-                reference=reference,
-                maximum_grasp_range_m=float(args.max_grasp_range),
-                timeout_sec=float(args.timeout),
-            )
             preflight_result = None
             if not args.skip_preflight:
                 preflight_result = node.preflight(
@@ -648,6 +682,14 @@ def main(argv=None) -> None:
                     reference=reference,
                     timeout_sec=min(60.0, float(args.timeout)),
                 )
+            commit_result = node.commit_runtime_profile(
+                object_name=object_name,
+                runtime_profile=runtime_profile,
+                keyframe_profile=keyframe_profile,
+                reference=reference,
+                maximum_grasp_range_m=args.max_grasp_range,
+                timeout_sec=float(args.timeout),
+            )
             _print(
                 {
                     "ok": True,

@@ -305,25 +305,18 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
                     f"quality={quality:.3f}, required={minimum_quality:.3f}"
                 )
 
-            maximum_range = float(
-                request.get(
-                    "graspable_max_range_m",
-                    self.get_parameter("graspable_max_range_m").value,
-                )
-            )
-            minimum_range = float(
-                self.get_parameter("graspable_min_range_m").value
-            )
+            # camera_teaching_no_fixed_distance_gate_v1
+            # A camera-authoritative teaching point is accepted at the actual
+            # observed pose.  Fixed 0.32 m recognition / 0.30 m grasp gates are
+            # legacy distance-handoff assumptions.  Reachability is decided by
+            # the semantic keyframe IK and sampled safe-region preflight.
             current_range = planar_range_m(
                 point,
                 forward_axis_sign=self.forward_axis_sign,
                 lateral_axis_sign=self.lateral_axis_sign,
             )
-            if current_range < minimum_range or current_range > maximum_range:
-                raise ValueError(
-                    "camera teaching point is outside graspable range: "
-                    f"range={current_range:.3f} allowed=[{minimum_range:.3f}, {maximum_range:.3f}]"
-                )
+            if not math.isfinite(current_range) or current_range <= 0.0:
+                raise ValueError("camera teaching point has an invalid range")
 
             self.keyframe_store.reload()
             keyframes = self.keyframe_store.get(keyframe_profile)
@@ -372,7 +365,6 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
                 pick_profile=pick_profile,
                 position_scope="camera_relative",
                 distance_handoff_enabled=False,
-                graspable_max_range_m=maximum_range,
                 base_linear_error_fraction=0.0,
                 base_turn_error_fraction=0.0,
                 turn_translation_drift_m_per_360=0.0,
@@ -421,10 +413,16 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
             profile_file=str(self.profile_store.path),
             reference_source="locked_camera_teaching_reference",
             persistent_odometry_used=False,
+            fixed_distance_gate_used=False,
+            measured_reference_range_m=current_range,
+            reachability_authority="semantic_keyframe_ik_and_safe_region",
         )
         self._publish_status(
             "camera_grasp_teaching_committed",
             profile_mapping=stored.to_mapping(),
+            fixed_distance_gate_used=False,
+            measured_reference_range_m=current_range,
+            reachability_authority="semantic_keyframe_ik_and_safe_region",
         )
 
     # ------------------------------------------------------------------
