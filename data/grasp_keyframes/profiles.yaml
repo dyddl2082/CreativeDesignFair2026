@@ -1,87 +1,12 @@
 schema: macrobot.grasp_keyframes/v2
-updated_at: '2026-09-05T14:53:06.813788+00:00'
+updated_at: '2026-09-06T03:07:18.127076+00:00'
 profiles:
-  Eraser:
-    object_name: Eraser
-    recorded_at: '2026-08-12T18:40:28.584136+00:00'
-    reference_orientation_deg: 0.0
-    reference_orientation_class: unknown
-    reference_orientation_quality: 0.0
-    stages:
-      OPEN:
-        representation: gripper_only
-        q:
-        - 0.0
-        - 0.0
-        - 0.0
-        object_offset: null
-        seed_q: null
-        gripper_q: 0.0
-        settle_sec: 0.1
-      PRE_GRASP:
-        representation: object_relative_cartesian
-        q:
-        - 0.0
-        - 0.0
-        - 0.0
-        object_offset:
-        - -0.3386668045746144
-        - 0.11388636818897907
-        - 0.1177313359331003
-        seed_q:
-        - 0.0
-        - 0.0
-        - 0.0
-        gripper_q: 0.0
-        settle_sec: 0.1
-      GRASP_OPEN:
-        representation: object_relative_cartesian
-        q:
-        - 0.7191661174298876
-        - -0.8437085944337337
-        - 0.0
-        object_offset:
-        - -0.4038568734766922
-        - 0.11388636818897907
-        - 0.11596387205772048
-        seed_q:
-        - 0.7191661174298876
-        - -0.8437085944337337
-        - 0.0
-        gripper_q: 0.0
-        settle_sec: 0.1
-      CLOSE:
-        representation: gripper_only
-        q:
-        - 0.7191661174298876
-        - -0.8437085944337337
-        - 1.520317332529485
-        object_offset: null
-        seed_q: null
-        gripper_q: 1.520317332529485
-        settle_sec: 0.1
-      LIFT:
-        representation: object_relative_cartesian
-        q:
-        - 0.27336906439519776
-        - -0.6937085944337336
-        - 1.520317332529485
-        object_offset:
-        - -0.32467636530860866
-        - 0.11388636818897907
-        - 0.17770725718242952
-        seed_q:
-        - 0.27336906439519776
-        - -0.6937085944337336
-        - 1.520317332529485
-        gripper_q: 1.520317332529485
-        settle_sec: 0.1
   Eraser_r4:
     object_name: Eraser
-    recorded_at: '2026-09-05T14:53:06.813544+00:00'
-    reference_orientation_deg: 90.46956634521484
+    recorded_at: '2026-09-06T03:07:18.126802+00:00'
+    reference_orientation_deg: 92.2253646850586
     reference_orientation_class: vertical
-    reference_orientation_quality: 0.924885094165802
+    reference_orientation_quality: 0.8595813512802124
     stages:
       OPEN:
         representation: gripper_only
@@ -96,15 +21,15 @@ profiles:
       PRE_GRASP:
         representation: object_relative_cartesian
         q:
-        - 0.0
+        - -0.39999999999999997
         - 0.0
         - 0.0
         object_offset:
-        - -0.3782500687316315
-        - 0.006538914960967167
-        - 0.18906514822943105
+        - -0.45937271792900947
+        - 0.005725843017660957
+        - 0.09354762091779097
         seed_q:
-        - 0.0
+        - -0.39999999999999997
         - 0.0
         - 0.0
         gripper_q: 0.0
@@ -112,42 +37,42 @@ profiles:
       GRASP_OPEN:
         representation: object_relative_cartesian
         q:
-        - -0.2
-        - 0.05
-        - 0.024650545068119853
+        - -0.6
+        - 0.2
+        - 0.1547276711785434
         object_offset:
-        - -0.4090630805375539
-        - 0.006538919784211943
-        - 0.15407929251886016
+        - -0.4875455090196289
+        - 0.005725857588713766
+        - 0.07806573539785437
         seed_q:
-        - -0.2
-        - 0.05
-        - 0.024650545068119853
-        gripper_q: 0.024650545068119853
+        - -0.6
+        - 0.2
+        - 0.1547276711785434
+        gripper_q: 0.1547276711785434
         settle_sec: 0.1
       CLOSE:
         representation: gripper_only
         q:
-        - -0.2
-        - 0.05
-        - 1.383996308361093
+        - -0.6
+        - 0.2
+        - 1.387294548445606
         object_offset: null
         seed_q: null
-        gripper_q: 1.383996308361093
+        gripper_q: 1.387294548445606
         settle_sec: 0.1
       LIFT:
         representation: object_relative_cartesian
         q:
-        - 0.04999999999999999
-        - -0.05
-        - 1.383996308361093
+        - 0.09542162417045935
+        - 1.3877787807814457e-17
+        - 1.387294548445606
         object_offset:
-        - -0.370202922186032
-        - 0.006538911349372893
-        - 0.18888393443610624
+        - -0.3931749610467667
+        - 0.005725839189334912
+        - 0.2088337304323457
         seed_q:
-        - 0.04999999999999999
-        - -0.05
-        - 1.383996308361093
-        gripper_q: 1.383996308361093
+        - 0.09542162417045935
+        - 1.3877787807814457e-17
+        - 1.387294548445606
+        gripper_q: 1.387294548445606
         settle_sec: 0.1

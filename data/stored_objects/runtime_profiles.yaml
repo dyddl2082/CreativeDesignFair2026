@@ -1,0 +1,96 @@
+schema: macrobot.stored_object_runtime/v1
+updated_at: '2026-09-06T03:27:29.047844+00:00'
+profiles:
+  Eraser:
+    object_name: Eraser
+    recorded_at: '2026-09-06T03:27:29.044809+00:00'
+    recording_state: complete
+    position_scope: pico_odom_session
+    search_pose_odom:
+      x_m: -0.11244731
+      y_m: -0.00031395124
+      yaw_deg: 0.2829713
+      reliable: true
+      pico_time_ms: 8665142
+    object_point_odom:
+      x: 0.22161195766898686
+      y: 0.05938036974290346
+      z: 0.02842844854738773
+    alignment:
+      object_name: Eraser
+      pick_profile: Eraser
+      frame_id: base_link
+      reference_point_base:
+        x: 0.22380597676998334
+        y: 0.0558169220205024
+        z: 0.02842844854738773
+      recorded_at: '2026-09-06T03:27:29.044867+00:00'
+      minimum_score: 0.0
+      stability_count: 5
+      stability_window_sec: 1.5
+      stability_radius_m: 0.012
+      bearing_tolerance_deg: 2.0
+      range_tolerance_m: 0.015
+      height_tolerance_m: 0.03
+      max_turn_step_deg: 4.0
+      max_move_step_m: 0.04
+      turn_speed: 150
+      move_speed: 80
+      motion_timeout_sec: 10.0
+      settle_sec: 0.45
+      max_iterations: 20
+      max_total_turn_deg: 120.0
+      max_total_move_m: 0.6
+      minimum_localization_quality: 0.15
+      maximum_depth_std_m: 0.035
+      maximum_center_std_px: 20.0
+      require_orientation_match: false
+      reference_orientation_deg: 0.0
+      reference_orientation_class: unknown
+      reference_orientation_quality: 0.0
+      minimum_orientation_quality: 0.25
+      orientation_tolerance_deg: 25.0
+    recognition:
+      point_base:
+        x: 0.33435000953674315
+        y: 0.05804375415089443
+        z: 0.02842844854738773
+      score: 0.8806196451187134
+      minimum_range_m: 0.32
+      maximum_range_m: 1.2
+    grasp:
+      executor: keyframes
+      trajectory: ''
+      keyframe_profile: Eraser_r4
+      pick_profile: Eraser
+    search:
+      max_yaw_deg: 35.0
+      step_deg: 10.0
+      dwell_sec: 1.2
+    coarse_return:
+      position_tolerance_m: 0.02
+      angle_tolerance_deg: 3.0
+      max_move_m: 1.5
+      max_turn_deg: 180.0
+    distance_handoff:
+      enabled: true
+      graspable_min_range_m: 0.08
+      graspable_max_range_m: 0.3
+      position_tolerance_m: 0.012
+      angle_tolerance_deg: 2.0
+      max_move_step_m: 0.1
+      max_turn_step_deg: 4.0
+      max_iterations: 16
+      max_total_move_m: 0.8
+      max_total_turn_deg: 180.0
+      base_linear_error_fraction: 0.015
+      base_turn_error_fraction: 0.02
+      turn_translation_drift_m_per_360: 0.01
+      maximum_uncertainty_m: 0.025
+      maximum_object_relocation_m: 1.0
+    grasp_pose_odom:
+      x_m: -0.0014543235
+      y_m: 0.00067706296
+      yaw_deg: 0.740146036
+      reliable: true
+      pico_time_ms: 8710228
