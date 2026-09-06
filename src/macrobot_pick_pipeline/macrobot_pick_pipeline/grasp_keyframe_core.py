@@ -212,7 +212,7 @@ def build_semantic_grasp_plan(
             target = None
         elif stage.representation == "object_relative_cartesian" and stage.object_offset is not None:
             target = add3(object_point_base, stage.object_offset)
-            if abs(float(target[1]) - float(model.geometry.tool_y)) > float(lateral_tolerance_m):
+            if abs(float(target[1]) - float(model.forward(0.0, 0.0, 0.0).y)) > float(lateral_tolerance_m):
                 raise ValueError(f"{name.lower()}_lateral_alignment_failed")
             gripper_q = float(stage.gripper_q if stage.gripper_q is not None else stage.q[2])
             seed = stage.seed_q or stage.q or previous_q
@@ -253,7 +253,7 @@ def _resolve_cartesian_stage(
 ) -> SemanticPlanStep:
     if stage.representation == "object_relative_cartesian" and stage.object_offset is not None:
         target = add3(object_point_base, stage.object_offset)
-        if abs(float(target[1]) - float(model.geometry.tool_y)) > float(lateral_tolerance_m):
+        if abs(float(target[1]) - float(model.forward(0.0, 0.0, 0.0).y)) > float(lateral_tolerance_m):
             raise ValueError(f"{output_name.lower()}_lateral_alignment_failed")
         solution = solve_nearest(
             model,

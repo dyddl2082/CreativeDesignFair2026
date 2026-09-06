@@ -13,7 +13,7 @@ def test_mock_pick_plan_is_reachable():
         model,
         profile,
         "Buds3",
-        (-0.150, model.geometry.tool_y, 0.120),
+        (-0.150, model.forward(0.0, 0.0, 0.0).y, 0.120),
         (0.0, 0.0, 0.0),
     )
     assert [step.name for step in plan.steps] == [
