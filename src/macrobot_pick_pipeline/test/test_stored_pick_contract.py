@@ -125,3 +125,61 @@ def test_resilient_search_is_rotation_first_with_conditional_backoff():
     assert '"search_policy": "rotation_first_visual_replanning"' in text
     assert 'search_close_obstacle_backoff_started' in text
     assert 'bearing_corrected_before_translation=True' in text
+
+
+def test_orientation_is_a_recoverable_control_signal_and_forward_motion_is_visual():
+    text = _source("resilient_object_task_node.py")
+    assert 'orientation_viewpoint_turn_started' in text
+    assert 'orientation_viewpoint_translation_started' in text
+    assert 'object_orientation_observation' in text
+    assert 'fresh_visual_observation_required' in text
+    assert 'maximum_near_deadreckon_m": 0.0' in text
+    assert 'full 360-degree visual search completed without target' in text
+
+
+def test_stored_keyframe_command_forwards_orientation_metadata():
+    text = _source("resilient_object_task_node.py")
+    assert 'payload["object_orientation"] = orientation' in text
+    keyframe = _source("grasp_keyframe_node.py")
+    assert 'direct_orientation' in keyframe
+    assert 'detection["orientation"]' in keyframe
+
+
+def test_recoverable_failures_hold_or_restart_instead_of_terminal_result():
+    text = _source("resilient_object_task_node.py")
+    assert 'terminal_policy' in text
+    assert 'full_360_not_found_or_explicit_stop_or_critical_fault' in text
+    assert 'recoverable_condition_hold' in text
+    assert 'terminal_overall_timeout_enabled' in text
+
+
+def test_cli_can_remain_attached_until_real_terminal_condition():
+    text = _source("stored_object_pick_cli.py")
+    assert '"--wait-forever"' in text
+    assert 'terminal_wait = 0.0' in text
+
+
+def test_grasp_teaching_view_is_orientation_authority_and_bearing_is_corrected_first():
+    text = _source("resilient_object_task_node.py")
+    assert "def _refresh_orientation_reference" in text
+    assert 'self.keyframe_store.get(keyframe_name)' in text
+    assert 'f"grasp_keyframe_profile:{keyframe_name}"' in text
+    assert 'control_order="bearing_then_orientation_then_range"' in text
+    assert 'orientation_probe_stage = "after_recenter"' in text
+
+
+def test_not_found_requires_verified_full_turn_and_underrotation_is_drive_fault():
+    text = _source("resilient_object_task_node.py")
+    assert '"OBJECT_NOT_FOUND"' in text
+    assert 'full_rotation_completed=True' in text
+    assert '"WHEEL_SLIP"' in text
+    assert 'full_rotation_completed=False' in text
+    assert 'search_max_overscan_deg' in text
+
+
+def test_generic_wall_timeout_is_suppressed_but_physical_arm_watchdogs_remain():
+    text = _source("resilient_object_task_node.py")
+    assert 'arm_preflight_watchdog_sec' in text
+    assert 'arm_execution_watchdog_sec' in text
+    assert 'self.goal_deadline = 0.0' in text
+    assert 'semantic arm execution watchdog expired' in text

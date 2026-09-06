@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import time
 from typing import Any, Dict, Optional
@@ -118,7 +119,8 @@ class _Client(Node):
         return False, f"no matching command acknowledgement after {publish_count} publish attempt(s)"
 
     def wait(self, timeout: float) -> Optional[Dict[str, Any]]:
-        deadline = time.monotonic() + timeout
+        wait_forever = float(timeout) <= 0.0
+        deadline = math.inf if wait_forever else time.monotonic() + float(timeout)
         while rclpy.ok() and time.monotonic() < deadline:
             rclpy.spin_once(self, timeout_sec=0.1)
             if self.result is not None:
@@ -188,6 +190,11 @@ def _parser() -> argparse.ArgumentParser:
     visible.add_argument("--profile", default="")
     visible.add_argument("--align-only", action="store_true")
     visible.add_argument("--timeout", type=float, default=120.0)
+    visible.add_argument(
+        "--wait-forever",
+        action="store_true",
+        help="Keep the CLI attached until success, explicit stop, 360-degree not-found, or a critical fault",
+    )
 
     run = sub.add_parser(
         "run",
@@ -198,6 +205,11 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("--align-only", action="store_true")
     run.add_argument("--rebuild-banks", action="store_true")
     run.add_argument("--timeout", type=float, default=180.0)
+    run.add_argument(
+        "--wait-forever",
+        action="store_true",
+        help="Keep the CLI attached until success, explicit stop, 360-degree not-found, or a critical fault",
+    )
 
     place = sub.add_parser(
         "place",
@@ -235,6 +247,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     place.add_argument("--no-finder", action="store_true")
     place.add_argument("--timeout", type=float, default=180.0)
+    place.add_argument("--wait-forever", action="store_true")
 
     sub.add_parser("memory", help="Show epoch-scoped location hints and held-object state")
     forget = sub.add_parser("forget-location", help="Delete only one volatile location hint")
@@ -452,6 +465,8 @@ def main(argv=None) -> None:
             "place",
         }
         terminal_wait = timeout + 10.0 if args.command in action_commands else timeout
+        if bool(getattr(args, "wait_forever", False)):
+            terminal_wait = 0.0
         result = node.wait(terminal_wait)
         if result is None:
             print("No terminal result received before timeout", file=sys.stderr)

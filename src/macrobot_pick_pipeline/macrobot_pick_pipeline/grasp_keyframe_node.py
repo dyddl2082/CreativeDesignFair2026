@@ -6,7 +6,7 @@ import json
 import math
 from pathlib import Path
 import time
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 from ament_index_python.packages import get_package_share_directory
 from .serial2r_model_config import build_arm_model
@@ -241,9 +241,32 @@ class GraspKeyframeNode(Node):
         payload["_point"] = point
         self.latest_detection = payload
 
-    def _fresh_detection(self, object_name: str, direct_point: Optional[Vector3] = None) -> tuple[Vector3, dict[str, Any]]:
+    def _fresh_detection(
+        self,
+        object_name: str,
+        direct_point: Optional[Vector3] = None,
+        direct_orientation: Optional[Mapping[str, Any]] = None,
+    ) -> tuple[Vector3, dict[str, Any]]:
         if direct_point is not None:
-            return direct_point, {}
+            detection: dict[str, Any] = {}
+            if isinstance(direct_orientation, Mapping):
+                try:
+                    angle = float(direct_orientation.get("angle_deg", 0.0) or 0.0)
+                    quality = float(direct_orientation.get("quality", 0.0) or 0.0)
+                    orientation_class = str(
+                        direct_orientation.get("class", "unknown")
+                    ).strip() or "unknown"
+                except (TypeError, ValueError):
+                    angle = 0.0
+                    quality = 0.0
+                    orientation_class = "unknown"
+                if math.isfinite(angle) and math.isfinite(quality):
+                    detection["orientation"] = {
+                        "angle_deg": angle % 180.0,
+                        "quality": max(0.0, min(1.0, quality)),
+                        "class": orientation_class,
+                    }
+            return direct_point, detection
         payload = self.latest_detection
         if payload is None:
             raise ValueError("localized_object_unavailable")
@@ -638,7 +661,13 @@ class GraspKeyframeNode(Node):
         profile = self.store.get(str(data.get("profile", "")))
         profile.validate()
         object_name = str(data.get("object_name", profile.object_name)).strip()
-        point, detection = self._fresh_detection(object_name, _point(data.get("object_point_base")))
+        point, detection = self._fresh_detection(
+            object_name,
+            _point(data.get("object_point_base")),
+            data.get("object_orientation")
+            if isinstance(data.get("object_orientation"), Mapping)
+            else None,
+        )
         require_orientation_match = operation != "place" and (
             bool(self.get_parameter("require_orientation_match").value)
             or profile.reference_orientation_quality
@@ -651,9 +680,14 @@ class GraspKeyframeNode(Node):
             current_angle = float(orientation.get("angle_deg", 0.0)) if isinstance(orientation, dict) else 0.0
             if current_quality < float(self.get_parameter("minimum_orientation_quality").value):
                 raise ValueError("object_orientation_unreliable")
-            if profile.reference_orientation_class != "unknown" and current_class != profile.reference_orientation_class:
-                raise ValueError("object_orientation_class_mismatch")
-            if axial_orientation_error_deg(current_angle, profile.reference_orientation_deg) > float(
+            orientation_error = axial_orientation_error_deg(
+                current_angle, profile.reference_orientation_deg
+            )
+            # The coarse horizontal/vertical/diagonal class can flip at a bin
+            # boundary even when the continuous axial angle is acceptable.
+            # Keep the class for diagnostics, but let the angle+tolerance be the
+            # authoritative grasp-orientation gate.
+            if orientation_error > float(
                 self.get_parameter("orientation_tolerance_deg").value
             ):
                 raise ValueError("object_orientation_angle_mismatch")
@@ -715,6 +749,11 @@ class GraspKeyframeNode(Node):
                 operation=operation,
                 profile=profile.name,
                 object_point_base=list(point),
+                object_orientation=(
+                    detection.get("orientation", {})
+                    if isinstance(detection, dict)
+                    else {}
+                ),
                 steps=plan_mapping,
             )
             return

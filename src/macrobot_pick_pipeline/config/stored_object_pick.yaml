@@ -46,7 +46,7 @@ macrobot_stored_object_pick:
     alignment_confirmation_count: 2
     record_timeout_sec: 30.0
     visible_test_timeout_sec: 60.0
-    full_search_timeout_sec: 90.0
+    full_search_timeout_sec: 0.0
     finder_initial_detection_wait_sec: 3.0
     search_post_turn_detection_wait_sec: 3.0
     search_post_turn_frame_guard_sec: 0.3
@@ -91,7 +91,7 @@ macrobot_stored_object_pick:
     search_yaw_step_deg: 10.0
     search_yaw_levels: 3
     search_max_total_move_m: 0.12
-    search_max_total_turn_deg: 100.0
+    search_max_total_turn_deg: 395.0
     use_same_epoch_location_hint: true
     location_hint_max_age_sec: 900.0
     location_hint_max_bearing_deg: 40.0
@@ -99,13 +99,13 @@ macrobot_stored_object_pick:
     resilient_stability_count: 2
     delayed_detection_max_age_sec: 8.0
     pose_history_stationary_tolerance_sec: 8.0
-    visual_move_chunk_m: 0.04
+    visual_move_chunk_m: 0.02
     visual_turn_chunk_deg: 4.0
-    visual_reobserve_sec: 0.65
+    visual_reobserve_sec: 0.8
     visual_lost_timeout_sec: 8.0
     near_visual_handoff_range_m: 0.36
-    maximum_near_deadreckon_m: 0.1
-    resilient_alignment_confirmation_count: 1
+    maximum_near_deadreckon_m: 0.0
+    resilient_alignment_confirmation_count: 2
     place_default_offset_base:
     - 0.0
     - 0.12
@@ -120,6 +120,24 @@ macrobot_stored_object_pick:
     search_close_obstacle_threshold_m: 0.38
     search_close_obstacle_backoff_step_m: 0.04
     search_close_obstacle_backoff_steps: 2
+    arm_execution_watchdog_sec: 180.0
+    arm_preflight_watchdog_sec: 30.0
+    finder_search_timeout_sec: 600.0
+    orientation_alignment_enabled: true
+    orientation_auto_reference_quality: 0.65
+    orientation_probe_close_margin_m: 0.04
+    orientation_probe_min_improvement: 0.05
+    orientation_probe_move_m: 0.02
+    orientation_probe_turn_deg: 3.0
+    post_motion_frame_guard_sec: 0.2
+    recoverable_retry_sec: 1.0
+    require_fresh_visual_for_translation: true
+    search_full_rotation_deg: 360.0
+    search_max_overscan_deg: 30.0
+    search_rotation_completion_tolerance_deg: 5.0
+    search_turn_direction: 1
+    terminal_overall_timeout_enabled: false
+    terminal_search_timeout_enabled: false
 macrobot_visible_pick_test:
   ros__parameters:
     detection_max_age_sec: 8.0

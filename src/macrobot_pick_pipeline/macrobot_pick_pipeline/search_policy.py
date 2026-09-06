@@ -1,26 +1,17 @@
 """Rotation-first active visual-search policy.
 
-The tracked chassis has floor-dependent translational and rotational error.  A
-search therefore does not use blind forward motion to discover an object.  It
-first observes the current view, optionally performs a *small conditional
-backoff* when aligned depth reports that something is too close to the camera,
-and then changes only the camera heading in bounded yaw steps.  Translation is
-reserved for the visual-alignment phase after the requested object has been
-identified and localized.
-
-The backoff actions are deliberately labelled ``close_obstacle_backoff_*``.
-They are conditional: :class:`ResilientObjectTaskNode` executes them only while
-a fresh central-corridor clearance sample is below the configured threshold.
-Because MacRobot has no rear depth sensor, the total reverse distance must stay
-small and the operator must keep the rear corridor clear during demonstrations.
+Search observes the current view, optionally makes a very small conditional
+backoff when something is too close, and then performs a monotonic full-yaw
+sweep.  No positive translation is used to discover the target.  The terminal
+"object not found" condition is therefore tied to an actually completed 360
+degree visual sweep rather than an arbitrary wall-clock timeout.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from typing import Iterable, Tuple
-
-from .stored_object_core import absolute_offsets_to_relative_turns
 
 
 @dataclass(frozen=True)
@@ -41,13 +32,17 @@ class SearchAction:
 
 @dataclass(frozen=True)
 class RotationFirstSearchConfig:
-    """Configuration for bounded rotation-first target acquisition."""
+    """Configuration for one full rotation-first target-acquisition cycle."""
 
     initial_observation_sec: float = 4.0
     observation_sec: float = 3.0
     backoff_step_m: float = 0.04
     backoff_steps: int = 2
     yaw_step_deg: float = 10.0
+    full_rotation_deg: float = 360.0
+    turn_direction: int = 1
+    # Retained only so older call sites/configs do not break.  Full-rotation
+    # coverage is authoritative and yaw_levels no longer truncates the sweep.
     yaw_levels: int = 3
     include_conditional_backoff: bool = True
 
@@ -60,25 +55,24 @@ class RotationFirstSearchConfig:
             raise ValueError("backoff_step_m must be within 0.0 .. 0.04 m")
         if not 0 <= self.backoff_steps <= 2:
             raise ValueError("backoff_steps must be within 0 .. 2")
-        if not 0.0 <= self.yaw_step_deg <= 10.0:
-            raise ValueError("yaw_step_deg must be within 0.0 .. 10.0 deg")
+        if not 0.0 < self.yaw_step_deg <= 10.0:
+            raise ValueError("yaw_step_deg must be within (0.0, 10.0] deg")
+        if not 359.0 <= self.full_rotation_deg <= 365.0:
+            raise ValueError("full_rotation_deg must represent one full rotation")
+        if self.turn_direction not in {-1, 1}:
+            raise ValueError("turn_direction must be -1 or +1")
         if self.yaw_levels < 0:
             raise ValueError("yaw_levels must be non-negative")
 
 
 @dataclass(frozen=True)
 class TranslationDominantSearchConfig:
-    """Deprecated compatibility schema.
-
-    Older callers may still construct this class.  Its former forward probe is
-    interpreted as a bounded conditional backoff so that no caller silently
-    re-enables translation-first search.
-    """
+    """Deprecated compatibility schema; forward probes remain disabled."""
 
     forward_step_m: float = 0.08
     forward_steps: int = 2
     observation_sec: float = 2.0
-    yaw_step_deg: float = 12.0
+    yaw_step_deg: float = 10.0
     yaw_levels: int = 3
     include_reverse_return: bool = True
 
@@ -89,35 +83,34 @@ class TranslationDominantSearchConfig:
             raise ValueError("forward_steps must be non-negative")
         if self.observation_sec <= 0.0:
             raise ValueError("observation_sec must be positive")
-        if self.yaw_step_deg < 0.0:
-            raise ValueError("yaw_step_deg must be non-negative")
+        if self.yaw_step_deg <= 0.0:
+            raise ValueError("yaw_step_deg must be positive")
         if self.yaw_levels < 0:
             raise ValueError("yaw_levels must be non-negative")
 
 
-def _yaw_offsets(step_deg: float, levels: int) -> Tuple[float, ...]:
-    """Return a monotonic, small-step camera-view sweep.
-
-    Alternating directly between positive and negative extrema would command
-    increasingly large turns.  Instead the camera moves from centre to one
-    side, back through centre, and then to the other side.  Every useful
-    decision is made from a fresh stationary observation.
-    """
-
-    count = max(0, int(levels))
+def _full_rotation_turns(
+    step_deg: float,
+    total_deg: float,
+    direction: int,
+) -> Tuple[float, ...]:
+    remaining = float(total_deg)
     step = float(step_deg)
-    if count == 0 or step <= 0.0:
-        return (0.0,)
-    positive = [step * level for level in range(1, count + 1)]
-    return_to_center = [step * level for level in range(count - 1, -1, -1)]
-    negative = [-step * level for level in range(1, count + 1)]
-    return tuple([0.0, *positive, *return_to_center, *negative])
+    sign = 1.0 if int(direction) > 0 else -1.0
+    turns = []
+    while remaining > 1e-9:
+        amount = min(step, remaining)
+        turns.append(sign * amount)
+        remaining -= amount
+    if not math.isclose(sum(abs(item) for item in turns), total_deg, abs_tol=1e-7):
+        raise RuntimeError("full-rotation discretization failed")
+    return tuple(turns)
 
 
 def build_rotation_first_search(
     config: RotationFirstSearchConfig,
 ) -> Tuple[SearchAction, ...]:
-    """Build initial observation, conditional backoff, then yaw-only search."""
+    """Build current-view, conditional backoff, then exactly one full yaw sweep."""
 
     config.validate()
     actions = [
@@ -145,14 +138,19 @@ def build_rotation_first_search(
                 )
             )
 
-    offsets = _yaw_offsets(config.yaw_step_deg, config.yaw_levels)
-    relative = absolute_offsets_to_relative_turns(offsets)
-    for index, turn in enumerate(relative[1:], start=1):
-        actions.append(SearchAction("turn", amount=turn, label=f"view_turn_{index}"))
+    for index, turn in enumerate(
+        _full_rotation_turns(
+            config.yaw_step_deg,
+            config.full_rotation_deg,
+            config.turn_direction,
+        ),
+        start=1,
+    ):
+        actions.append(SearchAction("turn", amount=turn, label=f"full_yaw_turn_{index}"))
         actions.append(
             SearchAction(
                 "observe",
-                label=f"yaw_view_{index}",
+                label=f"full_yaw_view_{index}",
                 observe_sec=config.observation_sec,
             )
         )
@@ -165,7 +163,7 @@ def build_rotation_first_search(
 def build_translation_dominant_search(
     config: TranslationDominantSearchConfig,
 ) -> Tuple[SearchAction, ...]:
-    """Compatibility wrapper that now returns the safer rotation-first plan."""
+    """Compatibility wrapper that returns the full rotation-first plan."""
 
     config.validate()
     return build_rotation_first_search(
@@ -175,6 +173,8 @@ def build_translation_dominant_search(
             backoff_step_m=min(0.04, config.forward_step_m),
             backoff_steps=min(2, config.forward_steps),
             yaw_step_deg=min(10.0, config.yaw_step_deg),
+            full_rotation_deg=360.0,
+            turn_direction=1,
             yaw_levels=config.yaw_levels,
             include_conditional_backoff=config.include_reverse_return,
         )

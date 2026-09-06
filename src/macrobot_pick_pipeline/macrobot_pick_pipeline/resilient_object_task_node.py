@@ -22,7 +22,7 @@ requires a stable external reference such as a visual landmark, dock, or SLAM.
 from __future__ import annotations
 
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import json
 import math
 from pathlib import Path
@@ -39,6 +39,12 @@ from .alignment_core import (
     planar_observation,
 )
 from .object_memory import ObjectMemoryStore, ObjectObservationMemory
+from .orientation_control import (
+    OrientationAssessment,
+    assess_orientation,
+    choose_probe_direction,
+    choose_probe_translation_m,
+)
 from .planner import DetectionSample, StableDetection
 from .pose_history import PoseHistory
 from .runtime_epoch import RuntimeEpoch, read_host_boot_id
@@ -112,6 +118,9 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         self.search_observe_until = 0.0
         self.search_total_move_m = 0.0
         self.search_total_turn_deg = 0.0
+        self.search_measured_turn_deg = 0.0
+        self.search_extra_turn_deg = 0.0
+        self.search_sweep_direction = 1
         self.search_corridor_forward_m = 0.0
         self.last_clearance: Dict[str, Any] = {}
         self.latest_detection_metadata: Dict[str, Any] = {}
@@ -123,10 +132,29 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         self.reobserve_not_before = 0.0
         self.align_wait_started = 0.0
         self.motion_started_wall_sec = 0.0
+        self.base_motion_start_odom: Optional[OdomPose] = None
         self.pending_detection_drop_count = 0
         self.location_hint_state = "missing"
         self.location_hint_reason = ""
         self.next_state_heartbeat_monotonic = 0.0
+        self.latest_stable_detection: Optional[StableDetection] = None
+        self.fresh_detection_not_before_wall_sec = 0.0
+        self.orientation_probe_stage = "idle"
+        self.orientation_probe_direction = 0
+        self.orientation_probe_baseline_cost: Optional[float] = None
+        self.orientation_probe_count = 0
+        self.orientation_total_move_m = 0.0
+        self.orientation_total_turn_deg = 0.0
+        self.orientation_last_assessment: Dict[str, Any] = {}
+        self.orientation_reference_deg = 0.0
+        self.orientation_reference_class = "unknown"
+        self.orientation_reference_quality = 0.0
+        self.orientation_reference_source = "unavailable"
+        self.recovery_hold_reason = ""
+        self.recovery_hold_code = ""
+        self.recovery_resume_mode = ""
+        self.recovery_resume_at = 0.0
+        self.recovery_count = 0
         self._resilient_ready = False
 
         super().__init__()
@@ -189,9 +217,16 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             "search_close_obstacle_backoff_step_m": 0.04,
             "search_close_obstacle_backoff_steps": 2,
             "search_yaw_step_deg": 10.0,
-            "search_yaw_levels": 3,
+            "search_yaw_levels": 3,  # deprecated compatibility value
+            "search_full_rotation_deg": 360.0,
+            "search_turn_direction": 1,
+            "search_rotation_completion_tolerance_deg": 5.0,
+            "search_max_overscan_deg": 30.0,
             "search_max_total_move_m": 0.12,
-            "search_max_total_turn_deg": 100.0,
+            "search_max_total_turn_deg": 395.0,
+            "terminal_search_timeout_enabled": False,
+            "terminal_overall_timeout_enabled": False,
+            "finder_search_timeout_sec": 600.0,
             "use_same_epoch_location_hint": True,
             "location_hint_max_age_sec": 900.0,
             "location_hint_max_bearing_deg": 40.0,
@@ -199,13 +234,24 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             "resilient_stability_count": 2,
             "delayed_detection_max_age_sec": 8.0,
             "pose_history_stationary_tolerance_sec": 8.0,
-            "visual_move_chunk_m": 0.04,
+            "visual_move_chunk_m": 0.02,
             "visual_turn_chunk_deg": 4.0,
-            "visual_reobserve_sec": 0.65,
+            "visual_reobserve_sec": 0.80,
             "visual_lost_timeout_sec": 8.0,
+            "post_motion_frame_guard_sec": 0.20,
+            "require_fresh_visual_for_translation": True,
             "near_visual_handoff_range_m": 0.36,
-            "maximum_near_deadreckon_m": 0.10,
-            "resilient_alignment_confirmation_count": 1,
+            "maximum_near_deadreckon_m": 0.0,
+            "resilient_alignment_confirmation_count": 2,
+            "orientation_alignment_enabled": True,
+            "orientation_auto_reference_quality": 0.65,
+            "orientation_probe_turn_deg": 3.0,
+            "orientation_probe_move_m": 0.02,
+            "orientation_probe_close_margin_m": 0.04,
+            "orientation_probe_min_improvement": 0.05,
+            "recoverable_retry_sec": 1.0,
+            "arm_preflight_watchdog_sec": 30.0,
+            "arm_execution_watchdog_sec": 180.0,
             "place_default_offset_base": [0.0, 0.12, 0.0],
             "place_min_horizontal_offset_m": 0.08,
             "place_max_horizontal_offset_m": 0.25,
@@ -230,6 +276,23 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
                 "location_hint_reason": self.location_hint_reason,
                 "pending_delayed_detections": len(self.pending_detections),
                 "held_object": held,
+                "orientation_probe_stage": self.orientation_probe_stage,
+                "orientation_probe_count": self.orientation_probe_count,
+                "orientation_last_assessment": dict(self.orientation_last_assessment),
+                "orientation_reference": {
+                    "angle_deg": self.orientation_reference_deg,
+                    "class": self.orientation_reference_class,
+                    "quality": self.orientation_reference_quality,
+                    "source": self.orientation_reference_source,
+                },
+                "recovery_hold": {
+                    "code": self.recovery_hold_code,
+                    "reason": self.recovery_hold_reason,
+                    "resume_mode": self.recovery_resume_mode,
+                },
+                "terminal_policy": (
+                    "full_360_not_found_or_explicit_stop_or_critical_fault"
+                ),
             }
         )
         return payload
@@ -253,6 +316,9 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         self.search_observe_until = 0.0
         self.search_total_move_m = 0.0
         self.search_total_turn_deg = 0.0
+        self.search_measured_turn_deg = 0.0
+        self.search_extra_turn_deg = 0.0
+        self.search_sweep_direction = 1
         self.search_corridor_forward_m = 0.0
         self.latest_detection_metadata = {}
         self.cached_stable_detection = None
@@ -263,9 +329,28 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         self.reobserve_not_before = 0.0
         self.align_wait_started = 0.0
         self.motion_started_wall_sec = 0.0
+        self.base_motion_start_odom = None
         self.location_hint_state = "missing"
         self.location_hint_reason = ""
         self.next_state_heartbeat_monotonic = 0.0
+        self.latest_stable_detection = None
+        self.fresh_detection_not_before_wall_sec = 0.0
+        self.orientation_probe_stage = "idle"
+        self.orientation_probe_direction = 0
+        self.orientation_probe_baseline_cost = None
+        self.orientation_probe_count = 0
+        self.orientation_total_move_m = 0.0
+        self.orientation_total_turn_deg = 0.0
+        self.orientation_last_assessment = {}
+        self.orientation_reference_deg = 0.0
+        self.orientation_reference_class = "unknown"
+        self.orientation_reference_quality = 0.0
+        self.orientation_reference_source = "unavailable"
+        self.recovery_hold_reason = ""
+        self.recovery_hold_code = ""
+        self.recovery_resume_mode = ""
+        self.recovery_resume_at = 0.0
+        self.recovery_count = 0
 
     def _current_epoch(self) -> RuntimeEpoch:
         return RuntimeEpoch.current(
@@ -606,6 +691,9 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             "resilient_search_turn",
             "resilient_approach_move",
             "resilient_approach_turn",
+            "resilient_orientation_probe_move",
+            "resilient_orientation_probe_turn",
+            "recovery_hold",
         }:
             return
         detection = self._parse_detection(msg)
@@ -622,6 +710,9 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
 
     def _ingest_detection(self, detection: PendingDetection) -> bool:
         now = time.time()
+        if detection.source_stamp_sec < self.fresh_detection_not_before_wall_sec:
+            self.pending_detection_drop_count += 1
+            return False
         age = max(0.0, now - detection.source_stamp_sec)
         maximum_age = max(
             0.1, float(self.get_parameter("delayed_detection_max_age_sec").value)
@@ -729,6 +820,9 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             alignment.stability_count,
             max(1, int(self.get_parameter("resilient_stability_count").value)),
         )
+        # Orientation is deliberately not used as an eligibility filter here.
+        # A low-quality or mismatched orientation is a control input for active
+        # viewpoint recovery, not a reason to make the target disappear.
         return self.filter.stable(
             now_sec=time.time(),
             object_name=self.object_name,
@@ -739,23 +833,17 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             minimum_localization_quality=alignment.minimum_localization_quality,
             maximum_depth_std_m=alignment.maximum_depth_std_m,
             maximum_center_std_px=alignment.maximum_center_std_px,
-            required_orientation_class=(
-                alignment.reference_orientation_class
-                if alignment.require_orientation_match
-                else ""
-            ),
-            minimum_orientation_quality=alignment.minimum_orientation_quality,
+            required_orientation_class="",
+            minimum_orientation_quality=0.0,
         )
 
-    # ------------------------------------------------------------------
-    # Search: current view, conditional close-obstacle backoff, then yaw sweep
-    # ------------------------------------------------------------------
     def _after_stow(self) -> None:
         self._request_odom("resilient_search_start")
 
     def _start_resilient_search(self) -> None:
         assert self.profile is not None
         self.filter.clear()
+        self.pending_detections.clear()
         self.phase = "search"
         now = time.monotonic()
         timeout = (
@@ -763,12 +851,68 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             if self.mode == "visible_test"
             else float(self.get_parameter("full_search_timeout_sec").value)
         )
-        self.phase_deadline = min(self.goal_deadline, now + timeout)
+        if bool(self.get_parameter("terminal_search_timeout_enabled").value):
+            self.phase_deadline = min(self.goal_deadline, now + max(1.0, timeout))
+        else:
+            self.phase_deadline = math.inf
         self.search_total_move_m = 0.0
         self.search_total_turn_deg = 0.0
+        self.search_measured_turn_deg = 0.0
+        self.search_extra_turn_deg = 0.0
         self.search_corridor_forward_m = 0.0
         self.search_observe_until = 0.0
+        self._reset_orientation_recovery()
+        self._refresh_orientation_reference()
 
+        self.location_hint_state = "missing"
+        self.location_hint_reason = "no_location_memory"
+        hint_point = None
+        sweep_direction = 1 if int(
+            self.get_parameter("search_turn_direction").value
+        ) >= 0 else -1
+        if (
+            self.object_memory is not None
+            and self.last_odom is not None
+            and bool(self.get_parameter("use_same_epoch_location_hint").value)
+        ):
+            state, reason, record = self.object_memory.classify(
+                self.object_name,
+                self._current_epoch(),
+                current_wall_sec=time.time(),
+                maximum_age_sec=float(
+                    self.get_parameter("location_hint_max_age_sec").value
+                ),
+                pico_time_tolerance_ms=int(
+                    self.get_parameter("pico_reboot_tolerance_ms").value
+                ),
+            )
+            self.location_hint_state = state
+            self.location_hint_reason = reason
+            if state == "fresh" and record is not None:
+                try:
+                    hint_point = point_odom_to_base(
+                        record.object_point_odom,
+                        self.last_odom,
+                        forward_axis_sign=self.forward_axis_sign,
+                        lateral_axis_sign=self.lateral_axis_sign,
+                    )
+                    observation = planar_observation(
+                        hint_point,
+                        forward_axis_sign=self.forward_axis_sign,
+                        lateral_axis_sign=self.lateral_axis_sign,
+                    )
+                    # The hint chooses only the sweep direction.  It never
+                    # authorizes translation or shortens the required 360 deg.
+                    if abs(observation.bearing_rad) > 1e-6:
+                        sweep_direction = 1 if observation.bearing_rad > 0.0 else -1
+                    self.location_hint_reason = (
+                        f"{reason}:sweep_direction_only"
+                    )
+                except Exception as error:
+                    self.location_hint_state = "stale"
+                    self.location_hint_reason = f"hint_transform_failed:{error}"
+
+        self.search_sweep_direction = sweep_direction
         config = RotationFirstSearchConfig(
             initial_observation_sec=float(
                 self.get_parameter("search_initial_observation_sec").value
@@ -803,97 +947,26 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             ),
             yaw_step_deg=min(
                 10.0,
-                max(
-                    0.0,
-                    float(self.get_parameter("search_yaw_step_deg").value),
-                ),
+                max(0.1, float(self.get_parameter("search_yaw_step_deg").value)),
             ),
+            full_rotation_deg=float(
+                self.get_parameter("search_full_rotation_deg").value
+            ),
+            turn_direction=sweep_direction,
             yaw_levels=int(self.get_parameter("search_yaw_levels").value),
             include_conditional_backoff=bool(
                 self.get_parameter("search_close_obstacle_backoff_enabled").value
             ),
         )
         actions = list(build_rotation_first_search(config))
-
-        self.location_hint_state = "missing"
-        self.location_hint_reason = "no_location_memory"
-        hint_point = None
-        if (
-            self.object_memory is not None
-            and self.last_odom is not None
-            and bool(self.get_parameter("use_same_epoch_location_hint").value)
-        ):
-            state, reason, record = self.object_memory.classify(
-                self.object_name,
-                self._current_epoch(),
-                current_wall_sec=time.time(),
-                maximum_age_sec=float(
-                    self.get_parameter("location_hint_max_age_sec").value
-                ),
-                pico_time_tolerance_ms=int(
-                    self.get_parameter("pico_reboot_tolerance_ms").value
-                ),
-            )
-            self.location_hint_state = state
-            self.location_hint_reason = reason
-            if state == "fresh" and record is not None:
-                try:
-                    hint_point = point_odom_to_base(
-                        record.object_point_odom,
-                        self.last_odom,
-                        forward_axis_sign=self.forward_axis_sign,
-                        lateral_axis_sign=self.lateral_axis_sign,
-                    )
-                    observation = planar_observation(
-                        hint_point,
-                        forward_axis_sign=self.forward_axis_sign,
-                        lateral_axis_sign=self.lateral_axis_sign,
-                    )
-                    max_bearing = float(
-                        self.get_parameter("location_hint_max_bearing_deg").value
-                    )
-                    if abs(math.degrees(observation.bearing_rad)) <= max_bearing:
-                        turn = max(
-                            -float(self.get_parameter("location_hint_turn_step_deg").value),
-                            min(
-                                float(self.get_parameter("location_hint_turn_step_deg").value),
-                                math.degrees(observation.bearing_rad),
-                            ),
-                        )
-                        if abs(turn) >= self.profile.alignment.bearing_tolerance_deg:
-                            # Keep the current-view and close-obstacle checks first.
-                            # The odometry hint only chooses the first yaw view; it
-                            # never authorizes translation toward the old location.
-                            first_turn = next(
-                                (
-                                    index
-                                    for index, item in enumerate(actions)
-                                    if item.kind == "turn"
-                                ),
-                                len(actions),
-                            )
-                            actions.insert(
-                                first_turn,
-                                SearchAction(
-                                    "turn", turn, "same_epoch_hint_view"
-                                ),
-                            )
-                            actions.insert(
-                                first_turn + 1,
-                                SearchAction(
-                                    "observe",
-                                    label="same_epoch_hint_observe",
-                                    observe_sec=config.observation_sec,
-                                ),
-                            )
-                except Exception as error:
-                    self.location_hint_state = "stale"
-                    self.location_hint_reason = f"hint_transform_failed:{error}"
-
         self.search_actions = deque(actions)
+        finder_timeout = max(
+            60.0,
+            float(self.get_parameter("finder_search_timeout_sec").value),
+        )
         if self.start_finder_for_goal:
             if not self.finder_active:
-                self._start_finder(max(1.0, self.goal_deadline - now))
+                self._start_finder(finder_timeout)
             else:
                 self._set_active_target(self.object_name)
         else:
@@ -904,11 +977,14 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             location_hint_state=self.location_hint_state,
             location_hint_reason=self.location_hint_reason,
             location_hint_point_base=(None if hint_point is None else list(hint_point)),
-            odom_used_as="same_epoch_optional_hint_only",
+            odom_used_as="sweep_direction_hint_only",
             reboot_behavior="discard_coordinates_keep_recognition_and_grasp_skill",
             planned_actions=[action.__dict__ for action in actions],
             planned_move_budget_m=move_budget,
             planned_turn_budget_deg=turn_budget,
+            terminal_not_found_requires_full_rotation=True,
+            full_rotation_deg=config.full_rotation_deg,
+            sweep_direction=config.turn_direction,
         )
 
     def _try_search_or_align(self) -> None:
@@ -923,11 +999,84 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             return
         self.search_observe_until = 0.0
         if not self.search_actions:
-            self._fail(
+            required_rotation = float(
+                self.get_parameter("search_full_rotation_deg").value
+            )
+            tolerance = max(
+                0.0,
+                float(
+                    self.get_parameter(
+                        "search_rotation_completion_tolerance_deg"
+                    ).value
+                ),
+            )
+            remaining = required_rotation - self.search_measured_turn_deg
+            overscan_limit = max(
+                0.0,
+                float(self.get_parameter("search_max_overscan_deg").value),
+            )
+            if remaining > tolerance and self.search_extra_turn_deg < overscan_limit:
+                step = min(
+                    float(self.get_parameter("search_yaw_step_deg").value),
+                    remaining,
+                    overscan_limit - self.search_extra_turn_deg,
+                )
+                if step > 1e-6:
+                    self.search_extra_turn_deg += step
+                    self.search_actions.append(
+                        SearchAction(
+                            "turn",
+                            self.search_sweep_direction * step,
+                            "measured_rotation_overscan",
+                        )
+                    )
+                    self.search_actions.append(
+                        SearchAction(
+                            "observe",
+                            label="measured_rotation_overscan_view",
+                            observe_sec=float(
+                                self.get_parameter("search_observation_sec").value
+                            ),
+                        )
+                    )
+                    self._publish_status(
+                        "search_rotation_overscan_added",
+                        measured_turn_deg=self.search_measured_turn_deg,
+                        required_rotation_deg=required_rotation,
+                        added_turn_deg=step,
+                        total_overscan_deg=self.search_extra_turn_deg,
+                    )
+                    return
+            if remaining > tolerance:
+                # We commanded a complete sweep plus bounded overscan but the
+                # encoder-derived yaw still does not prove a full rotation.
+                # Treat this as a serious drive/odometry fault, not as
+                # "object not found".
+                self._fail(
+                    "WHEEL_SLIP",
+                    reason=(
+                        "commanded full-yaw sweep could not be verified by odometry; "
+                        "possible track slip, encoder error, or blocked rotation"
+                    ),
+                    full_rotation_completed=False,
+                    required_rotation_deg=required_rotation,
+                    rotation_tolerance_deg=tolerance,
+                    search_total_turn_deg=self.search_total_turn_deg,
+                    search_measured_turn_deg=self.search_measured_turn_deg,
+                    search_overscan_deg=self.search_extra_turn_deg,
+                )
+                return
+            # The only automatic target-absence terminal: an encoder-verified
+            # complete 360-degree visual sweep found no target.
+            StoredObjectPickNode._fail(
+                self,
                 "OBJECT_NOT_FOUND",
-                reason="bounded rotation-first visual search exhausted",
+                reason="full 360-degree visual search completed without target",
+                full_rotation_completed=True,
                 search_total_move_m=self.search_total_move_m,
                 search_total_turn_deg=self.search_total_turn_deg,
+                search_measured_turn_deg=self.search_measured_turn_deg,
+                search_overscan_deg=self.search_extra_turn_deg,
             )
             return
         action = self.search_actions.popleft()
@@ -939,6 +1088,7 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
                 label=action.label,
                 observation_sec=action.observe_sec,
                 remaining_actions=len(self.search_actions),
+                accumulated_turn_deg=self.search_total_turn_deg,
             )
             return
         if action.kind == "move":
@@ -972,32 +1122,14 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
                     rear_clearance_verified=False,
                     safety_note="rear corridor must be kept clear by the operator",
                 )
-            # A reverse corridor step is only allowed for distance that was
-            # actually travelled forward.  This prevents an unsafe blind
-            # reverse when a forward probe was skipped by the depth gate.
-            if requested_amount < 0.0 and action.label.startswith("corridor_reverse"):
-                available = max(0.0, self.search_corridor_forward_m)
-                if available <= 1e-4:
-                    self._publish_status(
-                        "search_reverse_skipped",
-                        label=action.label,
-                        reason="no_completed_forward_corridor_distance",
-                    )
-                    return
-                requested_amount = -min(abs(requested_amount), available)
             if (
                 self.search_total_move_m + abs(requested_amount)
                 > float(self.get_parameter("search_max_total_move_m").value)
             ):
-                self._fail("SAFETY_BLOCKED", reason="search translation budget exceeded")
-                return
-            if requested_amount > 0.0 and not self._clearance_allows(requested_amount):
-                self._publish_status(
-                    "search_forward_probe_skipped",
-                    label=action.label,
-                    requested_move_m=requested_amount,
-                    reason="depth_clearance_unavailable_or_blocked",
-                    clearance=self.last_clearance,
+                self._enter_recovery_hold(
+                    "SEARCH_TRANSLATION_LIMIT",
+                    "search translation soft limit reached",
+                    resume_mode="search",
                 )
                 return
             self.search_total_move_m += abs(requested_amount)
@@ -1013,15 +1145,17 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             self.search_total_turn_deg + abs(action.amount)
             > float(self.get_parameter("search_max_total_turn_deg").value)
         ):
-            self._fail("SAFETY_BLOCKED", reason="search turn budget exceeded")
+            StoredObjectPickNode._fail(
+                self,
+                "INTERNAL_ERROR",
+                reason="configured full-rotation search exceeds turn safety envelope",
+                requested_total_turn_deg=self.search_total_turn_deg + abs(action.amount),
+            )
             return
         self.search_total_turn_deg += abs(action.amount)
         self.filter.clear()
         self._send_turn(action.amount, "resilient_search_turn")
 
-    # ------------------------------------------------------------------
-    # Short-motion execution and pose-history updates
-    # ------------------------------------------------------------------
     def _simulate_end_pose(
         self, start: OdomPose, expected_event: str, amount: float
     ) -> OdomPose:
@@ -1070,6 +1204,7 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             self.get_parameter("base_motion_timeout_sec").value
         ) + 1.0
         self.motion_started_wall_sec = time.time()
+        self.base_motion_start_odom = self.last_odom
         if self.pose_history.pending:
             self.pose_history.abort_motion()
         self.pose_history.begin_motion(
@@ -1083,6 +1218,9 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
                 self.last_odom, expected_event, physical_amount
             )
             self.base_active = False
+            if purpose == "resilient_search_turn":
+                self.search_measured_turn_deg += abs(float(physical_amount))
+            self.base_motion_start_odom = None
             self.last_odom = end
             self.pose_history.complete_motion(time.time(), end)
             self.steps[purpose] = {
@@ -1157,8 +1295,14 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
                 return
             if payload.get("ok") is not True or status != "done":
                 self.pose_history.abort_motion()
+                error_code = {
+                    "stall": "WHEEL_SLIP",
+                    "encoder_direction_error": "ENCODER_DIRECTION_ERROR",
+                    "timeout": "MOTION_EXECUTION_FAILED",
+                    "stopped": "MOTION_EXECUTION_FAILED",
+                }.get(status, "MOTION_EXECUTION_FAILED")
                 self._fail(
-                    "MOTION_EXECUTION_FAILED",
+                    error_code,
                     reason=f"base motion ended with status={status or 'unknown'}",
                     pico_response=payload,
                 )
@@ -1172,6 +1316,23 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
                     pico_response=payload,
                 )
                 return
+            if (
+                purpose == "resilient_search_turn"
+                and self.base_motion_start_odom is not None
+            ):
+                measured_delta = abs(
+                    wrap_angle_deg(
+                        odom.yaw_deg - self.base_motion_start_odom.yaw_deg
+                    )
+                )
+                self.search_measured_turn_deg += measured_delta
+                self._publish_status(
+                    "search_measured_rotation_updated",
+                    measured_step_deg=measured_delta,
+                    measured_total_deg=self.search_measured_turn_deg,
+                    commanded_total_deg=self.search_total_turn_deg,
+                )
+            self.base_motion_start_odom = None
             self.last_odom = odom
             self.pose_history.complete_motion(time.time(), odom)
             self.steps[purpose] = dict(payload)
@@ -1200,27 +1361,28 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
                     )
 
     def _after_resilient_motion(self, purpose: str, physical_amount: float) -> None:
+        # A MOVE_CM/TURN_DEG result is not accurate enough to authorize another
+        # grasping motion.  Discard every pre-boundary sample and require a new
+        # camera frame after a small settling guard.
+        self.fresh_detection_not_before_wall_sec = time.time() + max(
+            0.0,
+            float(self.get_parameter("post_motion_frame_guard_sec").value),
+        )
+        self.filter.clear()
+        self.cached_stable_detection = None
+        self.require_fresh_after_turn = True
         if purpose.startswith("resilient_search"):
-            if purpose == "resilient_search_move":
-                if physical_amount > 0.0:
-                    self.search_corridor_forward_m += physical_amount
-                elif physical_amount < 0.0:
-                    self.search_corridor_forward_m = max(
-                        0.0, self.search_corridor_forward_m - abs(physical_amount)
-                    )
             self.phase = "search"
             self.search_observe_until = 0.0
             self._publish_status(
                 "search_motion_completed",
                 purpose=purpose,
                 completed_amount=physical_amount,
-                corridor_forward_remaining_m=self.search_corridor_forward_m,
-                next="stationary_camera_observation",
+                next="fresh_stationary_camera_observation",
+                odometry_used_as="motion_bookkeeping_not_grasp_authority",
             )
             return
         self.phase = "align_settle"
-        if purpose == "resilient_approach_turn":
-            self.require_fresh_after_turn = True
         assert self.profile is not None
         self.settle_until = time.monotonic() + self.profile.alignment.settle_sec
         self.reobserve_not_before = self.settle_until + float(
@@ -1229,7 +1391,8 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         self._publish_status(
             "visual_servo_motion_completed",
             purpose=purpose,
-            next="fresh_detection_or_bounded_near_projection",
+            next="fresh_visual_observation_required",
+            move_cm_error_corrected_by="next_camera_observation",
         )
 
     def _close_obstacle_state(self) -> tuple[bool, str, Dict[str, Any]]:
@@ -1294,6 +1457,7 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
     def _begin_visual_approach(self, stable: StableDetection) -> None:
         assert self.profile is not None
         self.cached_stable_detection = stable
+        self.latest_stable_detection = stable
         self.filter.clear()
         self.phase = "align"
         self.align_wait_started = time.monotonic()
@@ -1305,12 +1469,16 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             finder_kept_active=self.finder_active,
             exact_stored_yaw_required=False,
             bearing_corrected_before_translation=True,
+            orientation_is_active_control_signal=self._orientation_required(),
             move_chunk_m=float(self.get_parameter("visual_move_chunk_m").value),
             turn_chunk_deg=float(self.get_parameter("visual_turn_chunk_deg").value),
+            visual_confirmation_required_after_every_motion=True,
+            odometry_role="short_motion_bookkeeping_only",
         )
 
     def _update_visual_anchor(self, stable: StableDetection) -> None:
         self.last_object_point = stable.point_base
+        self.latest_stable_detection = stable
         self.last_visual_wall_sec = time.time()
         self.deadreckon_since_visual_m = 0.0
         self.require_fresh_after_turn = False
@@ -1387,57 +1555,56 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             return
         now = time.monotonic()
         stable = self._stable_detection()
-        fresh_visual = stable is not None
         if stable is None and self.cached_stable_detection is not None:
             stable = self.cached_stable_detection
             self.cached_stable_detection = None
-            fresh_visual = True
-        if stable is not None:
-            point = stable.point_base
-            constraint = observation_constraint_decision(
-                self.profile.alignment,
-                localization_quality=stable.localization_quality,
-                depth_std_m=stable.depth_std_m,
-                center_std_px=stable.center_std_px,
-                orientation_deg=stable.orientation_deg,
-                orientation_class=stable.orientation_class,
-                orientation_quality=stable.orientation_quality,
-            )
-            if constraint.action == "reject":
-                self._fail("TARGET_NOT_GRASPABLE", reason=constraint.reason)
-                return
-            self._update_visual_anchor(stable)
-            self.filter.clear()
-        else:
+        if stable is None:
             if now < self.reobserve_not_before:
                 return
             if self.last_visual_wall_sec <= 0.0 or (
                 time.time() - self.last_visual_wall_sec
                 > float(self.get_parameter("visual_lost_timeout_sec").value)
             ):
-                self._fail(
-                    "OBJECT_LOST",
-                    reason="no fresh or compensatable visual observation during approach",
+                self._publish_status(
+                    "visual_target_lost_restarting_full_search",
+                    last_visual_age_sec=(
+                        None
+                        if self.last_visual_wall_sec <= 0.0
+                        else time.time() - self.last_visual_wall_sec
+                    ),
                 )
-                return
-            if self.require_fresh_after_turn:
-                # Tracked-base yaw is floor-dependent.  A turn may change the
-                # camera view, but its odometry result is never trusted to
-                # authorize a following translation without a new visual point.
-                return
-            point = self._predicted_point()
-            if point is None:
-                return
-            if self.deadreckon_since_visual_m > float(
-                self.get_parameter("maximum_near_deadreckon_m").value
-            ):
-                self._fail(
-                    "POSE_ESTIMATE_UNRELIABLE",
-                    reason="near-range visual handoff translation budget exceeded",
-                )
-                return
+                self._restart_full_search("visual target lost during alignment")
+            return
 
+        # Gate 3-D localization quality first.  Orientation quality is not a
+        # disappearance condition; it drives active viewpoint recovery below.
+        basic_profile = replace(
+            self.profile.alignment,
+            require_orientation_match=False,
+        )
+        constraint = observation_constraint_decision(
+            basic_profile,
+            localization_quality=stable.localization_quality,
+            depth_std_m=stable.depth_std_m,
+            center_std_px=stable.center_std_px,
+            orientation_deg=stable.orientation_deg,
+            orientation_class=stable.orientation_class,
+            orientation_quality=stable.orientation_quality,
+        )
+        if constraint.action == "reject":
+            self.filter.clear()
+            self._publish_status(
+                "recoverable_observation_rejected",
+                reason=constraint.reason,
+                policy="hold_stationary_and_wait_for_better_visual_sample",
+            )
+            return
+
+        point = stable.point_base
+        self._update_visual_anchor(stable)
+        self.filter.clear()
         self.last_object_point = point
+
         try:
             errors = alignment_errors(
                 point,
@@ -1447,28 +1614,115 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             )
             decision = choose_alignment_action(errors, self.profile.alignment)
         except Exception as error:
-            self._fail("TARGET_NOT_GRASPABLE", reason=str(error))
+            self._enter_recovery_hold(
+                "TARGET_POSE_INVALID",
+                str(error),
+                resume_mode="search",
+            )
             return
         self.last_errors = errors
+
+        if decision.action == "reject":
+            if decision.reason == "object_not_in_front_half_plane":
+                self._restart_full_search(decision.reason)
+            else:
+                self._enter_recovery_hold(
+                    "TARGET_POSE_NOT_CORRECTABLE",
+                    decision.reason,
+                    resume_mode="manual",
+                )
+            return
+
+        orientation_required = self._orientation_required()
+        assessment: Optional[OrientationAssessment] = None
+        if orientation_required:
+            assessment = self._orientation_assessment(stable)
+            self.orientation_last_assessment = {
+                "state": assessment.state,
+                "signed_error_deg": assessment.signed_error_deg,
+                "absolute_error_deg": assessment.absolute_error_deg,
+                "quality": assessment.quality,
+                "cost": assessment.cost,
+            }
+            self._publish_status(
+                "object_orientation_observation",
+                current_angle_deg=stable.orientation_deg,
+                current_class=stable.orientation_class,
+                current_quality=stable.orientation_quality,
+                reference_angle_deg=self.orientation_reference_deg,
+                reference_class=self.orientation_reference_class,
+                reference_quality=self.orientation_reference_quality,
+                reference_source=self.orientation_reference_source,
+                assessment=dict(self.orientation_last_assessment),
+            )
+
+        # Complete the turn-then-translate half of an orientation probe before
+        # normal bearing correction.  Merely undoing the probe turn would not
+        # change viewpoint and could cause an endless oscillation.
+        if orientation_required and self.orientation_probe_stage == "after_turn":
+            assert assessment is not None
+            self.aligned_confirmations = 0
+            self._run_orientation_recovery(stable, assessment)
+            return
+
+        # Direction/bearing is always corrected before another orientation
+        # assessment or any range translation.  After a viewpoint translation,
+        # this step re-centres the object so orientation costs are comparable.
+        if decision.action == "turn":
+            amount = max(
+                -float(self.get_parameter("visual_turn_chunk_deg").value),
+                min(
+                    float(self.get_parameter("visual_turn_chunk_deg").value),
+                    decision.amount,
+                ),
+            )
+            if self.orientation_probe_stage in {"after_move", "after_recenter"}:
+                self.orientation_probe_stage = "after_recenter"
+            self.aligned_confirmations = 0
+            self.total_turn_deg += abs(amount)
+            self._publish_status(
+                "visual_servo_bearing_correction_started",
+                requested_turn_deg=amount,
+                orientation_probe_stage=self.orientation_probe_stage,
+                reason="bearing_before_orientation_and_range",
+            )
+            self._send_turn(amount, "resilient_approach_turn")
+            return
+
+        # Bearing is now within tolerance.  Low-confidence or mismatched
+        # orientation triggers a small measured-improvement viewpoint probe.
+        if orientation_required:
+            assert assessment is not None
+            if not assessment.aligned:
+                self.aligned_confirmations = 0
+                self._run_orientation_recovery(stable, assessment)
+                return
+            self._reset_orientation_recovery(keep_direction=True)
+
         self._publish_status(
             "visual_servo_observation",
             point_base=list(point),
-            fresh_visual=fresh_visual,
-            deadreckon_since_visual_m=self.deadreckon_since_visual_m,
+            fresh_visual=True,
+            deadreckon_since_visual_m=0.0,
             errors=self._error_mapping(errors),
+            orientation=(
+                None
+                if assessment is None
+                else dict(self.orientation_last_assessment)
+            ),
             decision={
                 "action": decision.action,
                 "amount": decision.amount,
                 "reason": decision.reason,
             },
+            control_order="bearing_then_orientation_then_range",
+            move_cm_error_policy="reobserve_after_every_chunk",
         )
-        if decision.action == "reject":
-            self._fail("TARGET_NOT_GRASPABLE", reason=decision.reason)
-            return
+
         if decision.action == "aligned":
             self.aligned_confirmations += 1
             required = max(
-                1,
+                2,
                 int(
                     self.get_parameter(
                         "resilient_alignment_confirmation_count"
@@ -1482,69 +1736,364 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         self.aligned_confirmations = 0
         self.alignment_iterations += 1
         if self.alignment_iterations > self.profile.alignment.max_iterations:
-            self._fail("ALIGNMENT_TIMEOUT", reason="visual servo iteration limit")
-            return
-
-        if decision.action == "turn":
-            # A turn based only on dead reckoning amplifies the floor-dependent
-            # yaw error.  Wait for a new camera result instead.
-            if not fresh_visual:
-                return
-            amount = max(
-                -float(self.get_parameter("visual_turn_chunk_deg").value),
-                min(
-                    float(self.get_parameter("visual_turn_chunk_deg").value),
-                    decision.amount,
-                ),
+            self._publish_status(
+                "alignment_soft_limit_recycled",
+                previous_iterations=self.alignment_iterations,
+                policy="continue_with_fresh_visual_replanning",
             )
-            if self.total_turn_deg + abs(amount) > self.profile.alignment.max_total_turn_deg:
-                self._fail("SAFETY_BLOCKED", reason="visual-servo turn budget exceeded")
-                return
-            self.total_turn_deg += abs(amount)
-            self.filter.clear()
-            self._send_turn(amount, "resilient_approach_turn")
-            return
+            self.alignment_iterations = 0
 
+        # At this point bearing and orientation are both acceptable, so the
+        # remaining decision can only be a short range correction.
+        if decision.action != "move":
+            self._enter_recovery_hold(
+                "TARGET_POSE_NOT_CORRECTABLE",
+                f"unexpected alignment decision: {decision.action}",
+                resume_mode="manual",
+            )
+            return
         amount = max(
             -float(self.get_parameter("visual_move_chunk_m").value),
             min(float(self.get_parameter("visual_move_chunk_m").value), decision.amount),
         )
-        current_range = planar_range_m(
-            point,
-            forward_axis_sign=self.forward_axis_sign,
-            lateral_axis_sign=self.lateral_axis_sign,
-        )
-        if not fresh_visual and current_range > float(
-            self.get_parameter("near_visual_handoff_range_m").value
-        ):
-            return
         if amount > 0.0 and not self._clearance_allows(amount):
-            self._fail(
-                "SAFETY_BLOCKED",
-                reason="forward visual-servo chunk blocked by aligned-depth clearance",
+            self._enter_recovery_hold(
+                "FORWARD_CLEARANCE_BLOCKED",
+                "forward visual-servo chunk blocked by aligned-depth clearance",
+                resume_mode="align",
                 clearance=self.last_clearance,
             )
             return
-        if self.total_move_m + abs(amount) > self.profile.alignment.max_total_move_m:
-            self._fail("SAFETY_BLOCKED", reason="visual-servo translation budget exceeded")
-            return
-        if not fresh_visual and (
-            self.deadreckon_since_visual_m + abs(amount)
-            > float(self.get_parameter("maximum_near_deadreckon_m").value)
-        ):
-            self._fail(
-                "POSE_ESTIMATE_UNRELIABLE",
-                reason="near-range dead-reckoning budget would be exceeded",
-            )
-            return
         self.total_move_m += abs(amount)
-        self.deadreckon_since_visual_m += abs(amount)
+        self.deadreckon_since_visual_m = 0.0
         self.filter.clear()
         self._send_move(amount, "resilient_approach_move")
 
-    # ------------------------------------------------------------------
-    # Pick/place terminal manipulation
-    # ------------------------------------------------------------------
+    def _refresh_orientation_reference(self) -> None:
+        """Select the grasp-teaching view as the orientation authority.
+
+        ``record-search`` may have been captured from a farther viewpoint than
+        the semantic keyframes.  The keyframe profile therefore takes
+        precedence whenever it contains a usable reference orientation; this
+        is also the reference used by the final keyframe preflight.
+        """
+
+        self.orientation_reference_deg = 0.0
+        self.orientation_reference_class = "unknown"
+        self.orientation_reference_quality = 0.0
+        self.orientation_reference_source = "unavailable"
+        if self.profile is None:
+            return
+
+        alignment = self.profile.alignment
+        self.orientation_reference_deg = float(
+            alignment.reference_orientation_deg
+        ) % 180.0
+        self.orientation_reference_class = str(
+            alignment.reference_orientation_class
+        )
+        self.orientation_reference_quality = max(
+            0.0,
+            min(1.0, float(alignment.reference_orientation_quality)),
+        )
+        self.orientation_reference_source = "stored_alignment_profile"
+
+        keyframe_name = str(self.profile.grasp_keyframe_profile).strip()
+        if self.profile.grasp_executor != "keyframes" or not keyframe_name:
+            return
+        try:
+            self.keyframe_store.reload()
+            keyframe_profile = self.keyframe_store.get(keyframe_name)
+        except Exception as error:
+            self.get_logger().warning(
+                f"Could not load keyframe orientation reference {keyframe_name}: {error}"
+            )
+            return
+        quality = max(
+            0.0,
+            min(1.0, float(keyframe_profile.reference_orientation_quality)),
+        )
+        if quality <= 0.0:
+            return
+        self.orientation_reference_deg = float(
+            keyframe_profile.reference_orientation_deg
+        ) % 180.0
+        self.orientation_reference_class = str(
+            keyframe_profile.reference_orientation_class
+        )
+        self.orientation_reference_quality = quality
+        self.orientation_reference_source = (
+            f"grasp_keyframe_profile:{keyframe_name}"
+        )
+
+    def _orientation_required(self) -> bool:
+        if self.profile is None or not bool(
+            self.get_parameter("orientation_alignment_enabled").value
+        ):
+            return False
+        return bool(self.profile.alignment.require_orientation_match) or (
+            self.orientation_reference_quality
+            >= float(
+                self.get_parameter("orientation_auto_reference_quality").value
+            )
+        )
+
+    def _orientation_assessment(
+        self, stable: StableDetection
+    ) -> OrientationAssessment:
+        assert self.profile is not None
+        alignment = self.profile.alignment
+        return assess_orientation(
+            current_deg=stable.orientation_deg,
+            current_quality=stable.orientation_quality,
+            reference_deg=self.orientation_reference_deg,
+            minimum_quality=alignment.minimum_orientation_quality,
+            tolerance_deg=alignment.orientation_tolerance_deg,
+        )
+
+    @staticmethod
+    def _orientation_payload(stable: Optional[StableDetection]) -> Dict[str, Any]:
+        if stable is None:
+            return {}
+        return {
+            "angle_deg": float(stable.orientation_deg) % 180.0,
+            "class": str(stable.orientation_class),
+            "quality": max(0.0, min(1.0, float(stable.orientation_quality))),
+        }
+
+    def _reset_orientation_recovery(self, *, keep_direction: bool = False) -> None:
+        self.orientation_probe_stage = "idle"
+        if not keep_direction:
+            self.orientation_probe_direction = 0
+        self.orientation_probe_baseline_cost = None
+
+    def _run_orientation_recovery(
+        self,
+        stable: StableDetection,
+        assessment: OrientationAssessment,
+    ) -> None:
+        assert self.profile is not None
+        alignment = self.profile.alignment
+        if self.orientation_probe_stage == "after_turn":
+            current_range = planar_range_m(
+                stable.point_base,
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+            reference_range = planar_range_m(
+                alignment.reference_point_base,
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+            step = min(
+                0.02,
+                max(0.0, float(self.get_parameter("orientation_probe_move_m").value)),
+            )
+            forward_allowed = self._clearance_allows(step)
+            amount = choose_probe_translation_m(
+                current_range_m=current_range,
+                reference_range_m=reference_range,
+                step_m=step,
+                forward_clearance_ok=forward_allowed,
+                close_margin_m=float(
+                    self.get_parameter("orientation_probe_close_margin_m").value
+                ),
+            )
+            self.orientation_probe_stage = "after_move"
+            self.orientation_total_move_m += abs(amount)
+            self._publish_status(
+                "orientation_viewpoint_translation_started",
+                direction=self.orientation_probe_direction,
+                requested_move_m=amount,
+                current_range_m=current_range,
+                reference_range_m=reference_range,
+                forward_clearance_ok=forward_allowed,
+                safety_note=(
+                    "short MOVE_CM is never trusted as final pose; fresh vision is mandatory"
+                ),
+            )
+            self._send_move(amount, "resilient_orientation_probe_move")
+            return
+
+        if self.orientation_probe_stage in {"after_move", "after_recenter"}:
+            self.orientation_probe_direction = choose_probe_direction(
+                assessment,
+                previous_direction=self.orientation_probe_direction,
+                previous_cost=self.orientation_probe_baseline_cost,
+                minimum_improvement=float(
+                    self.get_parameter("orientation_probe_min_improvement").value
+                ),
+            )
+            self.orientation_probe_baseline_cost = assessment.cost
+            self.orientation_probe_stage = "idle"
+
+        if self.orientation_probe_stage == "idle":
+            self.orientation_probe_direction = choose_probe_direction(
+                assessment,
+                previous_direction=self.orientation_probe_direction,
+                previous_cost=None,
+                minimum_improvement=float(
+                    self.get_parameter("orientation_probe_min_improvement").value
+                ),
+            )
+            turn = min(
+                4.0,
+                max(0.5, float(self.get_parameter("orientation_probe_turn_deg").value)),
+            ) * self.orientation_probe_direction
+            self.orientation_probe_baseline_cost = assessment.cost
+            self.orientation_probe_stage = "after_turn"
+            self.orientation_probe_count += 1
+            self.orientation_total_turn_deg += abs(turn)
+            self._publish_status(
+                "orientation_viewpoint_turn_started",
+                probe_index=self.orientation_probe_count,
+                direction=self.orientation_probe_direction,
+                requested_turn_deg=turn,
+                baseline_cost=assessment.cost,
+                assessment=dict(self.orientation_last_assessment),
+                controller="measured_improvement_hill_climb",
+            )
+            self._send_turn(turn, "resilient_orientation_probe_turn")
+
+    def _restart_full_search(self, reason: str) -> None:
+        if self.base_active or self.arm_active:
+            return
+        self.filter.clear()
+        self.pending_detections.clear()
+        self.cached_stable_detection = None
+        self.latest_stable_detection = None
+        self.last_visual_wall_sec = 0.0
+        self.reobserve_not_before = 0.0
+        self._reset_orientation_recovery()
+        self._publish_status(
+            "recoverable_condition_restarting_full_search",
+            reason=reason,
+            terminal=False,
+        )
+        self._cancel_finder("restart_full_search")
+        self._start_resilient_search()
+
+    def _enter_recovery_hold(
+        self,
+        code: str,
+        reason: str,
+        *,
+        resume_mode: str,
+        **details: Any,
+    ) -> None:
+        self.state = "RUNNING"
+        self.phase = "recovery_hold"
+        self.recovery_hold_code = str(code)
+        self.recovery_hold_reason = str(reason)
+        self.recovery_resume_mode = str(resume_mode)
+        self.recovery_resume_at = time.monotonic() + max(
+            0.1, float(self.get_parameter("recoverable_retry_sec").value)
+        )
+        self.recovery_count += 1
+        self._publish_status(
+            "recoverable_condition_hold",
+            False,
+            error_code=code,
+            reason=reason,
+            terminal=False,
+            physical_motion="stationary",
+            resume_mode=resume_mode,
+            recovery_count=self.recovery_count,
+            **details,
+        )
+
+    def _resume_recovery_hold(self) -> None:
+        if self.phase != "recovery_hold":
+            return
+        if self.recovery_resume_mode == "manual":
+            # Keep the robot physically stationary and the action active.  A
+            # future LLM/UI can cancel, or the operator can correct the scene
+            # and issue a new command after canceling this one.
+            return
+        mode = self.recovery_resume_mode
+        reason = self.recovery_hold_reason
+        self.recovery_hold_code = ""
+        self.recovery_hold_reason = ""
+        self.recovery_resume_mode = ""
+        if mode == "align":
+            stable = self._stable_detection()
+            if stable is not None:
+                self.phase = "align"
+                self.cached_stable_detection = stable
+                return
+        self._restart_full_search(reason or "recoverable retry")
+
+    def _start_grasp_preflight(self) -> None:
+        assert self.profile is not None
+        if self.last_object_point is None:
+            self._restart_full_search("object point unavailable before grasp preflight")
+            return
+        if self._orientation_required() and self.latest_stable_detection is None:
+            self.phase = "align"
+            self._publish_status(
+                "grasp_preflight_waiting_for_orientation",
+                terminal=False,
+            )
+            return
+        self.phase = "grasp_preflight"
+        self.keyframe_command_id = f"stored-pick-preflight-{self.request_id}"
+        self.keyframe_preflight_only = True
+        self.arm_active = True
+        self.phase_deadline = time.monotonic() + max(
+            1.0,
+            float(self.get_parameter("arm_preflight_watchdog_sec").value),
+        )
+        payload = {
+            "action": "preflight",
+            "command_id": self.keyframe_command_id,
+            "profile": self.profile.grasp_keyframe_profile,
+            "object_name": self.object_name,
+            "object_point_base": list(self.last_object_point),
+        }
+        orientation = self._orientation_payload(self.latest_stable_detection)
+        if orientation:
+            payload["object_orientation"] = orientation
+        self._publish_json(self.keyframe_command_pub, payload)
+        self._publish_status(
+            "semantic_grasp_preflight_started",
+            grasp_keyframe_profile=self.profile.grasp_keyframe_profile,
+            align_only=not self.execute_pick,
+            object_orientation=orientation,
+        )
+
+    def _start_grasp(self) -> None:
+        assert self.profile is not None
+        if self.profile.grasp_executor != "keyframes":
+            super()._start_grasp()
+            return
+        if self.last_object_point is None:
+            self._restart_full_search("object point unavailable before grasp")
+            return
+        self.phase = "grasp"
+        self.keyframe_command_id = f"stored-pick-keyframes-{self.request_id}"
+        self.keyframe_preflight_only = False
+        self.arm_active = True
+        self.phase_deadline = time.monotonic() + max(
+            1.0,
+            float(self.get_parameter("arm_execution_watchdog_sec").value),
+        )
+        payload = {
+            "action": "play",
+            "command_id": self.keyframe_command_id,
+            "profile": self.profile.grasp_keyframe_profile,
+            "object_name": self.object_name,
+            "object_point_base": list(self.last_object_point),
+        }
+        orientation = self._orientation_payload(self.latest_stable_detection)
+        if orientation:
+            payload["object_orientation"] = orientation
+        self._publish_json(self.keyframe_command_pub, payload)
+        self._publish_status(
+            "semantic_grasp_started",
+            grasp_keyframe_profile=self.profile.grasp_keyframe_profile,
+            object_orientation=orientation,
+        )
+
     def _alignment_complete(self) -> None:
         if self.task_kind != "place":
             super()._alignment_complete()
@@ -1580,7 +2129,10 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         self.keyframe_command_id = f"stored-place-preflight-{self.request_id}"
         self.keyframe_preflight_only = True
         self.arm_active = True
-        self.phase_deadline = self.goal_deadline
+        self.phase_deadline = time.monotonic() + max(
+            1.0,
+            float(self.get_parameter("arm_preflight_watchdog_sec").value),
+        )
         self._publish_json(
             self.keyframe_command_pub,
             {
@@ -1604,7 +2156,10 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         self.keyframe_command_id = f"stored-place-keyframes-{self.request_id}"
         self.keyframe_preflight_only = False
         self.arm_active = True
-        self.phase_deadline = self.goal_deadline
+        self.phase_deadline = time.monotonic() + max(
+            1.0,
+            float(self.get_parameter("arm_execution_watchdog_sec").value),
+        )
         self._publish_json(
             self.keyframe_command_pub,
             {
@@ -1621,9 +2176,70 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         )
 
     def _keyframe_result_callback(self, msg: String) -> None:
-        if self.task_kind != "place":
-            super()._keyframe_result_callback(msg)
+        if self.task_kind == "place":
+            # Preserve the existing reverse-pick PLACE result contract.
+            if not self.keyframe_command_id or self.state in TERMINAL_STATES:
+                return
+            try:
+                payload = json.loads(msg.data)
+            except Exception:
+                return
+            if not isinstance(payload, dict):
+                return
+            if str(payload.get("command_id", "")) != self.keyframe_command_id:
+                return
+            event = str(payload.get("event", ""))
+            if self.state == "CANCEL_REQUESTED":
+                if event in {
+                    "grasp_keyframe_cancel_failed",
+                    "grasp_keyframe_place_failed",
+                }:
+                    self.cancel_terminal = "FAILED"
+                    self.cancel_error_code = "SAFE_STOP_UNCONFIRMED"
+                    self.cancel_details["keyframe_cancel_result"] = dict(payload)
+                if event in {
+                    "grasp_keyframe_place_cancelled",
+                    "grasp_keyframe_cancel_failed",
+                    "grasp_keyframe_place_failed",
+                    "grasp_keyframe_place_preflight_succeeded",
+                    "grasp_keyframe_place_preflight_failed",
+                    "grasp_keyframe_command_rejected",
+                }:
+                    self.cancel_wait_arm = False
+                    self.arm_active = False
+                    self.keyframe_command_id = ""
+                    self.keyframe_preflight_only = False
+                    self._try_finish_cancel()
+                return
+            if event == "grasp_keyframe_place_preflight_succeeded" and payload.get("ok") is True:
+                self.arm_active = False
+                self.keyframe_command_id = ""
+                self.keyframe_preflight_only = False
+                self.steps["place_preflight"] = dict(payload)
+                self._start_place_execution()
+                return
+            if event == "grasp_keyframe_place_completed" and payload.get("ok") is True:
+                self.arm_active = False
+                self.keyframe_command_id = ""
+                self.steps["place"] = dict(payload)
+                self._succeed()
+                return
+            if event in {
+                "grasp_keyframe_place_failed",
+                "grasp_keyframe_place_preflight_failed",
+                "grasp_keyframe_command_rejected",
+            } or payload.get("ok") is False:
+                self.arm_active = False
+                self.keyframe_command_id = ""
+                self.keyframe_preflight_only = False
+                self._enter_recovery_hold(
+                    "PLACE_PATH_NOT_READY",
+                    str(payload.get("reason", event or "semantic place failed")),
+                    resume_mode="manual",
+                    keyframe_result=payload,
+                )
             return
+
         if not self.keyframe_command_id or self.state in TERMINAL_STATES:
             return
         try:
@@ -1635,51 +2251,124 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         if str(payload.get("command_id", "")) != self.keyframe_command_id:
             return
         event = str(payload.get("event", ""))
+        reason = str(payload.get("reason", ""))
         if self.state == "CANCEL_REQUESTED":
-            if event in {
-                "grasp_keyframe_place_failed",
-                "grasp_keyframe_cancel_failed",
-            }:
-                self.cancel_terminal = "FAILED"
-                self.cancel_error_code = "SAFE_STOP_UNCONFIRMED"
-            if event in {
-                "grasp_keyframe_execution_cancelled",
-                "grasp_keyframe_place_failed",
-                "grasp_keyframe_cancel_failed",
-                "grasp_keyframe_place_preflight_succeeded",
-                "grasp_keyframe_place_preflight_failed",
-                "grasp_keyframe_command_rejected",
-            }:
-                self.cancel_wait_arm = False
-                self.arm_active = False
-                self.keyframe_command_id = ""
-                self._try_finish_cancel()
+            super()._keyframe_result_callback(msg)
             return
-        if event == "grasp_keyframe_place_preflight_succeeded" and payload.get("ok") is True:
+        if event == "grasp_keyframe_preflight_succeeded" and payload.get("ok") is True:
+            super()._keyframe_result_callback(msg)
+            return
+        if event == "grasp_keyframe_execution_completed" and payload.get("ok") is True:
+            super()._keyframe_result_callback(msg)
+            return
+
+        if event in {
+            "grasp_keyframe_preflight_failed",
+            "grasp_keyframe_command_rejected",
+        } or (payload.get("ok") is False and self.keyframe_preflight_only):
             self.arm_active = False
             self.keyframe_command_id = ""
             self.keyframe_preflight_only = False
-            self.steps["place_preflight"] = dict(payload)
-            self._start_place_execution()
-            return
-        if event == "grasp_keyframe_place_completed" and payload.get("ok") is True:
-            self.arm_active = False
-            self.keyframe_command_id = ""
-            self.steps["place"] = dict(payload)
-            self._succeed()
-            return
-        if event in {
-            "grasp_keyframe_place_preflight_failed",
-            "grasp_keyframe_place_failed",
-            "grasp_keyframe_command_rejected",
-        } or payload.get("ok") is False:
-            self.arm_active = False
-            self.keyframe_command_id = ""
-            self._fail(
-                "ARM_PATH_UNSAFE" if "preflight" in event else "PLACE_FAILED",
-                reason=event or "semantic place failed",
+            if reason in {
+                "object_orientation_unreliable",
+                "object_orientation_class_mismatch",
+                "object_orientation_angle_mismatch",
+            }:
+                self.phase = "align"
+                self.filter.clear()
+                self.latest_stable_detection = None
+                self._set_active_target(self.object_name)
+                if not self.finder_active:
+                    self._start_finder(
+                        max(
+                            60.0,
+                            float(
+                                self.get_parameter(
+                                    "finder_search_timeout_sec"
+                                ).value
+                            ),
+                        )
+                    )
+                self._publish_status(
+                    "grasp_preflight_returned_to_orientation_alignment",
+                    reason=reason,
+                    keyframe_result=payload,
+                )
+                return
+            self._enter_recovery_hold(
+                "GRASP_PREFLIGHT_NOT_READY",
+                reason or event or "semantic grasp preflight failed",
+                resume_mode="manual",
                 keyframe_result=payload,
             )
+            return
+
+        # A failure after physical keyframe execution started is a critical arm
+        # fault and remains terminal.
+        if event == "grasp_keyframe_execution_failed" or payload.get("ok") is False:
+            self.arm_active = False
+            self.keyframe_command_id = ""
+            self.keyframe_preflight_only = False
+            StoredObjectPickNode._fail(
+                self,
+                "ARM_EXECUTION_FAILED",
+                reason=reason or event or "semantic grasp execution failed",
+                keyframe_result=payload,
+            )
+
+    def _fail(self, error_code: str, *, reason: str, **details: Any) -> None:
+        # Registration/administrative commands retain normal finite failures.
+        if self.state == "CANCEL_REQUESTED":
+            return
+        if getattr(self, "mode", "").startswith("record") or self.state != "RUNNING":
+            StoredObjectPickNode._fail(
+                self, error_code, reason=reason, **details
+            )
+            return
+
+        critical_codes = {
+            "PICO_COMMUNICATION_ERROR",
+            "MOTION_EXECUTION_FAILED",
+            "POSE_ESTIMATE_UNRELIABLE",
+            "ROBOT_STATE_UNAVAILABLE",
+            "ARM_EXECUTION_FAILED",
+            "GRIPPER_EXECUTION_FAILED",
+            "SAFE_STOP_UNCONFIRMED",
+            "INTERNAL_ERROR",
+            "POWER_LOSS",
+            "WHEEL_SLIP",
+            "ENCODER_DIRECTION_ERROR",
+            "ESTOP",
+            "INVALID_ARGUMENT",
+            "RESOURCE_BUSY",
+            "GRASP_PROFILE_NOT_FOUND",
+            "POSITION_STORE_ERROR",
+        }
+        if error_code in critical_codes:
+            StoredObjectPickNode._fail(
+                self, error_code, reason=reason, **details
+            )
+            return
+        if error_code == "OBJECT_NOT_FOUND" and bool(
+            details.get("full_rotation_completed", False)
+        ):
+            StoredObjectPickNode._fail(
+                self, error_code, reason=reason, **details
+            )
+            return
+
+        if error_code in {"OBJECT_LOST", "OBJECT_NOT_FOUND", "PERCEPTION_UNAVAILABLE", "ALIGNMENT_TIMEOUT"}:
+            resume = "search"
+        elif error_code in {"TARGET_NOT_GRASPABLE", "SAFETY_BLOCKED"}:
+            resume = "align"
+        else:
+            resume = "manual"
+        self._enter_recovery_hold(
+            error_code,
+            reason,
+            resume_mode=resume,
+            **details,
+        )
 
     def _succeed(self) -> None:
         if self.object_memory is not None:
@@ -1759,13 +2448,16 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             self._publish_status(
                 "resilient_state_heartbeat",
                 active=self._is_busy(),
-                execution_policy="rotation_first_vision_led_replanning",
+                execution_policy=(
+                    "full_360_search_orientation_recovery_fresh_visual_motion"
+                ),
             )
 
-        # Preserve delayed detections buffered during a short base motion.
-        # The parent clears the stability filter at the end of align_settle;
-        # doing so would discard exactly the compensated result needed for
-        # motion-boundary replanning.
+        if self.phase == "recovery_hold" and self.state not in TERMINAL_STATES:
+            if time.monotonic() >= self.recovery_resume_at:
+                self._resume_recovery_hold()
+            return
+
         if (
             self.phase == "align_settle"
             and not self.base_active
@@ -1775,17 +2467,44 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             if now >= self.settle_until:
                 self.phase = "align"
             return
-        if (
-            self.task_kind == "place"
-            and self.phase in {"place_preflight", "place"}
-            and self.state not in TERMINAL_STATES
-            and self.goal_deadline > 0.0
-            and time.monotonic() >= self.goal_deadline
-        ):
-            self._request_cancel("PLACE action timeout", terminal="TIMED_OUT")
-            return
-        super()._timer_callback()
 
+        if (
+            self.phase in {"grasp_preflight", "place_preflight"}
+            and self.state not in TERMINAL_STATES
+            and self.arm_active
+            and time.monotonic() >= self.phase_deadline
+        ):
+            self._fail(
+                "ARM_EXECUTION_FAILED",
+                reason="semantic arm preflight response watchdog expired",
+                phase=self.phase,
+            )
+            return
+        if (
+            self.phase in {"grasp", "place"}
+            and self.state not in TERMINAL_STATES
+            and self.arm_active
+            and time.monotonic() >= self.phase_deadline
+        ):
+            self._fail(
+                "ARM_EXECUTION_FAILED",
+                reason="semantic arm execution watchdog expired",
+                phase=self.phase,
+            )
+            return
+
+        # Generic wall-clock expiration is not a terminal condition for active
+        # search/alignment.  Serious motion/communication and arm watchdogs are
+        # handled independently above and in the parent callbacks.
+        saved_goal_deadline = self.goal_deadline
+        if not bool(
+            self.get_parameter("terminal_overall_timeout_enabled").value
+        ):
+            self.goal_deadline = 0.0
+        try:
+            super()._timer_callback()
+        finally:
+            self.goal_deadline = saved_goal_deadline
 
 def main(args=None) -> None:
     rclpy.init(args=args)
