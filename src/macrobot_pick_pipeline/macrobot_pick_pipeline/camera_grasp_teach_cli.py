@@ -218,6 +218,8 @@ class CameraGraspTeachClient(Node):
         maximum_point_radius_m: float,
         minimum_orientation_quality: float,
         maximum_orientation_spread_deg: float,
+        orientation_mode: str = "auto",
+        minimum_3d_orientation_samples: int = 3,
     ) -> CameraTeachingReference:
         self._wait_for_subscriber(self.finder_goal_pub, timeout_sec=8.0)
         self.target_object = object_name
@@ -260,6 +262,8 @@ class CameraGraspTeachClient(Node):
                     maximum_center_std_px=20.0,
                     minimum_orientation_quality=minimum_orientation_quality,
                     maximum_orientation_spread_deg=maximum_orientation_spread_deg,
+                    orientation_mode=orientation_mode,
+                    minimum_3d_orientation_samples=minimum_3d_orientation_samples,
                 )
                 return reference
             except ValueError as error:
@@ -475,6 +479,22 @@ def _common_start_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--position-radius", type=float, default=0.008)
     parser.add_argument("--min-orientation-quality", type=float, default=0.45)
     parser.add_argument("--orientation-spread", type=float, default=8.0)
+    parser.add_argument(
+        "--orientation-mode",
+        choices=("auto", "3d", "2d"),
+        default="auto",
+        help=(
+            "auto prefers measured base_link 3-D yaw and falls back to a "
+            "consistent image-plane axis; 3d requires measured depth-axis "
+            "samples; 2d records only the image-plane axis"
+        ),
+    )
+    parser.add_argument(
+        "--min-3d-orientation-samples",
+        type=int,
+        default=3,
+        help="minimum measured depth-axis samples inside the teaching window",
+    )
     parser.add_argument("--timeout", type=float, default=120.0)
 
 
@@ -566,6 +586,8 @@ def _start_session(
         maximum_point_radius_m=float(args.position_radius),
         minimum_orientation_quality=float(args.min_orientation_quality),
         maximum_orientation_spread_deg=float(args.orientation_spread),
+        orientation_mode=str(args.orientation_mode),
+        minimum_3d_orientation_samples=max(1, int(args.min_3d_orientation_samples)),
     )
     lock_result = node.lock_reference(
         keyframe_profile=keyframe_profile,

@@ -56,6 +56,10 @@ class GraspKeyframeProfile:
     reference_orientation_deg: float = 0.0
     reference_orientation_class: str = "unknown"
     reference_orientation_quality: float = 0.0
+    reference_orientation_source: str = ""
+    reference_orientation_frame: str = ""
+    reference_orientation_semantics: str = ""
+    reference_orientation_axis_base: Optional[Vector3] = None
     recorded_at: str = ""
 
     def validate(self) -> None:
@@ -69,6 +73,15 @@ class GraspKeyframeProfile:
             stage.validate()
             if stage.name != name:
                 raise ValueError(f"stage mapping mismatch: {name} != {stage.name}")
+        # macrobot_3d_orientation_core_metadata_merge_v1
+        if self.reference_orientation_axis_base is not None:
+            axis = tuple(float(value) for value in self.reference_orientation_axis_base)
+            if len(axis) != 3 or not all(math.isfinite(value) for value in axis):
+                raise ValueError("reference_orientation_axis_base must be a finite 3-vector")
+            if math.sqrt(sum(value * value for value in axis)) <= 1e-9:
+                raise ValueError("reference_orientation_axis_base must be non-zero")
+            if self.reference_orientation_frame not in {"", "base_link"}:
+                raise ValueError("3-D keyframe orientation axis must be in base_link")
 
 
 @dataclass(frozen=True)

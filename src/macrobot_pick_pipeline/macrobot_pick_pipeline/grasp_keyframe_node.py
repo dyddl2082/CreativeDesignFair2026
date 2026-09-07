@@ -28,6 +28,12 @@ from .grasp_keyframe_core import (
 )
 from .grasp_keyframe_store import GraspKeyframeStore
 from .alignment_core import axial_orientation_error_deg
+from .orientation_control import assess_orientation
+from .orientation_domain import (
+    axis_from_mapping,
+    axis_mapping,
+    normalise_orientation_mapping,
+)
 from .planner import Q, Vector3
 
 
@@ -250,22 +256,9 @@ class GraspKeyframeNode(Node):
         if direct_point is not None:
             detection: dict[str, Any] = {}
             if isinstance(direct_orientation, Mapping):
-                try:
-                    angle = float(direct_orientation.get("angle_deg", 0.0) or 0.0)
-                    quality = float(direct_orientation.get("quality", 0.0) or 0.0)
-                    orientation_class = str(
-                        direct_orientation.get("class", "unknown")
-                    ).strip() or "unknown"
-                except (TypeError, ValueError):
-                    angle = 0.0
-                    quality = 0.0
-                    orientation_class = "unknown"
-                if math.isfinite(angle) and math.isfinite(quality):
-                    detection["orientation"] = {
-                        "angle_deg": angle % 180.0,
-                        "quality": max(0.0, min(1.0, quality)),
-                        "class": orientation_class,
-                    }
+                orientation = normalise_orientation_mapping(direct_orientation)
+                if orientation:
+                    detection["orientation"] = orientation
             return direct_point, detection
         payload = self.latest_detection
         if payload is None:
@@ -354,11 +347,7 @@ class GraspKeyframeNode(Node):
             "profile": str(reference.get("profile", "")),
             "object_name": str(reference.get("object_name", "")),
             "point_base": None if point is None else list(point),
-            "object_orientation": {
-                "angle_deg": float(orientation.get("angle_deg", 0.0) or 0.0),
-                "class": str(orientation.get("class", "unknown")),
-                "quality": float(orientation.get("quality", 0.0) or 0.0),
-            },
+            "object_orientation": normalise_orientation_mapping(orientation),
             "localization": {
                 "quality": float(localization.get("quality", 0.0) or 0.0),
                 "method": str(localization.get("method", "")),
@@ -679,13 +668,22 @@ class GraspKeyframeNode(Node):
             settle_sec=float(data.get("settle_sec", self.get_parameter("default_settle_sec").value)),
         )
         orientation = detection.get("orientation", {}) if isinstance(detection, dict) else {}
+        orientation = (
+            normalise_orientation_mapping(orientation)
+            if isinstance(orientation, Mapping)
+            else {}
+        )
         profile = self.store.upsert_stage(
             profile_name=profile_name,
             object_name=object_name,
             stage=stage,
-            orientation_deg=float(orientation.get("angle_deg", 0.0)) if isinstance(orientation, dict) else 0.0,
-            orientation_class=str(orientation.get("class", "unknown")) if isinstance(orientation, dict) else "unknown",
-            orientation_quality=float(orientation.get("quality", 0.0)) if isinstance(orientation, dict) else 0.0,
+            orientation_deg=float(orientation.get("angle_deg", 0.0) or 0.0),
+            orientation_class=str(orientation.get("class", "unknown")),
+            orientation_quality=float(orientation.get("quality", 0.0) or 0.0),
+            orientation_source=str(orientation.get("source", "")),
+            orientation_frame=str(orientation.get("coordinate_frame", "")),
+            orientation_semantics=str(orientation.get("semantics", "")),
+            orientation_axis_base=axis_from_mapping(orientation.get("axis_base")),
         )
         self._result(
             "grasp_keyframe_captured",
@@ -752,7 +750,17 @@ class GraspKeyframeNode(Node):
             0.0,
             min(1.0, float(profile.reference_orientation_quality)),
         )
-        reference_source = "grasp_keyframe_profile"
+        reference_source = (
+            str(profile.reference_orientation_source).strip()
+            or "grasp_keyframe_profile"
+        )
+        reference_coordinate_frame = str(
+            profile.reference_orientation_frame
+        ).strip()
+        reference_semantics = str(
+            profile.reference_orientation_semantics
+        ).strip()
+        reference_axis_base = profile.reference_orientation_axis_base
         if reference_orientation:
             try:
                 candidate_angle = float(
@@ -785,6 +793,15 @@ class GraspKeyframeNode(Node):
                         "source", "stored_alignment_profile"
                     )
                 )
+                reference_coordinate_frame = str(
+                    reference_orientation.get("coordinate_frame", "")
+                ).strip()
+                reference_semantics = str(
+                    reference_orientation.get("semantics", "")
+                ).strip()
+                reference_axis_base = axis_from_mapping(
+                    reference_orientation.get("axis_base")
+                )
 
         require_orientation_match = operation != "place" and (
             bool(self.get_parameter("require_orientation_match").value)
@@ -792,22 +809,41 @@ class GraspKeyframeNode(Node):
             >= float(self.get_parameter("auto_require_orientation_quality").value)
         )
         if require_orientation_match:
-            orientation = detection.get("orientation", {}) if isinstance(detection, dict) else {}
-            current_class = str(orientation.get("class", "unknown")) if isinstance(orientation, dict) else "unknown"
-            current_quality = float(orientation.get("quality", 0.0)) if isinstance(orientation, dict) else 0.0
-            current_angle = float(orientation.get("angle_deg", 0.0)) if isinstance(orientation, dict) else 0.0
-            if current_quality < float(self.get_parameter("minimum_orientation_quality").value):
-                raise ValueError("object_orientation_unreliable")
-            orientation_error = axial_orientation_error_deg(
-                current_angle, reference_angle
+            orientation = (
+                detection.get("orientation", {})
+                if isinstance(detection, dict)
+                else {}
             )
-            # The coarse horizontal/vertical/diagonal class can flip at a bin
-            # boundary even when the continuous axial angle is acceptable.
-            # Keep the class for diagnostics, but let the angle+tolerance be the
-            # authoritative grasp-orientation gate.
-            if orientation_error > float(
-                self.get_parameter("orientation_tolerance_deg").value
-            ):
+            if not isinstance(orientation, Mapping):
+                orientation = {}
+            current_quality = float(orientation.get("quality", 0.0) or 0.0)
+            current_angle = float(orientation.get("angle_deg", 0.0) or 0.0)
+            assessment = assess_orientation(
+                current_deg=current_angle,
+                current_quality=current_quality,
+                reference_deg=reference_angle,
+                minimum_quality=float(
+                    self.get_parameter("minimum_orientation_quality").value
+                ),
+                tolerance_deg=float(
+                    self.get_parameter("orientation_tolerance_deg").value
+                ),
+                current_axis_base=axis_from_mapping(
+                    orientation.get("axis_base")
+                ),
+                reference_axis_base=reference_axis_base,
+                current_coordinate_frame=str(
+                    orientation.get("coordinate_frame", "")
+                ),
+                reference_coordinate_frame=reference_coordinate_frame,
+                current_semantics=str(orientation.get("semantics", "")),
+                reference_semantics=reference_semantics,
+            )
+            if assessment.state == "quality_low":
+                if assessment.reason:
+                    raise ValueError(assessment.reason)
+                raise ValueError("object_orientation_unreliable")
+            if assessment.state == "angle_mismatch":
                 raise ValueError("object_orientation_angle_mismatch")
         if operation == "place":
             plan = build_semantic_place_plan(
@@ -877,6 +913,9 @@ class GraspKeyframeNode(Node):
                     "class": reference_class,
                     "quality": reference_quality,
                     "source": reference_source,
+                    "coordinate_frame": reference_coordinate_frame,
+                    "semantics": reference_semantics,
+                    "axis_base": axis_mapping(reference_axis_base),
                 },
                 steps=plan_mapping,
             )
@@ -898,6 +937,9 @@ class GraspKeyframeNode(Node):
                 "class": reference_class,
                 "quality": reference_quality,
                 "source": reference_source,
+                "coordinate_frame": reference_coordinate_frame,
+                "semantics": reference_semantics,
+                "axis_base": axis_mapping(reference_axis_base),
             },
             steps=plan_mapping,
         )

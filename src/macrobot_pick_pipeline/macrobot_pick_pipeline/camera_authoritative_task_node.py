@@ -33,6 +33,7 @@ from .alignment_core import (
     observation_constraint_decision,
 )
 from .orientation_control import OrientationAssessment
+from .orientation_domain import axis_from_mapping
 from .precision_docking import choose_precision_docking_action, precision_errors
 from .fast_visual_docking import (
     choose_fast_camera_docking_action,
@@ -116,7 +117,9 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
             "camera_allow_legacy_record_commands": False,
             "camera_profile_position_scope": "camera_relative",
             # fast_camera_docking_v1
-            "fast_docking_enabled": True,
+            # Keep the depth-assisted orientation path, but leave the unrelated
+            # coarse-to-fine speed controller disabled by default.
+            "fast_docking_enabled": False,
             "fast_coarse_move_chunk_m": 0.030,
             "fast_coarse_bearing_tolerance_deg": 4.0,
             "fast_emergency_bearing_tolerance_deg": 7.0,
@@ -325,6 +328,18 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
             orientation_class = str(
                 orientation.get("class", "unknown")
             ).strip() or "unknown"
+            orientation_source = str(
+                orientation.get("source", "")
+            ).strip()
+            orientation_frame = str(
+                orientation.get("coordinate_frame", "")
+            ).strip()
+            orientation_semantics = str(
+                orientation.get("semantics", "")
+            ).strip()
+            orientation_axis_base = axis_from_mapping(
+                orientation.get("axis_base")
+            )
             if not math.isfinite(angle) or not math.isfinite(quality):
                 raise ValueError("object orientation contains a non-finite value")
             minimum_quality = float(
@@ -373,6 +388,10 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
                 orientation_deg=angle,
                 orientation_class=orientation_class,
                 orientation_quality=quality,
+                orientation_source=orientation_source,
+                orientation_frame=orientation_frame,
+                orientation_semantics=orientation_semantics,
+                orientation_axis_base=orientation_axis_base,
                 require_orientation_match=True,
             )
             stored = replace(
@@ -666,14 +685,28 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
         return str(orientation.get("source", "")).strip()
 
     def _run_orientation_recovery(self, stable, assessment) -> None:
-        source = self._current_orientation_source()
+        # The direct correction is orientation-only.  It is independent of the
+        # optional fast docking controller and is allowed only when both the
+        # current observation and the recorded reference are measured 3-D axes
+        # expressed in the same base_link domain.
+        source = str(getattr(stable, "orientation_source", "")).strip()
+        compatible_3d = (
+            source == "depth_axis_3d"
+            and getattr(stable, "orientation_coordinate_frame", "") == "base_link"
+            and getattr(stable, "orientation_semantics", "") == "axial_yaw"
+            and getattr(stable, "orientation_axis_base", None) is not None
+            and self.orientation_reference_coordinate_frame == "base_link"
+            and self.orientation_reference_semantics == "axial_yaw"
+            and self.orientation_reference_axis_base is not None
+            and assessment.comparison_mode == "base_link_axis_3d"
+        )
         if (
             bool(
                 self.get_parameter(
                     "fast_direct_3d_orientation_enabled"
                 ).value
             )
-            and source == "depth_axis_3d"
+            and compatible_3d
             and assessment.state == "angle_mismatch"
         ):
             amount = direct_axis_turn_deg(

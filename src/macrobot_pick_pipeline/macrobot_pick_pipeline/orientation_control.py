@@ -16,6 +16,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+from typing import Optional, Sequence
+
+from .orientation_domain import signed_axial_axis_error_deg
 
 
 def signed_axial_error_deg(current_deg: float, reference_deg: float) -> float:
@@ -35,6 +38,8 @@ class OrientationAssessment:
     absolute_error_deg: float
     quality: float
     cost: float
+    reason: str = ""
+    comparison_mode: str = "scalar_axial_angle"
 
     @property
     def aligned(self) -> bool:
@@ -48,6 +53,12 @@ def assess_orientation(
     reference_deg: float,
     minimum_quality: float,
     tolerance_deg: float,
+    current_axis_base: Optional[Sequence[float]] = None,
+    reference_axis_base: Optional[Sequence[float]] = None,
+    current_coordinate_frame: str = "",
+    reference_coordinate_frame: str = "",
+    current_semantics: str = "",
+    reference_semantics: str = "",
 ) -> OrientationAssessment:
     """Classify one visual orientation observation and compute a hill-climb cost."""
 
@@ -61,7 +72,61 @@ def assess_orientation(
     if tolerance <= 0.0 or not math.isfinite(tolerance):
         raise ValueError("tolerance_deg must be positive and finite")
 
-    error = signed_axial_error_deg(current_deg, reference_deg)
+    current_frame = str(current_coordinate_frame).strip()
+    reference_frame = str(reference_coordinate_frame).strip()
+    current_kind = str(current_semantics).strip()
+    reference_kind = str(reference_semantics).strip()
+    domain_declared = bool(
+        current_frame or current_kind or reference_frame or reference_kind
+    )
+    domain_compatible = (
+        not domain_declared
+        or (
+            bool(current_frame)
+            and bool(current_kind)
+            and current_frame == reference_frame
+            and current_kind == reference_kind
+        )
+    )
+    if not domain_compatible:
+        quality = 0.0
+        error = 0.0
+        absolute = 0.0
+        cost = 2.0
+        return OrientationAssessment(
+            "quality_low",
+            error,
+            absolute,
+            quality,
+            cost,
+            reason=(
+                "orientation_domain_mismatch: "
+                f"current={current_frame or '?'}:{current_kind or '?'}, "
+                f"reference={reference_frame or '?'}:{reference_kind or '?'}"
+            ),
+            comparison_mode="incompatible",
+        )
+
+    use_axis = (
+        current_axis_base is not None
+        and reference_axis_base is not None
+        and current_frame == reference_frame == "base_link"
+        and current_kind == reference_kind == "axial_yaw"
+    )
+    if use_axis:
+        try:
+            error = signed_axial_axis_error_deg(
+                current_axis_base or (), reference_axis_base or ()
+            )
+            comparison_mode = "base_link_axis_3d"
+        except (TypeError, ValueError):
+            quality = 0.0
+            error = 0.0
+            comparison_mode = "invalid_3d_axis"
+    else:
+        error = signed_axial_error_deg(current_deg, reference_deg)
+        comparison_mode = "scalar_axial_angle"
+
     absolute = abs(error)
     quality = max(0.0, min(1.0, quality))
     quality_deficit = max(0.0, minimum - quality) / max(minimum, 1e-6)
@@ -73,7 +138,15 @@ def assess_orientation(
         state = "angle_mismatch"
     else:
         state = "aligned"
-    return OrientationAssessment(state, error, absolute, quality, cost)
+    return OrientationAssessment(
+        state,
+        error,
+        absolute,
+        quality,
+        cost,
+        reason="",
+        comparison_mode=comparison_mode,
+    )
 
 
 def choose_probe_direction(

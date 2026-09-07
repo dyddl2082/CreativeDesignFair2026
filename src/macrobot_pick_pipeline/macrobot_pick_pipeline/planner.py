@@ -10,6 +10,7 @@ from typing import Deque, Iterable, List, Optional, Sequence, Tuple
 from macrobot_arm_kinematics.model import IKSolution, MacRobotArmModel
 
 from .profiles import PickProfile, Q, Vector3
+from .orientation_domain import axial_yaw_deg, canonical_axis
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,10 @@ class DetectionSample:
     orientation_deg: float = 0.0
     orientation_class: str = "unknown"
     orientation_quality: float = 0.0
+    orientation_source: str = ""
+    orientation_coordinate_frame: str = ""
+    orientation_semantics: str = ""
+    orientation_axis_base: Optional[Vector3] = None
 
 
 @dataclass(frozen=True)
@@ -42,6 +47,10 @@ class StableDetection:
     orientation_deg: float = 0.0
     orientation_class: str = "unknown"
     orientation_quality: float = 0.0
+    orientation_source: str = ""
+    orientation_coordinate_frame: str = ""
+    orientation_semantics: str = ""
+    orientation_axis_base: Optional[Vector3] = None
 
 
 class StablePointFilter:
@@ -116,27 +125,87 @@ class StablePointFilter:
             item for item in eligible
             if item.orientation_quality > 0.0 and math.isfinite(item.orientation_deg)
         ]
+        orientation_source = ""
+        orientation_coordinate_frame = ""
+        orientation_semantics = ""
+        orientation_axis_base: Optional[Vector3] = None
         if orientation_usable:
+            # Do not average image-plane angles and base-frame 3-D yaw.  Prefer
+            # the measured depth-axis domain when it has enough samples;
+            # otherwise use the largest internally compatible domain.
+            groups: dict[tuple[str, str, str], list[DetectionSample]] = {}
+            for item in orientation_usable:
+                is_measured_3d = (
+                    item.orientation_source == "depth_axis_3d"
+                    and item.orientation_coordinate_frame == "base_link"
+                    and item.orientation_semantics == "axial_yaw"
+                    and item.orientation_axis_base is not None
+                )
+                domain = (
+                    item.orientation_coordinate_frame,
+                    item.orientation_semantics,
+                    "measured_3d" if is_measured_3d else "scalar",
+                )
+                groups.setdefault(domain, []).append(item)
+            preferred = [
+                values
+                for key, values in groups.items()
+                if key == ("base_link", "axial_yaw", "measured_3d")
+            ]
+            selected = max(
+                preferred or list(groups.values()),
+                key=lambda values: (len(values), values[-1].stamp_sec),
+            )
             raw_qualities = [
                 max(0.0, min(1.0, float(item.orientation_quality)))
-                for item in orientation_usable
+                for item in selected
             ]
             weights = [max(value, 1e-6) for value in raw_qualities]
+            three_d = all(
+                item.orientation_axis_base is not None
+                and item.orientation_source == "depth_axis_3d"
+                and item.orientation_coordinate_frame == "base_link"
+                and item.orientation_semantics == "axial_yaw"
+                for item in selected
+            )
+            if three_d:
+                anchor_item = max(
+                    selected, key=lambda item: item.orientation_quality
+                )
+                anchor = canonical_axis(
+                    anchor_item.orientation_axis_base or (1.0, 0.0, 0.0)
+                )
+                accumulated = [0.0, 0.0, 0.0]
+                for item, weight in zip(selected, weights):
+                    axis = canonical_axis(item.orientation_axis_base or anchor)
+                    if sum(a * b for a, b in zip(axis, anchor)) < 0.0:
+                        axis = tuple(-value for value in axis)
+                    for index in range(3):
+                        accumulated[index] += weight * axis[index]
+                orientation_axis_base = canonical_axis(accumulated)
+                orientation_deg = axial_yaw_deg(orientation_axis_base)
+            else:
+                axis_x = sum(
+                    weight * math.cos(math.radians(2.0 * item.orientation_deg))
+                    for item, weight in zip(selected, weights)
+                )
+                axis_y = sum(
+                    weight * math.sin(math.radians(2.0 * item.orientation_deg))
+                    for item, weight in zip(selected, weights)
+                )
+                orientation_deg = (
+                    0.5 * math.degrees(math.atan2(axis_y, axis_x))
+                ) % 180.0
+                orientation_axis_base = None
+
             axis_x = sum(
                 weight * math.cos(math.radians(2.0 * item.orientation_deg))
-                for item, weight in zip(orientation_usable, weights)
+                for item, weight in zip(selected, weights)
             )
             axis_y = sum(
                 weight * math.sin(math.radians(2.0 * item.orientation_deg))
-                for item, weight in zip(orientation_usable, weights)
+                for item, weight in zip(selected, weights)
             )
-            orientation_deg = (0.5 * math.degrees(math.atan2(axis_y, axis_x))) % 180.0
-
-            # The former implementation reported only angular coherence.  A
-            # set of mutually consistent but individually poor patch estimates
-            # therefore became quality=1.0 and could prematurely authorize a
-            # grasp.  Preserve both pieces of evidence: raw patch confidence and
-            # cross-frame axial agreement.
             coherence = min(
                 1.0,
                 math.hypot(axis_x, axis_y) / max(sum(weights), 1e-9),
@@ -149,6 +218,14 @@ class StablePointFilter:
                 orientation_class = "vertical"
             else:
                 orientation_class = "diagonal"
+            orientation_source = max(
+                sorted({item.orientation_source for item in selected}),
+                key=lambda value: sum(
+                    item.orientation_source == value for item in selected
+                ),
+            )
+            orientation_coordinate_frame = selected[-1].orientation_coordinate_frame
+            orientation_semantics = selected[-1].orientation_semantics
         else:
             orientation_deg = 0.0
             orientation_quality = 0.0
@@ -172,6 +249,10 @@ class StablePointFilter:
             orientation_deg=orientation_deg,
             orientation_class=orientation_class,
             orientation_quality=orientation_quality,
+            orientation_source=orientation_source,
+            orientation_coordinate_frame=orientation_coordinate_frame,
+            orientation_semantics=orientation_semantics,
+            orientation_axis_base=orientation_axis_base,
         )
 
 

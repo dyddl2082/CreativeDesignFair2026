@@ -30,6 +30,12 @@ def _vector3(value: Any, field: str) -> Vector3:
     return tuple(_finite_float(item, field) for item in items)  # type: ignore[return-value]
 
 
+def _optional_vector3(value: Any, field: str) -> Optional[Vector3]:
+    if value is None:
+        return None
+    return _vector3(value, field)
+
+
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -98,6 +104,10 @@ class AlignmentProfile:
     reference_orientation_deg: float = 0.0
     reference_orientation_class: str = "unknown"
     reference_orientation_quality: float = 0.0
+    reference_orientation_source: str = ""
+    reference_orientation_frame: str = ""
+    reference_orientation_semantics: str = ""
+    reference_orientation_axis_base: Optional[Vector3] = None
     minimum_orientation_quality: float = 0.25
     orientation_tolerance_deg: float = 25.0
 
@@ -135,6 +145,25 @@ class AlignmentProfile:
             "reference_orientation_class": str(
                 mapping.get("reference_orientation_class", base.reference_orientation_class)
             ).strip() or "unknown",
+            "reference_orientation_source": str(
+                mapping.get("reference_orientation_source", base.reference_orientation_source)
+            ).strip(),
+            "reference_orientation_frame": str(
+                mapping.get("reference_orientation_frame", base.reference_orientation_frame)
+            ).strip(),
+            "reference_orientation_semantics": str(
+                mapping.get(
+                    "reference_orientation_semantics",
+                    base.reference_orientation_semantics,
+                )
+            ).strip(),
+            "reference_orientation_axis_base": _optional_vector3(
+                mapping.get(
+                    "reference_orientation_axis_base",
+                    base.reference_orientation_axis_base,
+                ),
+                "reference_orientation_axis_base",
+            ),
         }
         float_fields = (
             "minimum_score",
@@ -214,6 +243,16 @@ class AlignmentProfile:
             "unknown", "horizontal", "vertical", "diagonal"
         }:
             raise ValueError("unsupported reference_orientation_class")
+        if self.reference_orientation_axis_base is not None:
+            axis = self.reference_orientation_axis_base
+            if not all(math.isfinite(float(value)) for value in axis):
+                raise ValueError("reference_orientation_axis_base must be finite")
+            if math.sqrt(sum(float(value) ** 2 for value in axis)) <= 1e-9:
+                raise ValueError("reference_orientation_axis_base must be non-zero")
+            if self.reference_orientation_frame not in {"", "base_link"}:
+                raise ValueError(
+                    "3-D orientation axis must be expressed in base_link"
+                )
 
     def with_reference(
         self,
@@ -224,6 +263,10 @@ class AlignmentProfile:
         orientation_deg: Optional[float] = None,
         orientation_class: Optional[str] = None,
         orientation_quality: Optional[float] = None,
+        orientation_source: Optional[str] = None,
+        orientation_frame: Optional[str] = None,
+        orientation_semantics: Optional[str] = None,
+        orientation_axis_base: Optional[Vector3] = None,
         require_orientation_match: Optional[bool] = None,
     ) -> "AlignmentProfile":
         result = replace(
@@ -246,6 +289,37 @@ class AlignmentProfile:
                 self.reference_orientation_quality
                 if orientation_quality is None
                 else float(orientation_quality)
+            ),
+            reference_orientation_source=(
+                self.reference_orientation_source
+                if orientation_source is None
+                else str(orientation_source).strip()
+            ),
+            reference_orientation_frame=(
+                self.reference_orientation_frame
+                if orientation_frame is None
+                else str(orientation_frame).strip()
+            ),
+            reference_orientation_semantics=(
+                self.reference_orientation_semantics
+                if orientation_semantics is None
+                else str(orientation_semantics).strip()
+            ),
+            reference_orientation_axis_base=(
+                tuple(float(value) for value in orientation_axis_base)
+                if orientation_axis_base is not None
+                else (
+                    None
+                    if any(
+                        value is not None
+                        for value in (
+                            orientation_source,
+                            orientation_frame,
+                            orientation_semantics,
+                        )
+                    )
+                    else self.reference_orientation_axis_base
+                )
             ),
             require_orientation_match=(
                 self.require_orientation_match
@@ -290,6 +364,18 @@ class AlignmentProfile:
             "reference_orientation_deg": self.reference_orientation_deg,
             "reference_orientation_class": self.reference_orientation_class,
             "reference_orientation_quality": self.reference_orientation_quality,
+            "reference_orientation_source": self.reference_orientation_source,
+            "reference_orientation_frame": self.reference_orientation_frame,
+            "reference_orientation_semantics": self.reference_orientation_semantics,
+            "reference_orientation_axis_base": (
+                None
+                if self.reference_orientation_axis_base is None
+                else {
+                    "x": self.reference_orientation_axis_base[0],
+                    "y": self.reference_orientation_axis_base[1],
+                    "z": self.reference_orientation_axis_base[2],
+                }
+            ),
             "minimum_orientation_quality": self.minimum_orientation_quality,
             "orientation_tolerance_deg": self.orientation_tolerance_deg,
         }

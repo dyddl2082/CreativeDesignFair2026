@@ -50,6 +50,7 @@ from .precision_docking import (
     choose_precision_docking_action,
     precision_errors,
 )
+from .orientation_domain import axis_from_mapping, axis_mapping
 from .planner import DetectionSample, StableDetection
 from .pose_history import PoseHistory
 from .runtime_epoch import RuntimeEpoch, read_host_boot_id
@@ -155,6 +156,9 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         self.orientation_reference_class = "unknown"
         self.orientation_reference_quality = 0.0
         self.orientation_reference_source = "unavailable"
+        self.orientation_reference_coordinate_frame = ""
+        self.orientation_reference_semantics = ""
+        self.orientation_reference_axis_base: Optional[Vector3] = None
         self.recovery_hold_reason = ""
         self.recovery_hold_code = ""
         self.recovery_resume_mode = ""
@@ -370,6 +374,9 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         self.orientation_reference_class = "unknown"
         self.orientation_reference_quality = 0.0
         self.orientation_reference_source = "unavailable"
+        self.orientation_reference_coordinate_frame = ""
+        self.orientation_reference_semantics = ""
+        self.orientation_reference_axis_base: Optional[Vector3] = None
         self.recovery_hold_reason = ""
         self.recovery_hold_code = ""
         self.recovery_resume_mode = ""
@@ -782,6 +789,16 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
                 orientation_deg=float(orientation.get("angle_deg", 0.0) or 0.0),
                 orientation_class=str(orientation.get("class", "unknown")),
                 orientation_quality=float(orientation.get("quality", 0.0) or 0.0),
+                orientation_source=str(orientation.get("source", "")),
+                orientation_coordinate_frame=str(
+                    orientation.get("coordinate_frame", "")
+                ),
+                orientation_semantics=str(orientation.get("semantics", "")),
+                orientation_axis_base=axis_from_mapping(
+                    (payload.get("orientation_3d", {}) or {}).get("axis_base")
+                    if isinstance(payload.get("orientation_3d", {}), Mapping)
+                    else orientation.get("axis_base")
+                ),
             )
         except (TypeError, ValueError):
             return False
@@ -1897,6 +1914,9 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         self.orientation_reference_class = "unknown"
         self.orientation_reference_quality = 0.0
         self.orientation_reference_source = "unavailable"
+        self.orientation_reference_coordinate_frame = ""
+        self.orientation_reference_semantics = ""
+        self.orientation_reference_axis_base = None
         if self.profile is None:
             return
 
@@ -1911,7 +1931,24 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             0.0,
             min(1.0, float(alignment.reference_orientation_quality)),
         )
-        self.orientation_reference_source = "stored_alignment_profile"
+        self.orientation_reference_source = (
+            str(alignment.reference_orientation_source).strip()
+            or "stored_alignment_profile"
+        )
+        self.orientation_reference_coordinate_frame = str(
+            alignment.reference_orientation_frame
+        ).strip()
+        self.orientation_reference_semantics = str(
+            alignment.reference_orientation_semantics
+        ).strip()
+        self.orientation_reference_axis_base = (
+            None
+            if alignment.reference_orientation_axis_base is None
+            else tuple(
+                float(value)
+                for value in alignment.reference_orientation_axis_base
+            )
+        )
 
         keyframe_name = str(self.profile.grasp_keyframe_profile).strip()
         if self.profile.grasp_executor != "keyframes" or not keyframe_name:
@@ -1937,9 +1974,21 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         # was measured from the exact chassis pose where the taught grasp works.
         # Use the keyframe capture only as a fallback when that close reference
         # is unavailable or too weak.
+        close_reference_has_domain = (
+            (
+                self.orientation_reference_coordinate_frame == "base_link"
+                and self.orientation_reference_semantics == "axial_yaw"
+                and self.orientation_reference_axis_base is not None
+            )
+            or (
+                self.orientation_reference_coordinate_frame == "camera_image"
+                and self.orientation_reference_semantics == "axial_angle"
+            )
+        )
         close_reference_is_reliable = (
             self.orientation_reference_quality >= minimum_reference_quality
             and self.orientation_reference_class != "unknown"
+            and close_reference_has_domain
         )
         if close_reference_is_reliable or quality < minimum_reference_quality:
             return
@@ -1951,7 +2000,24 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         )
         self.orientation_reference_quality = quality
         self.orientation_reference_source = (
-            f"grasp_keyframe_profile:{keyframe_name}"
+            str(keyframe_profile.reference_orientation_source).strip()
+            or f"grasp_keyframe_profile:{keyframe_name}"
+        )
+        self.orientation_reference_coordinate_frame = (
+            str(keyframe_profile.reference_orientation_frame).strip()
+            or "camera_image"
+        )
+        self.orientation_reference_semantics = (
+            str(keyframe_profile.reference_orientation_semantics).strip()
+            or "axial_angle"
+        )
+        self.orientation_reference_axis_base = (
+            None
+            if keyframe_profile.reference_orientation_axis_base is None
+            else tuple(
+                float(value)
+                for value in keyframe_profile.reference_orientation_axis_base
+            )
         )
 
     def _orientation_required(self) -> bool:
@@ -1999,22 +2065,35 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
             reference_deg=self.orientation_reference_deg,
             minimum_quality=minimum_quality,
             tolerance_deg=tolerance_deg,
+            current_axis_base=stable.orientation_axis_base,
+            reference_axis_base=self.orientation_reference_axis_base,
+            current_coordinate_frame=stable.orientation_coordinate_frame,
+            reference_coordinate_frame=self.orientation_reference_coordinate_frame,
+            current_semantics=stable.orientation_semantics,
+            reference_semantics=self.orientation_reference_semantics,
         )
 
     @staticmethod
     def _orientation_payload(stable: Optional[StableDetection]) -> Dict[str, Any]:
         if stable is None:
             return {}
-        return {
+        payload: Dict[str, Any] = {
             "angle_deg": float(stable.orientation_deg) % 180.0,
             "class": str(stable.orientation_class),
             "quality": max(0.0, min(1.0, float(stable.orientation_quality))),
+            "source": str(stable.orientation_source),
+            "coordinate_frame": str(stable.orientation_coordinate_frame),
+            "semantics": str(stable.orientation_semantics),
         }
+        mapped_axis = axis_mapping(stable.orientation_axis_base)
+        if mapped_axis is not None:
+            payload["axis_base"] = mapped_axis
+        return payload
 
     def _orientation_reference_payload(self) -> Dict[str, Any]:
         if self.orientation_reference_quality <= 0.0:
             return {}
-        return {
+        payload: Dict[str, Any] = {
             "angle_deg": float(self.orientation_reference_deg) % 180.0,
             "class": str(self.orientation_reference_class),
             "quality": max(
@@ -2022,7 +2101,15 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
                 min(1.0, float(self.orientation_reference_quality)),
             ),
             "source": str(self.orientation_reference_source),
+            "coordinate_frame": str(
+                self.orientation_reference_coordinate_frame
+            ),
+            "semantics": str(self.orientation_reference_semantics),
         }
+        mapped_axis = axis_mapping(self.orientation_reference_axis_base)
+        if mapped_axis is not None:
+            payload["axis_base"] = mapped_axis
+        return payload
 
     def _reset_orientation_recovery(self, *, keep_direction: bool = False) -> None:
         self.orientation_probe_stage = "idle"

@@ -173,7 +173,7 @@ macrobot_stored_object_pick:
     orientation_probe_fine_turn_deg: 1.0
     orientation_probe_fine_move_m: 0.01
     # Fast coarse-to-fine docking and depth-assisted 3-D orientation.
-    fast_docking_enabled: true
+    fast_docking_enabled: false
     fast_coarse_move_chunk_m: 0.03
     fast_coarse_bearing_tolerance_deg: 4.0
     fast_emergency_bearing_tolerance_deg: 7.0
@@ -191,7 +191,7 @@ macrobot_stored_object_pick:
     fast_coarse_settle_sec: 0.2
     fast_final_settle_sec: 0.35
     fast_reobserve_sec: 0.3
-    camera_max_turn_chunk_deg: 6.0
+    camera_max_turn_chunk_deg: 4.0
 macrobot_visible_pick_test:
   ros__parameters:
     detection_max_age_sec: 8.0

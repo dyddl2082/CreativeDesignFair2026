@@ -84,6 +84,12 @@ class GraspKeyframeStore:
                 reference_orientation_deg=float(raw.get("reference_orientation_deg", 0.0)),
                 reference_orientation_class=str(raw.get("reference_orientation_class", "unknown")),
                 reference_orientation_quality=float(raw.get("reference_orientation_quality", 0.0)),
+                reference_orientation_source=str(raw.get("reference_orientation_source", "")),
+                reference_orientation_frame=str(raw.get("reference_orientation_frame", "")),
+                reference_orientation_semantics=str(raw.get("reference_orientation_semantics", "")),
+                reference_orientation_axis_base=_vector3(
+                    raw.get("reference_orientation_axis_base")
+                ),
                 recorded_at=str(raw.get("recorded_at", "")),
             )
             # Draft profiles can be incomplete while the operator captures stages.
@@ -104,6 +110,10 @@ class GraspKeyframeStore:
         orientation_deg: float = 0.0,
         orientation_class: str = "unknown",
         orientation_quality: float = 0.0,
+        orientation_source: str = "",
+        orientation_frame: str = "",
+        orientation_semantics: str = "",
+        orientation_axis_base: Optional[tuple[float, float, float]] = None,
     ) -> GraspKeyframeProfile:
         key = self._key(profile_name)
         existing = self.profiles.get(key)
@@ -127,6 +137,30 @@ class GraspKeyframeStore:
                 existing.reference_orientation_quality
                 if existing and existing.reference_orientation_quality > 0.0
                 else float(orientation_quality)
+            ),
+            reference_orientation_source=(
+                existing.reference_orientation_source
+                if existing and existing.reference_orientation_quality > 0.0
+                else str(orientation_source).strip()
+            ),
+            reference_orientation_frame=(
+                existing.reference_orientation_frame
+                if existing and existing.reference_orientation_quality > 0.0
+                else str(orientation_frame).strip()
+            ),
+            reference_orientation_semantics=(
+                existing.reference_orientation_semantics
+                if existing and existing.reference_orientation_quality > 0.0
+                else str(orientation_semantics).strip()
+            ),
+            reference_orientation_axis_base=(
+                existing.reference_orientation_axis_base
+                if existing and existing.reference_orientation_quality > 0.0
+                else (
+                    None
+                    if orientation_axis_base is None
+                    else tuple(float(value) for value in orientation_axis_base)
+                )
             ),
             recorded_at=utc_now_iso(),
         )
@@ -161,6 +195,18 @@ class GraspKeyframeStore:
                 "reference_orientation_deg": profile.reference_orientation_deg,
                 "reference_orientation_class": profile.reference_orientation_class,
                 "reference_orientation_quality": profile.reference_orientation_quality,
+                "reference_orientation_source": profile.reference_orientation_source,
+                "reference_orientation_frame": profile.reference_orientation_frame,
+                "reference_orientation_semantics": profile.reference_orientation_semantics,
+                "reference_orientation_axis_base": (
+                    None
+                    if profile.reference_orientation_axis_base is None
+                    else {
+                        "x": profile.reference_orientation_axis_base[0],
+                        "y": profile.reference_orientation_axis_base[1],
+                        "z": profile.reference_orientation_axis_base[2],
+                    }
+                ),
                 "stages": stages,
             }
         return output
