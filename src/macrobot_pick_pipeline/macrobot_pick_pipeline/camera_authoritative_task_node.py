@@ -714,6 +714,7 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
                 ).value
             ),
         }
+    @staticmethod  # pose_relocation_plan_payload_binding_fix_v1
     def _pose_relocation_plan_payload(plan: RelocationPlan) -> Dict[str, Any]:
         return {
             "stage": plan.stage,
