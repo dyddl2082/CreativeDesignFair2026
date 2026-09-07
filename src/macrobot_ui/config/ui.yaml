@@ -1,0 +1,24 @@
+macrobot_ui:
+  ros__parameters:
+    env_file: ~/.config/macrobot_ui/.env
+    model: gpt-5.6
+    store_responses: false
+    tasks_dir: ~/MacRobot/data/ui/generated_tasks
+    run_result_dir: ~/MacRobot/data/ui/frontend_results
+    max_input_chars: 500
+    execution_controls_enabled: true
+    request_retry_period_ms: 750
+    request_ack_timeout_ms: 12000
+
+    task_request_topic: /macrobot/ui/task/request
+    task_status_topic: /macrobot/ui/task/status
+    task_result_topic: /macrobot/ui/task/result
+    stop_topic: /macrobot/ui/stop
+    backend_status_topic: /macrobot/ui/backend/status
+
+    stored_pick_status_topic: /macrobot/stored_pick/status
+    stored_pick_result_topic: /macrobot/stored_pick/result
+    finder_status_topic: /object_finder/status
+    localized_detection_topic: /macrobot/perception/localized_detection
+    arm_status_topic: /macrobot/arm/servo_bridge/status
+    pico_response_topic: /pico_debug/response

@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>macrobot_ui</name>
+  <version>0.3.0</version>
+  <description>Korean-safe PySide6 desktop UI with WSLg IBus support and Raspberry Pi execution backend for approved MacRobot LLM programs.</description>
+  <maintainer email="dyddl2082@snu.ac.kr">Kim Jinhyeong</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>python3-dotenv</exec_depend>
+  <exec_depend>macrobot_action_gateway</exec_depend>
+
+  <test_depend>ament_pytest</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

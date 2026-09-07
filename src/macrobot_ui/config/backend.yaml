@@ -1,0 +1,16 @@
+macrobot_ui_backend:
+  ros__parameters:
+    request_topic: /macrobot/ui/task/request
+    status_topic: /macrobot/ui/task/status
+    result_topic: /macrobot/ui/task/result
+    stop_topic: /macrobot/ui/stop
+    backend_status_topic: /macrobot/ui/backend/status
+
+    gateway_socket: /tmp/macrobot_action_gateway.sock
+    allow_execution: false
+    code_root: ~/MacRobot/data/ui/approved_tasks
+    run_log_root: ~/MacRobot/data/llm_runs
+    runner_wall_timeout_s: 300.0
+    max_code_bytes: 200000
+    request_cache_size: 64
+    heartbeat_period_s: 1.0
