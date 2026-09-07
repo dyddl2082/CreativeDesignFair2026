@@ -1,0 +1,128 @@
+{
+  "schema_version": 2,
+  "dataset": {
+    "role": "positive",
+    "label": "Rubber",
+    "target_object": "Rubber",
+    "reusable_for_all_targets": false,
+    "auto_negative_for_other_targets": true,
+    "requires_negative_sync": true
+  },
+  "object_name": "Rubber",
+  "target_object": "Rubber",
+  "view_label": "side",
+  "notes": "",
+  "session_id": "1287f75ba70d4aad",
+  "captured_local_iso": "2026-09-07T06:30:22.383-04:00",
+  "saved_local_iso": "2026-09-07T06:30:28.051-04:00",
+  "source": {
+    "camera_family": "Intel RealSense D435/D435f",
+    "color_topic": "/camera/camera/color/image_raw",
+    "depth_topic": "/camera/camera/aligned_depth_to_color/image_raw",
+    "color_stamp_ns": 1788777022273149170,
+    "color_frame_id": "camera_color_optical_frame",
+    "color_encoding": "rgb8",
+    "depth_stamp_ns": 1788777022273149170,
+    "depth_frame_id": "camera_color_optical_frame",
+    "depth_encoding": "16UC1",
+    "depth_sync_offset_sec": 0.0
+  },
+  "image": {
+    "original_width": 640,
+    "original_height": 480,
+    "crop_width": 143,
+    "crop_height": 296,
+    "crop_roi": {
+      "x": 353,
+      "y": 29,
+      "width": 143,
+      "height": 296
+    },
+    "jpeg_quality": 95
+  },
+  "depth": {
+    "available": true,
+    "valid_ratio": 0.4132016632016632,
+    "valid_count": 17490,
+    "median_m": 0.3360000252723694,
+    "near_m": 0.33000001311302185,
+    "far_m": 0.3440000116825104,
+    "min_m": 0.18800000846385956,
+    "max_m": 0.9530000686645508,
+    "saved": true,
+    "saved_unit": "millimeter_uint16_png",
+    "depth_roi": {
+      "x": 353,
+      "y": 29,
+      "width": 143,
+      "height": 296
+    }
+  },
+  "camera_info": {
+    "header": {
+      "stamp_ns": 1788777022273149170,
+      "frame_id": "camera_color_optical_frame"
+    },
+    "height": 480,
+    "width": 640,
+    "distortion_model": "plumb_bob",
+    "d": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "k": [
+      608.4835815429688,
+      0.0,
+      330.42254638671875,
+      0.0,
+      607.3209838867188,
+      248.2657012939453,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "r": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "p": [
+      608.4835815429688,
+      0.0,
+      330.42254638671875,
+      0.0,
+      0.0,
+      607.3209838867188,
+      248.2657012939453,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    "binning_x": 0,
+    "binning_y": 0,
+    "roi": {
+      "x_offset": 0,
+      "y_offset": 0,
+      "height": 0,
+      "width": 0,
+      "do_rectify": false
+    }
+  },
+  "files": {
+    "original": "/home/dyddl2082/MacRobot/data/objects/Rubber/20260907_063022_383_side_1287f7_original.jpg",
+    "crop": "/home/dyddl2082/MacRobot/data/curated/objects/Rubber/20260907_063022_383_side_1287f7.jpg",
+    "depth_crop": "/home/dyddl2082/MacRobot/data/curated/depth/Rubber/20260907_063022_383_side_1287f7_depth.png",
+    "metadata": "/home/dyddl2082/MacRobot/data/curated/metadata/Rubber/20260907_063022_383_side_1287f7.json"
+  }
+}
