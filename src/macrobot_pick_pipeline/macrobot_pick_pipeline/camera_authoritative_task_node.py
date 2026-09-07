@@ -152,7 +152,7 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
             "fast_orientation_engage_forward_m": 0.025,
             "fast_orientation_engage_lateral_m": 0.015,
             "fast_orientation_engage_bearing_deg": 3.0,
-            "fast_direct_3d_orientation_enabled": True,
+            "fast_direct_3d_orientation_enabled": False,
             "fast_direct_3d_turn_gain": 1.0,
             "fast_direct_3d_turn_max_deg": 6.0,
             "fast_direct_3d_turn_min_deg": 0.75,
@@ -1302,10 +1302,7 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
         return str(orientation.get("source", "")).strip()
 
     def _run_orientation_recovery(self, stable, assessment) -> None:
-        # The direct correction is orientation-only.  It is independent of the
-        # optional fast docking controller and is allowed only when both the
-        # current observation and the recorded reference are measured 3-D axes
-        # expressed in the same base_link domain.
+        # upright_orientation_pingpong_guard_v1
         source = str(getattr(stable, "orientation_source", "")).strip()
         current_semantics = str(
             getattr(stable, "orientation_semantics", "")
@@ -1313,6 +1310,33 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
         reference_semantics = str(
             self.orientation_reference_semantics
         ).strip()
+
+        # A face normal is a pose constraint, not an independent in-place yaw
+        # target.  Turning in place changes object bearing; the following
+        # bearing controller then commands the opposite turn.  Always use the
+        # inherited measured-improvement viewpoint sequence for upright faces:
+        # turn -> short translation -> re-centre -> fresh observation.
+        if current_semantics == "face_normal_yaw_mod_180":
+            self._publish_status(
+                "upright_orientation_viewpoint_recovery_selected",
+                orientation_state=assessment.state,
+                signed_axis_error_deg=assessment.signed_error_deg,
+                orientation_source=source,
+                orientation_probe_stage=getattr(
+                    self, "orientation_probe_stage", "idle"
+                ),
+                direct_in_place_turn_suppressed=True,
+                controller="turn_translate_recenter_with_direction_latch",
+                reason=(
+                    "in_place_face_normal_turn_would_be_undone_by_"
+                    "bearing_correction"
+                ),
+            )
+            super()._run_orientation_recovery(stable, assessment)
+            return
+
+        # Preserve the optional legacy direct correction only for compatible
+        # non-upright measured 3-D axes.  It remains disabled by default.
         compatible_3d = (
             is_measured_base_axis_orientation(
                 source=source,
@@ -1334,6 +1358,7 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
                 ).value
             )
             and compatible_3d
+            and current_semantics != "face_normal_yaw_mod_180"
             and assessment.state == "angle_mismatch"
         ):
             amount = direct_axis_turn_deg(
@@ -1360,10 +1385,11 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
                 requested_turn_deg=amount,
                 signed_axis_error_deg=assessment.signed_error_deg,
                 orientation_source=source,
-                controller="base_frame_upright_face_direct_correction",
+                controller="base_frame_long_axis_direct_correction",
             )
             self._send_turn(amount, "resilient_orientation_probe_turn")
             return
+
         super()._run_orientation_recovery(stable, assessment)
 
     def _send_move(self, physical_forward_positive_m: float, purpose: str) -> None:

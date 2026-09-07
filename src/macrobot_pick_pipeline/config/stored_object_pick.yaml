@@ -184,7 +184,7 @@ macrobot_stored_object_pick:
     fast_orientation_engage_forward_m: 0.025
     fast_orientation_engage_lateral_m: 0.015
     fast_orientation_engage_bearing_deg: 3.0
-    fast_direct_3d_orientation_enabled: true
+    fast_direct_3d_orientation_enabled: false
     fast_direct_3d_turn_gain: 1.0
     fast_direct_3d_turn_max_deg: 6.0
     fast_direct_3d_turn_min_deg: 0.75
