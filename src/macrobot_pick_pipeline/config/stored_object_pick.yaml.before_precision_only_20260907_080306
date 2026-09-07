@@ -127,7 +127,6 @@ macrobot_stored_object_pick:
     camera_motion_frame_guard_sec: 0.25
     camera_max_translation_chunk_m: 0.012
     camera_search_backoff_chunk_m: 0.02
-    camera_max_turn_chunk_deg: 4.0
     camera_search_turn_chunk_deg: 10.0
     camera_disable_location_memory: true
     camera_disable_distance_handoff: true
@@ -164,15 +163,35 @@ macrobot_stored_object_pick:
     precision_stability_window_sec: 2.5
     precision_stability_radius_m: 0.008
     precision_bearing_tolerance_deg: 1.0
-    precision_forward_tolerance_m: 0.005
-    precision_lateral_tolerance_m: 0.005
+    precision_forward_tolerance_m: 0.008
+    precision_lateral_tolerance_m: 0.008
     precision_turn_chunk_deg: 1.5
     precision_move_chunk_m: 0.012
     precision_confirmation_count: 3
     precision_orientation_min_quality: 0.45
-    precision_orientation_tolerance_deg: 4.0
+    precision_orientation_tolerance_deg: 8.0
     orientation_probe_fine_turn_deg: 1.0
     orientation_probe_fine_move_m: 0.01
+    # Fast coarse-to-fine docking and depth-assisted 3-D orientation.
+    fast_docking_enabled: true
+    fast_coarse_move_chunk_m: 0.03
+    fast_coarse_bearing_tolerance_deg: 4.0
+    fast_emergency_bearing_tolerance_deg: 7.0
+    fast_coarse_lateral_tolerance_m: 0.025
+    fast_coarse_turn_chunk_deg: 6.0
+    fast_final_forward_band_m: 0.035
+    fast_max_translation_streak: 3
+    fast_orientation_engage_forward_m: 0.025
+    fast_orientation_engage_lateral_m: 0.015
+    fast_orientation_engage_bearing_deg: 3.0
+    fast_direct_3d_orientation_enabled: true
+    fast_direct_3d_turn_gain: 1.0
+    fast_direct_3d_turn_max_deg: 6.0
+    fast_direct_3d_turn_min_deg: 0.75
+    fast_coarse_settle_sec: 0.2
+    fast_final_settle_sec: 0.35
+    fast_reobserve_sec: 0.3
+    camera_max_turn_chunk_deg: 6.0
 macrobot_visible_pick_test:
   ros__parameters:
     detection_max_age_sec: 8.0

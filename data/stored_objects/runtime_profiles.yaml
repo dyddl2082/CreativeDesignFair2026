@@ -1,5 +1,5 @@
 schema: macrobot.stored_object_runtime/v1
-updated_at: '2026-09-06T16:16:32.484016+00:00'
+updated_at: '2026-09-07T12:22:12.463309+00:00'
 profiles:
   Eraser:
     object_name: Eraser
@@ -7,6 +7,8 @@ profiles:
     recording_state: complete
     position_scope: camera_relative
     execution_authority: fresh_rgbd_localization
+    grasp_keyframe_profile: Eraser_r4
+    fixed_distance_gate_enabled: false
     search_pose_odom:
       x_m: 0.0
       y_m: 0.0
@@ -57,8 +59,7 @@ profiles:
         y: 0.05332260238741773
         z: 0.03884177121604897
       score: 0.871523380279541
-      minimum_range_m: 0.32
-      maximum_range_m: 1.2
+      fixed_range_gate_enabled: false
     grasp:
       executor: keyframes
       trajectory: ''
@@ -75,8 +76,6 @@ profiles:
       max_turn_deg: 180.0
     distance_handoff:
       enabled: false
-      graspable_min_range_m: 0.08
-      graspable_max_range_m: 0.3
       position_tolerance_m: 0.012
       angle_tolerance_deg: 2.0
       max_move_step_m: 0.1
@@ -89,6 +88,101 @@ profiles:
       turn_translation_drift_m_per_360: 0.0
       maximum_uncertainty_m: 0.001
       maximum_object_relocation_m: 1.0
+      fixed_range_gate_enabled: false
+    grasp_pose_odom:
+      x_m: 0.0
+      y_m: 0.0
+      yaw_deg: 0.0
+      reliable: false
+      pico_time_ms: null
+  Rubber:
+    object_name: Rubber
+    recorded_at: '2026-09-07T12:22:12.462704+00:00'
+    recording_state: complete
+    position_scope: camera_relative
+    execution_authority: fresh_rgbd_localization
+    grasp_keyframe_profile: Rubber_r4
+    fixed_distance_gate_enabled: false
+    search_pose_odom:
+      x_m: 0.0
+      y_m: 0.0
+      yaw_deg: 0.0
+      reliable: false
+      pico_time_ms: null
+    object_point_odom:
+      x: 0.0
+      y: 0.0
+      z: 0.04776365369130635
+    alignment:
+      object_name: Rubber
+      pick_profile: Rubber
+      frame_id: base_link
+      reference_point_base:
+        x: 0.20935000953674315
+        y: 0.055949685134722364
+        z: 0.04776365369130635
+      recorded_at: '2026-09-07T12:22:12.462611+00:00'
+      minimum_score: 0.0
+      stability_count: 5
+      stability_window_sec: 1.5
+      stability_radius_m: 0.012
+      bearing_tolerance_deg: 1.0
+      range_tolerance_m: 0.008
+      height_tolerance_m: 0.03
+      max_turn_step_deg: 4.0
+      max_move_step_m: 0.04
+      turn_speed: 150
+      move_speed: 80
+      motion_timeout_sec: 10.0
+      settle_sec: 0.45
+      max_iterations: 20
+      max_total_turn_deg: 120.0
+      max_total_move_m: 0.6
+      minimum_localization_quality: 0.15
+      maximum_depth_std_m: 0.035
+      maximum_center_std_px: 20.0
+      require_orientation_match: true
+      reference_orientation_deg: 92.1426814625828
+      reference_orientation_class: vertical
+      reference_orientation_quality: 0.593352656121914
+      minimum_orientation_quality: 0.45
+      orientation_tolerance_deg: 10.0
+    recognition:
+      point_base:
+        x: 0.20935000953674315
+        y: 0.055949685134722364
+        z: 0.04776365369130635
+      score: 0.8885495662689209
+      fixed_range_gate_enabled: false
+    grasp:
+      executor: keyframes
+      trajectory: ''
+      keyframe_profile: Rubber_r4
+      pick_profile: Rubber
+    search:
+      max_yaw_deg: 35.0
+      step_deg: 10.0
+      dwell_sec: 1.2
+    coarse_return:
+      position_tolerance_m: 0.02
+      angle_tolerance_deg: 3.0
+      max_move_m: 1.5
+      max_turn_deg: 180.0
+    distance_handoff:
+      enabled: false
+      position_tolerance_m: 0.012
+      angle_tolerance_deg: 2.0
+      max_move_step_m: 0.1
+      max_turn_step_deg: 4.0
+      max_iterations: 16
+      max_total_move_m: 0.8
+      max_total_turn_deg: 180.0
+      base_linear_error_fraction: 0.0
+      base_turn_error_fraction: 0.0
+      turn_translation_drift_m_per_360: 0.0
+      maximum_uncertainty_m: 0.001
+      maximum_object_relocation_m: 1.0
+      fixed_range_gate_enabled: false
     grasp_pose_odom:
       x_m: 0.0
       y_m: 0.0
