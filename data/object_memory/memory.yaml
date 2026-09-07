@@ -1,5 +1,5 @@
 schema: macrobot.object_memory/v2
-updated_at: '2026-09-07T10:20:12.874134+00:00'
+updated_at: '2026-09-07T12:24:21.099020+00:00'
 observations:
   Eraser:
     object_name: Eraser
@@ -26,11 +26,11 @@ observations:
     source: registration
 held_object:
   state: holding
-  object_name: Eraser
-  grasp_profile: Eraser_r4
-  updated_at: '2026-09-07T10:20:12.873900+00:00'
+  object_name: Rubber
+  grasp_profile: Rubber_r4
+  updated_at: '2026-09-07T12:24:21.098788+00:00'
   epoch:
     host_boot_id: dbca221a-e58a-4f9e-b949-d8e5b1aea7ff
     pico_boot_id: null
-    pico_time_ms: 597030
+    pico_time_ms: 8045299
   source: pick_result

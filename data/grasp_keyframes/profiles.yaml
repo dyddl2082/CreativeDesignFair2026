@@ -1,5 +1,5 @@
 schema: macrobot.grasp_keyframes/v2
-updated_at: '2026-09-06T16:16:32.420296+00:00'
+updated_at: '2026-09-07T12:22:04.895673+00:00'
 profiles:
   Eraser_r4:
     object_name: Eraser
@@ -75,4 +75,79 @@ profiles:
         - 0.10000000000000002
         - 1.484238380616707
         gripper_q: 1.484238380616707
+        settle_sec: 0.1
+  Rubber_r4:
+    object_name: Rubber
+    recorded_at: '2026-09-07T12:22:04.889283+00:00'
+    reference_orientation_deg: 92.1426814625828
+    reference_orientation_class: vertical
+    reference_orientation_quality: 0.593352656121914
+    stages:
+      OPEN:
+        representation: gripper_only
+        q:
+        - 0.0
+        - 0.0
+        - 0.0
+        object_offset: null
+        seed_q: null
+        gripper_q: 0.0
+        settle_sec: 0.1
+      PRE_GRASP:
+        representation: object_relative_cartesian
+        q:
+        - -0.5657607057462508
+        - 0.2
+        - 0.0
+        object_offset:
+        - -0.4663990874439607
+        - 0.007050335337157133
+        - 0.07775227425077576
+        seed_q:
+        - -0.5657607057462508
+        - 0.2
+        - 0.0
+        gripper_q: 0.0
+        settle_sec: 0.1
+      GRASP_OPEN:
+        representation: object_relative_cartesian
+        q:
+        - -0.5657607057462508
+        - 0.2
+        - 0.0
+        object_offset:
+        - -0.4663990874439607
+        - 0.007050335337157133
+        - 0.07775227425077576
+        seed_q:
+        - -0.5657607057462508
+        - 0.2
+        - 0.0
+        gripper_q: 0.0
+        settle_sec: 0.1
+      CLOSE:
+        representation: gripper_only
+        q:
+        - -0.5657607057462508
+        - 0.2
+        - 1.4921596167226285
+        object_offset: null
+        seed_q: null
+        gripper_q: 1.4921596167226285
+        settle_sec: 0.1
+      LIFT:
+        representation: object_relative_cartesian
+        q:
+        - 0.07578635903835236
+        - 0.10000000000000002
+        - 1.4921596167226285
+        object_offset:
+        - -0.3743834453172389
+        - 0.007050323714157931
+        - 0.21566527678219322
+        seed_q:
+        - 0.07578635903835236
+        - 0.10000000000000002
+        - 1.4921596167226285
+        gripper_q: 1.4921596167226285
         settle_sec: 0.1

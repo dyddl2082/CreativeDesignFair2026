@@ -163,13 +163,13 @@ macrobot_stored_object_pick:
     precision_stability_window_sec: 2.5
     precision_stability_radius_m: 0.008
     precision_bearing_tolerance_deg: 1.0
-    precision_forward_tolerance_m: 0.005
-    precision_lateral_tolerance_m: 0.005
+    precision_forward_tolerance_m: 0.008
+    precision_lateral_tolerance_m: 0.008
     precision_turn_chunk_deg: 1.5
     precision_move_chunk_m: 0.012
     precision_confirmation_count: 3
     precision_orientation_min_quality: 0.45
-    precision_orientation_tolerance_deg: 4.0
+    precision_orientation_tolerance_deg: 8.0
     orientation_probe_fine_turn_deg: 1.0
     orientation_probe_fine_move_m: 0.01
     # Fast coarse-to-fine docking and depth-assisted 3-D orientation.
