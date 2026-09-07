@@ -29,3 +29,4 @@ macrobot_grasp_keyframes:
     cancel_confirm_timeout_sec: 4.0
     default_settle_sec: 0.1
     timer_hz: 20.0
+    # macrobot_camera_reset_pose_relocation_v1

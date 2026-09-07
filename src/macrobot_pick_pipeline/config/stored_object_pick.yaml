@@ -192,6 +192,29 @@ macrobot_stored_object_pick:
     fast_final_settle_sec: 0.35
     fast_reobserve_sec: 0.3
     camera_max_turn_chunk_deg: 4.0
+    # macrobot_camera_reset_pose_relocation_v1
+    pose_relocation_enabled: true
+    pose_relocation_viewpoint_gain: 0.8
+    pose_relocation_range_gain: 0.85
+    pose_relocation_orbit_bearing_tolerance_deg: 5.0
+    pose_relocation_orbit_range_tolerance_m: 0.025
+    pose_relocation_orientation_reentry_deg: 6.0
+    pose_relocation_viewpoint_confirmation_count: 1
+    pose_relocation_max_viewpoint_translation_m: 0.12
+    pose_relocation_max_range_translation_m: 0.1
+    pose_relocation_max_turn_primitive_deg: 95.0
+    pose_relocation_minimum_object_range_m: 0.1
+    pose_relocation_allow_reverse: true
+    pose_relocation_reverse_turn_penalty_deg: 10.0
+    pose_relocation_min_turn_deg: 0.5
+    pose_relocation_min_move_m: 0.003
+    pose_relocation_settle_sec: 0.2
+    pose_relocation_reobserve_sec: 0.25
+    pose_relocation_clearance_heading_limit_deg: 20.0
+    pose_relocation_prefer_drive_rel: true
+    pose_relocation_max_drive_yaw_deg: 80.0
+    pose_relocation_min_drive_radius_m: 0.08
+    pose_relocation_drive_speed: 0
 macrobot_visible_pick_test:
   ros__parameters:
     detection_max_age_sec: 8.0
