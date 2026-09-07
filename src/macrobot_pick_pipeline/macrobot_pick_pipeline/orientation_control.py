@@ -18,7 +18,10 @@ from dataclasses import dataclass
 import math
 from typing import Optional, Sequence
 
-from .orientation_domain import signed_axial_axis_error_deg
+from .orientation_domain import (
+    BASE_AXIS_SEMANTICS,
+    signed_axial_axis_error_deg,
+)
 
 
 def signed_axial_error_deg(current_deg: float, reference_deg: float) -> float:
@@ -111,7 +114,8 @@ def assess_orientation(
         current_axis_base is not None
         and reference_axis_base is not None
         and current_frame == reference_frame == "base_link"
-        and current_kind == reference_kind == "axial_yaw"
+        and current_kind == reference_kind
+        and current_kind in BASE_AXIS_SEMANTICS
     )
     if use_axis:
         try:

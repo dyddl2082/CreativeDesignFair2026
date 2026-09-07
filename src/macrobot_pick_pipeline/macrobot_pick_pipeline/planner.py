@@ -10,7 +10,11 @@ from typing import Deque, Iterable, List, Optional, Sequence, Tuple
 from macrobot_arm_kinematics.model import IKSolution, MacRobotArmModel
 
 from .profiles import PickProfile, Q, Vector3
-from .orientation_domain import axial_yaw_deg, canonical_axis
+from .orientation_domain import (
+    axial_yaw_deg,
+    canonical_axis,
+    is_measured_base_axis_orientation,
+)
 
 
 @dataclass(frozen=True)
@@ -130,30 +134,40 @@ class StablePointFilter:
         orientation_semantics = ""
         orientation_axis_base: Optional[Vector3] = None
         if orientation_usable:
-            # Do not average image-plane angles and base-frame 3-D yaw.  Prefer
-            # the measured depth-axis domain when it has enough samples;
-            # otherwise use the largest internally compatible domain.
-            groups: dict[tuple[str, str, str], list[DetectionSample]] = {}
+            # Do not mix image-plane angles, old long-axis yaw and the
+            # upright-face normal domain.  Prefer the face-plane estimate used
+            # by all current vertically standing demonstration objects.
+            groups: dict[tuple[str, str, str, str], list[DetectionSample]] = {}
             for item in orientation_usable:
-                is_measured_3d = (
-                    item.orientation_source == "depth_axis_3d"
-                    and item.orientation_coordinate_frame == "base_link"
-                    and item.orientation_semantics == "axial_yaw"
-                    and item.orientation_axis_base is not None
+                measured_3d = is_measured_base_axis_orientation(
+                    source=item.orientation_source,
+                    coordinate_frame=item.orientation_coordinate_frame,
+                    semantics=item.orientation_semantics,
+                    axis=item.orientation_axis_base,
                 )
                 domain = (
+                    item.orientation_source,
                     item.orientation_coordinate_frame,
                     item.orientation_semantics,
-                    "measured_3d" if is_measured_3d else "scalar",
+                    "measured_3d" if measured_3d else "scalar",
                 )
                 groups.setdefault(domain, []).append(item)
-            preferred = [
+            upright_preferred = [
                 values
                 for key, values in groups.items()
-                if key == ("base_link", "axial_yaw", "measured_3d")
+                if key
+                == (
+                    "upright_face_plane_3d",
+                    "base_link",
+                    "face_normal_yaw_mod_180",
+                    "measured_3d",
+                )
+            ]
+            measured_preferred = [
+                values for key, values in groups.items() if key[3] == "measured_3d"
             ]
             selected = max(
-                preferred or list(groups.values()),
+                upright_preferred or measured_preferred or list(groups.values()),
                 key=lambda values: (len(values), values[-1].stamp_sec),
             )
             raw_qualities = [
@@ -162,10 +176,12 @@ class StablePointFilter:
             ]
             weights = [max(value, 1e-6) for value in raw_qualities]
             three_d = all(
-                item.orientation_axis_base is not None
-                and item.orientation_source == "depth_axis_3d"
-                and item.orientation_coordinate_frame == "base_link"
-                and item.orientation_semantics == "axial_yaw"
+                is_measured_base_axis_orientation(
+                    source=item.orientation_source,
+                    coordinate_frame=item.orientation_coordinate_frame,
+                    semantics=item.orientation_semantics,
+                    axis=item.orientation_axis_base,
+                )
                 for item in selected
             )
             if three_d:

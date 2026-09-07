@@ -19,10 +19,10 @@ from std_msgs.msg import String
 from tf2_ros import Buffer, TransformException, TransformListener
 
 from .depth_refinement_core import DepthEstimate, decode_depth_image, refine_depth_window
-from .depth_axis_3d import (
-    base_axis_orientation,
-    estimate_axis_3d,
+from .upright_face_3d import (
+    estimate_upright_face_orientation,
     orientation_class_from_yaw,
+    quaternion_rotation_matrix,
 )
 
 
@@ -111,6 +111,23 @@ class DetectionLocalizerNode(Node):
             "orientation_3d_minimum_horizontal_ratio": 0.30,
             "orientation_3d_allow_center_depth_fallback": True,
             "orientation_2d_fallback_quality_scale": 0.35,
+            # macrobot_upright_face_orientation_v1
+            "enable_upright_face_3d": True,
+            "upright_face_roi_inset_ratio": 0.10,
+            "upright_face_top_exclusion_ratio": 0.06,
+            "upright_face_bottom_exclusion_ratio": 0.18,
+            "upright_face_sample_stride_px": 2,
+            "upright_face_maximum_points": 1400,
+            "upright_face_depth_gate_m": 0.055,
+            "upright_face_minimum_points": 60,
+            "upright_face_ransac_iterations": 96,
+            "upright_face_inlier_threshold_m": 0.006,
+            "upright_face_minimum_inlier_ratio": 0.35,
+            "upright_face_maximum_abs_normal_z": 0.35,
+            "upright_face_maximum_median_residual_m": 0.006,
+            "upright_face_minimum_horizontal_span_m": 0.008,
+            "upright_face_minimum_vertical_span_m": 0.025,
+            "upright_face_maximum_center_plane_distance_m": 0.018,
         }
         for name, value in defaults.items():
             self.declare_parameter(name, value)
@@ -268,7 +285,7 @@ class DetectionLocalizerNode(Node):
         measurement_stamp_sec: Optional[float],
         source_frame: str,
     ) -> Dict[str, object]:
-        # fast_3d_axis_localizer_v1
+        # macrobot_upright_face_orientation_v1
         raw_orientation = details.get("orientation", {})
         orientation_2d = (
             dict(raw_orientation)
@@ -276,15 +293,23 @@ class DetectionLocalizerNode(Node):
             else {}
         )
         try:
-            angle_2d = float(orientation_2d.get("angle_deg", 0.0) or 0.0) % 180.0
+            angle_2d = float(
+                orientation_2d.get("angle_deg", 0.0) or 0.0
+            ) % 180.0
             quality_2d = max(
                 0.0,
-                min(1.0, float(orientation_2d.get("quality", 0.0) or 0.0)),
+                min(
+                    1.0,
+                    float(orientation_2d.get("quality", 0.0) or 0.0),
+                ),
             )
         except (TypeError, ValueError):
             angle_2d = 0.0
             quality_2d = 0.0
-        class_2d = str(orientation_2d.get("class", "unknown")).strip() or "unknown"
+        class_2d = (
+            str(orientation_2d.get("class", "unknown")).strip()
+            or "unknown"
+        )
         orientation_2d = {
             "angle_deg": angle_2d,
             "class": class_2d,
@@ -294,7 +319,10 @@ class DetectionLocalizerNode(Node):
             "semantics": "axial_angle",
         }
 
-        def low_authority_2d(reason: str) -> Dict[str, object]:
+        def low_authority_2d(
+            reason: str,
+            diagnostic: Optional[Mapping[str, object]] = None,
+        ) -> Dict[str, object]:
             scale = max(
                 0.0,
                 min(
@@ -309,20 +337,31 @@ class DetectionLocalizerNode(Node):
             selected = dict(orientation_2d)
             selected["quality"] = quality_2d * scale
             selected["reason"] = reason
+            orientation_3d: Dict[str, object] = {
+                "available": False,
+                "source": "upright_face_plane_3d",
+                "coordinate_frame": self.base_frame,
+                "semantics": "face_normal_yaw_mod_180",
+                "reason": reason,
+            }
+            if diagnostic:
+                orientation_3d.update(dict(diagnostic))
             return {
                 "orientation": selected,
                 "orientation_2d": orientation_2d,
-                "orientation_3d": {
-                    "available": False,
-                    "reason": reason,
-                },
+                "orientation_3d": orientation_3d,
             }
 
         if not bool(self.get_parameter("enable_depth_axis_3d").value):
-            return low_authority_2d("depth_axis_3d_disabled")
+            return low_authority_2d("orientation_3d_disabled")
+        if not bool(self.get_parameter("enable_upright_face_3d").value):
+            return low_authority_2d("upright_face_3d_disabled")
+
         info = self.camera_info
         if info is None or len(info.k) < 9:
-            return low_authority_2d("camera_info_unavailable_for_3d_axis")
+            return low_authority_2d(
+                "camera_info_unavailable_for_upright_face"
+            )
 
         roi_raw = details.get("roi", {})
         roi = roi_raw if isinstance(roi_raw, Mapping) else {}
@@ -342,62 +381,15 @@ class DetectionLocalizerNode(Node):
 
         depth_frame = self._nearest_depth_frame(measurement_stamp_sec)
         if depth_frame is None:
-            depth_frame = np.zeros((image_height, image_width), dtype=np.float32)
+            return low_authority_2d(
+                "aligned_depth_frame_unavailable_for_upright_face"
+            )
 
-        estimate = estimate_axis_3d(
-            depth_m=depth_frame,
-            center_x=u,
-            center_y=v,
-            center_depth_m=center_depth_m,
-            roi_xywh=(x, y, width, height),
-            orientation_2d_deg=angle_2d,
-            orientation_2d_quality=quality_2d,
-            fx=float(info.k[0]),
-            fy=float(info.k[4]),
-            cx=float(info.k[2]),
-            cy=float(info.k[5]),
-            sample_count=int(
-                self.get_parameter("orientation_3d_sample_count").value
-            ),
-            minor_track_count=int(
-                self.get_parameter("orientation_3d_minor_track_count").value
-            ),
-            strip_half_width_ratio=float(
-                self.get_parameter(
-                    "orientation_3d_strip_half_width_ratio"
-                ).value
-            ),
-            window_radius_px=int(
-                self.get_parameter("orientation_3d_window_radius_px").value
-            ),
-            minimum_valid_samples=int(
-                self.get_parameter(
-                    "orientation_3d_minimum_valid_samples"
-                ).value
-            ),
-            depth_gate_m=float(
-                self.get_parameter("orientation_3d_depth_gate_m").value
-            ),
-            minimum_depth_m=self.minimum_depth,
-            maximum_depth_m=self.maximum_depth,
-            minimum_span_m=float(
-                self.get_parameter("orientation_3d_minimum_span_m").value
-            ),
-            maximum_residual_m=float(
-                self.get_parameter(
-                    "orientation_3d_maximum_residual_m"
-                ).value
-            ),
-            allow_center_depth_fallback=bool(
-                self.get_parameter(
-                    "orientation_3d_allow_center_depth_fallback"
-                ).value
-            ),
+        frame = (
+            source_frame
+            or self.optical_frame_override
+            or info.header.frame_id
         )
-        if not estimate.available:
-            return low_authority_2d(estimate.reason or "depth_axis_fit_unavailable")
-
-        frame = source_frame or self.optical_frame_override or info.header.frame_id
         try:
             transform = self.tf_buffer.lookup_transform(
                 self.base_frame,
@@ -405,36 +397,136 @@ class DetectionLocalizerNode(Node):
                 Time(),
                 timeout=Duration(seconds=self.tf_timeout),
             )
-            axis_base = rotate_vector_by_quaternion(
-                estimate.axis_optical,
-                transform.transform.rotation,
+            quaternion = transform.transform.rotation
+            optical_to_base = quaternion_rotation_matrix(
+                float(quaternion.x),
+                float(quaternion.y),
+                float(quaternion.z),
+                float(quaternion.w),
             )
-        except TransformException as error:
-            return low_authority_2d(f"orientation_axis_tf_unavailable: {error}")
+        except (TransformException, TypeError, ValueError) as error:
+            return low_authority_2d(
+                f"orientation_face_tf_unavailable: {error}"
+            )
 
-        base_orientation = base_axis_orientation(
-            axis_base,
-            quality=estimate.quality,
-            source=estimate.source,
-            minimum_horizontal_ratio=float(
+        estimate = estimate_upright_face_orientation(
+            depth_m=depth_frame,
+            center_x=u,
+            center_y=v,
+            center_depth_m=center_depth_m,
+            roi_xywh=(x, y, width, height),
+            fx=float(info.k[0]),
+            fy=float(info.k[4]),
+            cx=float(info.k[2]),
+            cy=float(info.k[5]),
+            optical_to_base_rotation=optical_to_base,
+            roi_inset_ratio=float(
+                self.get_parameter("upright_face_roi_inset_ratio").value
+            ),
+            top_exclusion_ratio=float(
                 self.get_parameter(
-                    "orientation_3d_minimum_horizontal_ratio"
+                    "upright_face_top_exclusion_ratio"
+                ).value
+            ),
+            bottom_exclusion_ratio=float(
+                self.get_parameter(
+                    "upright_face_bottom_exclusion_ratio"
+                ).value
+            ),
+            sample_stride_px=int(
+                self.get_parameter("upright_face_sample_stride_px").value
+            ),
+            maximum_points=int(
+                self.get_parameter("upright_face_maximum_points").value
+            ),
+            depth_gate_m=float(
+                self.get_parameter("upright_face_depth_gate_m").value
+            ),
+            minimum_depth_m=self.minimum_depth,
+            maximum_depth_m=self.maximum_depth,
+            minimum_points=int(
+                self.get_parameter("upright_face_minimum_points").value
+            ),
+            ransac_iterations=int(
+                self.get_parameter("upright_face_ransac_iterations").value
+            ),
+            inlier_threshold_m=float(
+                self.get_parameter(
+                    "upright_face_inlier_threshold_m"
+                ).value
+            ),
+            minimum_inlier_ratio=float(
+                self.get_parameter(
+                    "upright_face_minimum_inlier_ratio"
+                ).value
+            ),
+            maximum_abs_normal_z=float(
+                self.get_parameter(
+                    "upright_face_maximum_abs_normal_z"
+                ).value
+            ),
+            maximum_median_residual_m=float(
+                self.get_parameter(
+                    "upright_face_maximum_median_residual_m"
+                ).value
+            ),
+            minimum_horizontal_span_m=float(
+                self.get_parameter(
+                    "upright_face_minimum_horizontal_span_m"
+                ).value
+            ),
+            minimum_vertical_span_m=float(
+                self.get_parameter(
+                    "upright_face_minimum_vertical_span_m"
+                ).value
+            ),
+            maximum_center_plane_distance_m=float(
+                self.get_parameter(
+                    "upright_face_maximum_center_plane_distance_m"
                 ).value
             ),
         )
-        if not base_orientation.available:
+
+        diagnostic = {
+            "sample_count": estimate.sample_count,
+            "measured_sample_count": estimate.sample_count,
+            "measured_fraction": (
+                1.0 if estimate.sample_count > 0 else 0.0
+            ),
+            "inlier_count": estimate.inlier_count,
+            "inlier_fraction": estimate.inlier_fraction,
+            "median_residual_m": estimate.median_residual_m,
+            "planarity": estimate.planarity,
+            "linearity": estimate.planarity,
+            "horizontal_span_m": estimate.horizontal_span_m,
+            "vertical_span_m": estimate.vertical_span_m,
+            "span_m": max(
+                estimate.horizontal_span_m,
+                estimate.vertical_span_m,
+            ),
+            "horizontal_ratio": 1.0 if estimate.available else 0.0,
+            "center_plane_distance_m": estimate.center_plane_distance_m,
+            "upright_assumption": True,
+        }
+        if not estimate.available:
             return low_authority_2d(
-                base_orientation.reason or "base_axis_orientation_unavailable"
+                estimate.reason or "upright_face_plane_unavailable",
+                diagnostic,
             )
 
+        normal = estimate.normal_base
         selected = {
-            "angle_deg": base_orientation.yaw_deg,
-            "class": orientation_class_from_yaw(base_orientation.yaw_deg),
-            "quality": base_orientation.quality,
-            "source": base_orientation.source,
+            "angle_deg": estimate.yaw_deg,
+            "class": orientation_class_from_yaw(estimate.yaw_deg),
+            "quality": estimate.quality,
+            "source": estimate.source,
             "coordinate_frame": self.base_frame,
-            "semantics": "axial_yaw",
-            "elevation_deg": base_orientation.elevation_deg,
+            "semantics": "face_normal_yaw_mod_180",
+            "axis_base": {
+                "x": normal[0],
+                "y": normal[1],
+                "z": normal[2],
+            },
         }
         return {
             "orientation": selected,
@@ -442,18 +534,7 @@ class DetectionLocalizerNode(Node):
             "orientation_3d": {
                 "available": True,
                 **selected,
-                "axis_base": {
-                    "x": base_orientation.axis_base[0],
-                    "y": base_orientation.axis_base[1],
-                    "z": base_orientation.axis_base[2],
-                },
-                "sample_count": estimate.sample_count,
-                "measured_sample_count": estimate.measured_sample_count,
-                "measured_fraction": estimate.measured_fraction,
-                "span_m": estimate.span_m,
-                "median_residual_m": estimate.median_residual_m,
-                "linearity": estimate.linearity,
-                "horizontal_ratio": base_orientation.horizontal_ratio,
+                **diagnostic,
             },
         }
 

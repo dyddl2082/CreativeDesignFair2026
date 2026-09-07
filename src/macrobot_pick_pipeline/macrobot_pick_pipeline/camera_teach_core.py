@@ -19,6 +19,7 @@ from .orientation_domain import (
     axis_mapping,
     axial_yaw_deg,
     canonical_axis,
+    is_measured_base_axis_orientation,
 )
 
 
@@ -302,41 +303,71 @@ def _choose_orientation_samples(
     if mode not in {"auto", "3d", "2d"}:
         raise ValueError("orientation_mode must be auto, 3d, or 2d")
 
-    three_d = [
-        sample
-        for sample in window
-        if sample.orientation_3d_available
-        and sample.orientation_source == "depth_axis_3d"
-        and sample.orientation_coordinate_frame == "base_link"
-        and sample.orientation_semantics == "axial_yaw"
-        and sample.orientation_axis_base is not None
-        and sample.orientation_quality >= float(minimum_orientation_quality)
+    # Keep each measured 3-D domain separate.  In particular, an old
+    # long-axis profile must never be averaged with the upright-face normal
+    # introduced for vertically standing objects.
+    three_d_groups: dict[tuple[str, str, str], list[CameraReferenceSample]] = {}
+    for sample in window:
+        if (
+            sample.orientation_quality >= float(minimum_orientation_quality)
+            and is_measured_base_axis_orientation(
+                source=sample.orientation_source,
+                coordinate_frame=sample.orientation_coordinate_frame,
+                semantics=sample.orientation_semantics,
+                axis=sample.orientation_axis_base,
+            )
+        ):
+            key = (
+                sample.orientation_source,
+                sample.orientation_coordinate_frame,
+                sample.orientation_semantics,
+            )
+            three_d_groups.setdefault(key, []).append(sample)
+
+    required_3d = max(1, int(minimum_3d_count))
+    eligible_3d = [
+        (key, samples)
+        for key, samples in three_d_groups.items()
+        if len(samples) >= required_3d
     ]
+    if mode in {"auto", "3d"} and eligible_3d:
+        # All demonstration objects are upright, so prefer the visible-face
+        # plane domain.  Fall back to the old depth-axis domain only for
+        # compatibility with previously recorded data.
+        _, selected = max(
+            eligible_3d,
+            key=lambda item: (
+                item[0][0] == "upright_face_plane_3d",
+                len(item[1]),
+                item[1][-1].published_stamp_sec,
+            ),
+        )
+        return selected, "3d"
+    if mode == "3d":
+        counts = {
+            f"{source}:{frame}:{semantics}": len(samples)
+            for (source, frame, semantics), samples in three_d_groups.items()
+        }
+        raise ValueError(
+            "not_enough_3d_orientation_samples: "
+            f"domains={counts} required={required_3d}"
+        )
+
     # Every localized payload keeps the raw image-axis estimate separately.
-    # It may therefore be used as an explicit/automatic fallback even when the
-    # selected per-frame orientation is a valid 3-D depth axis.  The values are
-    # still aggregated in a separate domain and are never mixed numerically.
+    # It remains an explicit auto/2-D fallback and is never mixed with 3-D.
     two_d = [
         sample
         for sample in window
         if _two_d_class(sample) != "unknown"
         and _two_d_quality(sample) >= float(minimum_orientation_quality)
     ]
-
-    required_3d = max(1, int(minimum_3d_count))
     required_2d = max(1, int(minimum_2d_count))
-    if mode in {"auto", "3d"} and len(three_d) >= required_3d:
-        return three_d, "3d"
-    if mode == "3d":
-        raise ValueError(
-            "not_enough_3d_orientation_samples: "
-            f"accepted={len(three_d)} required={required_3d}"
-        )
     if len(two_d) >= required_2d:
         return two_d, "2d"
     raise ValueError(
         "not_enough_orientation_samples: "
-        f"3d={len(three_d)}/{required_3d}, 2d={len(two_d)}/{required_2d}"
+        f"3d_domains={{{', '.join(f'{key!r}: {len(value)}' for key, value in three_d_groups.items())}}}, "
+        f"2d={len(two_d)}/{required_2d}"
     )
 
 
@@ -389,9 +420,9 @@ def aggregate_camera_reference(
     if selected_mode == "3d":
         axis, angle = _aggregate_axis(orientation_samples)
         raw_qualities = [sample.orientation_quality for sample in orientation_samples]
-        source = "depth_axis_3d"
-        coordinate_frame = "base_link"
-        semantics = "axial_yaw"
+        source = orientation_samples[-1].orientation_source
+        coordinate_frame = orientation_samples[-1].orientation_coordinate_frame
+        semantics = orientation_samples[-1].orientation_semantics
         classes = [_orientation_class(sample.orientation_deg) for sample in orientation_samples]
         sample_angles = [sample.orientation_deg for sample in orientation_samples]
     else:

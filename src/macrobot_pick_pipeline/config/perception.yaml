@@ -40,3 +40,20 @@ macrobot_detection_localizer:
     orientation_3d_minimum_horizontal_ratio: 0.3
     orientation_3d_allow_center_depth_fallback: true
     orientation_2d_fallback_quality_scale: 0.35
+    # Upright-object face-normal estimator.
+    enable_upright_face_3d: true
+    upright_face_roi_inset_ratio: 0.1
+    upright_face_top_exclusion_ratio: 0.06
+    upright_face_bottom_exclusion_ratio: 0.18
+    upright_face_sample_stride_px: 2
+    upright_face_maximum_points: 1400
+    upright_face_depth_gate_m: 0.055
+    upright_face_minimum_points: 60
+    upright_face_ransac_iterations: 96
+    upright_face_inlier_threshold_m: 0.006
+    upright_face_minimum_inlier_ratio: 0.35
+    upright_face_maximum_abs_normal_z: 0.35
+    upright_face_maximum_median_residual_m: 0.006
+    upright_face_minimum_horizontal_span_m: 0.008
+    upright_face_minimum_vertical_span_m: 0.025
+    upright_face_maximum_center_plane_distance_m: 0.018

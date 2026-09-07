@@ -33,7 +33,10 @@ from .alignment_core import (
     observation_constraint_decision,
 )
 from .orientation_control import OrientationAssessment
-from .orientation_domain import axis_from_mapping
+from .orientation_domain import (
+    axis_from_mapping,
+    is_measured_base_axis_orientation,
+)
 from .precision_docking import choose_precision_docking_action, precision_errors
 from .fast_visual_docking import (
     choose_fast_camera_docking_action,
@@ -690,14 +693,24 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
         # current observation and the recorded reference are measured 3-D axes
         # expressed in the same base_link domain.
         source = str(getattr(stable, "orientation_source", "")).strip()
+        current_semantics = str(
+            getattr(stable, "orientation_semantics", "")
+        ).strip()
+        reference_semantics = str(
+            self.orientation_reference_semantics
+        ).strip()
         compatible_3d = (
-            source == "depth_axis_3d"
-            and getattr(stable, "orientation_coordinate_frame", "") == "base_link"
-            and getattr(stable, "orientation_semantics", "") == "axial_yaw"
-            and getattr(stable, "orientation_axis_base", None) is not None
+            is_measured_base_axis_orientation(
+                source=source,
+                coordinate_frame=str(
+                    getattr(stable, "orientation_coordinate_frame", "")
+                ),
+                semantics=current_semantics,
+                axis=getattr(stable, "orientation_axis_base", None),
+            )
             and self.orientation_reference_coordinate_frame == "base_link"
-            and self.orientation_reference_semantics == "axial_yaw"
             and self.orientation_reference_axis_base is not None
+            and current_semantics == reference_semantics
             and assessment.comparison_mode == "base_link_axis_3d"
         )
         if (
@@ -733,7 +746,7 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
                 requested_turn_deg=amount,
                 signed_axis_error_deg=assessment.signed_error_deg,
                 orientation_source=source,
-                controller="base_frame_axis_direct_correction",
+                controller="base_frame_upright_face_direct_correction",
             )
             self._send_turn(amount, "resilient_orientation_probe_turn")
             return

@@ -484,16 +484,17 @@ def _common_start_arguments(parser: argparse.ArgumentParser) -> None:
         choices=("auto", "3d", "2d"),
         default="auto",
         help=(
-            "auto prefers measured base_link 3-D yaw and falls back to a "
-            "consistent image-plane axis; 3d requires measured depth-axis "
-            "samples; 2d records only the image-plane axis"
+            "auto prefers the measured base_link upright-face normal and "
+            "falls back to a consistent image-plane axis; 3d requires "
+            "measured upright face-plane samples; 2d records only the "
+            "image-plane axis"
         ),
     )
     parser.add_argument(
         "--min-3d-orientation-samples",
         type=int,
         default=3,
-        help="minimum measured depth-axis samples inside the teaching window",
+        help="minimum measured upright face-plane samples inside the teaching window",
     )
     parser.add_argument("--timeout", type=float, default=120.0)
 

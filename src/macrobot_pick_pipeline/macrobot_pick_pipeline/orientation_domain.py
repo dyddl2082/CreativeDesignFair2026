@@ -13,6 +13,16 @@ from typing import Any, Mapping, Optional, Sequence, Tuple
 
 
 PATCH_MARKER = "macrobot_3d_orientation_only_v1"
+UPRIGHT_FACE_MARKER = "macrobot_upright_face_orientation_v1"
+
+BASE_AXIS_SEMANTICS = frozenset({
+    "axial_yaw",
+    "face_normal_yaw_mod_180",
+})
+MEASURED_BASE_AXIS_SOURCES = frozenset({
+    "depth_axis_3d",
+    "upright_face_plane_3d",
+})
 
 
 Vector3 = Tuple[float, float, float]
@@ -95,6 +105,23 @@ def signed_axial_axis_error_deg(
     current_yaw = axial_yaw_deg(current)
     reference_yaw = axial_yaw_deg(reference)
     return ((current_yaw - reference_yaw + 90.0) % 180.0) - 90.0
+
+
+def is_measured_base_axis_orientation(
+    *,
+    source: str,
+    coordinate_frame: str,
+    semantics: str,
+    axis: Optional[Sequence[float]],
+) -> bool:
+    """Return whether metadata describes a measured undirected base-frame axis."""
+
+    return (
+        axis is not None
+        and str(source).strip() in MEASURED_BASE_AXIS_SOURCES
+        and str(coordinate_frame).strip() == "base_link"
+        and str(semantics).strip() in BASE_AXIS_SEMANTICS
+    )
 
 
 def orientation_domain(mapping: Mapping[str, Any]) -> tuple[str, str]:
