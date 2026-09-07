@@ -1,9 +1,9 @@
 schema: macrobot.stored_object_runtime/v1
-updated_at: '2026-09-07T12:22:12.463309+00:00'
+updated_at: '2026-09-07T15:32:41.401896+00:00'
 profiles:
   Eraser:
     object_name: Eraser
-    recorded_at: '2026-09-06T16:16:32.483244+00:00'
+    recorded_at: '2026-09-07T15:29:28.568251+00:00'
     recording_state: complete
     position_scope: camera_relative
     execution_authority: fresh_rgbd_localization
@@ -18,16 +18,16 @@ profiles:
     object_point_odom:
       x: 0.0
       y: 0.0
-      z: 0.03884177121604897
+      z: 0.04064503323295203
     alignment:
       object_name: Eraser
       pick_profile: Eraser
       frame_id: base_link
       reference_point_base:
-        x: 0.22535001215934752
-        y: 0.05332260238741773
-        z: 0.03884177121604897
-      recorded_at: '2026-09-06T16:16:32.483077+00:00'
+        x: 0.23435001549720763
+        y: 0.05860624610713209
+        z: 0.04064503323295203
+      recorded_at: '2026-09-07T15:29:28.567788+00:00'
       minimum_score: 0.0
       stability_count: 5
       stability_window_sec: 1.5
@@ -48,17 +48,24 @@ profiles:
       maximum_depth_std_m: 0.035
       maximum_center_std_px: 20.0
       require_orientation_match: true
-      reference_orientation_deg: 91.39402434946818
-      reference_orientation_class: vertical
-      reference_orientation_quality: 0.7740706873599316
+      reference_orientation_deg: 179.92102859368256
+      reference_orientation_class: horizontal
+      reference_orientation_quality: 0.9456298005835175
+      reference_orientation_source: upright_face_plane_3d
+      reference_orientation_frame: base_link
+      reference_orientation_semantics: face_normal_yaw_mod_180
+      reference_orientation_axis_base:
+        x: 0.999999050129468
+        y: -0.0013783106187636135
+        z: 0.0
       minimum_orientation_quality: 0.25
       orientation_tolerance_deg: 25.0
     recognition:
       point_base:
-        x: 0.22535001215934752
-        y: 0.05332260238741773
-        z: 0.03884177121604897
-      score: 0.871523380279541
+        x: 0.23435001549720763
+        y: 0.05860624610713209
+        z: 0.04064503323295203
+      score: 0.8756028413772583
       fixed_range_gate_enabled: false
     grasp:
       executor: keyframes
@@ -97,7 +104,7 @@ profiles:
       pico_time_ms: null
   Rubber:
     object_name: Rubber
-    recorded_at: '2026-09-07T12:22:12.462704+00:00'
+    recorded_at: '2026-09-07T15:32:41.399393+00:00'
     recording_state: complete
     position_scope: camera_relative
     execution_authority: fresh_rgbd_localization
@@ -112,16 +119,16 @@ profiles:
     object_point_odom:
       x: 0.0
       y: 0.0
-      z: 0.04776365369130635
+      z: 0.05218616596877908
     alignment:
       object_name: Rubber
       pick_profile: Rubber
       frame_id: base_link
       reference_point_base:
-        x: 0.20935000953674315
-        y: 0.055949685134722364
-        z: 0.04776365369130635
-      recorded_at: '2026-09-07T12:22:12.462611+00:00'
+        x: 0.2293500202655792
+        y: 0.05447923352529684
+        z: 0.05218616596877908
+      recorded_at: '2026-09-07T15:32:41.398892+00:00'
       minimum_score: 0.0
       stability_count: 5
       stability_window_sec: 1.5
@@ -142,17 +149,24 @@ profiles:
       maximum_depth_std_m: 0.035
       maximum_center_std_px: 20.0
       require_orientation_match: true
-      reference_orientation_deg: 92.1426814625828
-      reference_orientation_class: vertical
-      reference_orientation_quality: 0.593352656121914
+      reference_orientation_deg: 4.943435782346461
+      reference_orientation_class: horizontal
+      reference_orientation_quality: 0.8765154876447214
+      reference_orientation_source: upright_face_plane_3d
+      reference_orientation_frame: base_link
+      reference_orientation_semantics: face_normal_yaw_mod_180
+      reference_orientation_axis_base:
+        x: 0.9962802555428394
+        y: 0.08617222531358194
+        z: 0.0
       minimum_orientation_quality: 0.45
       orientation_tolerance_deg: 10.0
     recognition:
       point_base:
-        x: 0.20935000953674315
-        y: 0.055949685134722364
-        z: 0.04776365369130635
-      score: 0.8885495662689209
+        x: 0.2293500202655792
+        y: 0.05447923352529684
+        z: 0.05218616596877908
+      score: 0.9961181282997131
       fixed_range_gate_enabled: false
     grasp:
       executor: keyframes

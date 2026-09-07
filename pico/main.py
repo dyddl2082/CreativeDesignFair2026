@@ -82,9 +82,9 @@ DEFAULT_DRIVE_PWM = 100
 # Calibrate LEFT/RIGHT_TICKS_PER_CM with straight forward/reverse tests.
 # Measure EFFECTIVE_TRACK_WIDTH_CM between track centerlines, then refine
 # only if turn tests or camera closed-loop alignment require it.
-LEFT_TICKS_PER_CM = 78
-RIGHT_TICKS_PER_CM = 77.2142857
-EFFECTIVE_TRACK_WIDTH_CM = 16.0
+LEFT_TICKS_PER_CM = 72
+RIGHT_TICKS_PER_CM = 71.274725726
+EFFECTIVE_TRACK_WIDTH_CM = 20.3
 
 # Motor and encoder direction correction.
 MOTOR_LEFT_INVERT = False

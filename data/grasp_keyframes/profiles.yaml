@@ -1,12 +1,19 @@
 schema: macrobot.grasp_keyframes/v2
-updated_at: '2026-09-07T12:22:04.895673+00:00'
+updated_at: '2026-09-07T15:32:34.734163+00:00'
 profiles:
   Eraser_r4:
     object_name: Eraser
-    recorded_at: '2026-09-06T16:16:32.420003+00:00'
-    reference_orientation_deg: 91.39402434946818
-    reference_orientation_class: vertical
-    reference_orientation_quality: 0.7740706873599316
+    recorded_at: '2026-09-07T15:29:21.548797+00:00'
+    reference_orientation_deg: 179.92102859368256
+    reference_orientation_class: horizontal
+    reference_orientation_quality: 0.9456298005835175
+    reference_orientation_source: upright_face_plane_3d
+    reference_orientation_frame: base_link
+    reference_orientation_semantics: face_normal_yaw_mod_180
+    reference_orientation_axis_base:
+      x: 0.999999050129468
+      y: -0.0013783106187636135
+      z: 0.0
     stages:
       OPEN:
         representation: gripper_only
@@ -21,67 +28,74 @@ profiles:
       PRE_GRASP:
         representation: object_relative_cartesian
         q:
-        - -0.5317483951621435
-        - 0.18631829565506514
-        - 0.25680560247894785
+        - -0.6000000000000002
+        - 0.2748557204119894
+        - 0.0
         object_offset:
-        - -0.47907709518530184
-        - 0.009677416945560326
-        - 0.09363020155575098
+        - -0.4985928686408834
+        - 0.004393779373795294
+        - 0.09001902998385859
         seed_q:
-        - -0.5317483951621435
-        - 0.18631829565506514
-        - 0.25680560247894785
-        gripper_q: 0.25680560247894785
+        - -0.6000000000000002
+        - 0.2748557204119894
+        - 0.0
+        gripper_q: 0.0
         settle_sec: 0.1
       GRASP_OPEN:
         representation: object_relative_cartesian
         q:
-        - -0.5317483951621435
-        - 0.18631829565506514
-        - 0.25680560247894785
+        - -0.6000000000000002
+        - 0.2748557204119894
+        - 0.0
         object_offset:
-        - -0.47907709518530184
-        - 0.009677416945560326
-        - 0.09363020155575098
+        - -0.4985928686408834
+        - 0.004393779373795294
+        - 0.09001902998385859
         seed_q:
-        - -0.5317483951621435
-        - 0.18631829565506514
-        - 0.25680560247894785
-        gripper_q: 0.25680560247894785
+        - -0.6000000000000002
+        - 0.2748557204119894
+        - 0.0
+        gripper_q: 0.0
         settle_sec: 0.1
       CLOSE:
         representation: gripper_only
         q:
-        - -0.5358816302311301
-        - 0.2
-        - 1.484238380616707
+        - -0.6000000000000002
+        - 0.2748557204119894
+        - 1.387838992309968
         object_offset: null
         seed_q: null
-        gripper_q: 1.484238380616707
+        gripper_q: 1.387838992309968
         settle_sec: 0.1
       LIFT:
         representation: object_relative_cartesian
         q:
-        - 0.10882866509253232
-        - 0.10000000000000002
-        - 1.484238380616707
+        - 0.04430335602873254
+        - 0.17485572041198943
+        - 1.387838992309968
         object_offset:
-        - -0.3834870753028241
-        - 0.009677406187260852
-        - 0.23091815370803126
+        - -0.40229965980517485
+        - 0.004393767693394911
+        - 0.2320009265815801
         seed_q:
-        - 0.10882866509253232
-        - 0.10000000000000002
-        - 1.484238380616707
-        gripper_q: 1.484238380616707
+        - 0.04430335602873254
+        - 0.17485572041198943
+        - 1.387838992309968
+        gripper_q: 1.387838992309968
         settle_sec: 0.1
   Rubber_r4:
     object_name: Rubber
-    recorded_at: '2026-09-07T12:22:04.889283+00:00'
-    reference_orientation_deg: 92.1426814625828
-    reference_orientation_class: vertical
-    reference_orientation_quality: 0.593352656121914
+    recorded_at: '2026-09-07T15:32:34.733914+00:00'
+    reference_orientation_deg: 4.943435782346461
+    reference_orientation_class: horizontal
+    reference_orientation_quality: 0.8765154876447214
+    reference_orientation_source: upright_face_plane_3d
+    reference_orientation_frame: base_link
+    reference_orientation_semantics: face_normal_yaw_mod_180
+    reference_orientation_axis_base:
+      x: 0.9962802555428394
+      y: 0.08617222531358194
+      z: 0.0
     stages:
       OPEN:
         representation: gripper_only
@@ -96,58 +110,58 @@ profiles:
       PRE_GRASP:
         representation: object_relative_cartesian
         q:
-        - -0.5657607057462508
-        - 0.2
+        - -0.6000000000000002
+        - 0.27499999999999997
         - 0.0
         object_offset:
-        - -0.4663990874439607
-        - 0.007050335337157133
-        - 0.07775227425077576
+        - -0.4936015120693664
+        - 0.008520791964651268
+        - 0.0785071873826557
         seed_q:
-        - -0.5657607057462508
-        - 0.2
+        - -0.6000000000000002
+        - 0.27499999999999997
         - 0.0
         gripper_q: 0.0
         settle_sec: 0.1
       GRASP_OPEN:
         representation: object_relative_cartesian
         q:
-        - -0.5657607057462508
-        - 0.2
+        - -0.6000000000000002
+        - 0.27499999999999997
         - 0.0
         object_offset:
-        - -0.4663990874439607
-        - 0.007050335337157133
-        - 0.07775227425077576
+        - -0.4936015120693664
+        - 0.008520791964651268
+        - 0.0785071873826557
         seed_q:
-        - -0.5657607057462508
-        - 0.2
+        - -0.6000000000000002
+        - 0.27499999999999997
         - 0.0
         gripper_q: 0.0
         settle_sec: 0.1
       CLOSE:
         representation: gripper_only
         q:
-        - -0.5657607057462508
-        - 0.2
-        - 1.4921596167226285
+        - -0.6000000000000002
+        - 0.27499999999999997
+        - 1.3518505437524737
         object_offset: null
         seed_q: null
-        gripper_q: 1.4921596167226285
+        gripper_q: 1.3518505437524737
         settle_sec: 0.1
       LIFT:
         representation: object_relative_cartesian
         q:
-        - 0.07578635903835236
-        - 0.10000000000000002
-        - 1.4921596167226285
+        - 0.02123391895157914
+        - 0.12611697519845003
+        - 1.3518505437524737
         object_offset:
-        - -0.3743834453172389
-        - 0.007050323714157931
-        - 0.21566527678219322
+        - -0.40435073468143234
+        - 0.008520777425423016
+        - 0.2057482779751839
         seed_q:
-        - 0.07578635903835236
-        - 0.10000000000000002
-        - 1.4921596167226285
-        gripper_q: 1.4921596167226285
+        - 0.02123391895157914
+        - 0.12611697519845003
+        - 1.3518505437524737
+        gripper_q: 1.3518505437524737
         settle_sec: 0.1
