@@ -27,3 +27,16 @@ macrobot_detection_localizer:
     depth_maximum_mad_m: 0.025
     allow_candidate_depth_fallback: false
     depth_scale_m: 0.001
+    # Fast coarse-to-fine docking and depth-assisted 3-D orientation.
+    enable_depth_axis_3d: true
+    orientation_3d_sample_count: 11
+    orientation_3d_minor_track_count: 3
+    orientation_3d_strip_half_width_ratio: 0.12
+    orientation_3d_window_radius_px: 2
+    orientation_3d_minimum_valid_samples: 9
+    orientation_3d_depth_gate_m: 0.06
+    orientation_3d_minimum_span_m: 0.018
+    orientation_3d_maximum_residual_m: 0.012
+    orientation_3d_minimum_horizontal_ratio: 0.3
+    orientation_3d_allow_center_depth_fallback: true
+    orientation_2d_fallback_quality_scale: 0.35

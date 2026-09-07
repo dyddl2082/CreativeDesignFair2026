@@ -34,6 +34,11 @@ from .alignment_core import (
 )
 from .orientation_control import OrientationAssessment
 from .precision_docking import choose_precision_docking_action, precision_errors
+from .fast_visual_docking import (
+    choose_fast_camera_docking_action,
+    direct_axis_turn_deg,
+    orientation_engagement_ready,
+)
 from .resilient_object_task_node import ResilientObjectTaskNode
 from .stored_object_core import (
     OdomPose,
@@ -77,6 +82,9 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
         self.final_visual_started_at = 0.0
         self.camera_motion_sequence = 0
         self.camera_motion_completed_at = 0.0
+        # fast_camera_docking_v1
+        self.fast_docking_phase = "coarse"
+        self.fast_translation_streak = 0
         super().__init__()
         self._publish_status(
             "camera_authoritative_tasks_ready",
@@ -107,6 +115,25 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
             "camera_disable_distance_handoff": True,
             "camera_allow_legacy_record_commands": False,
             "camera_profile_position_scope": "camera_relative",
+            # fast_camera_docking_v1
+            "fast_docking_enabled": True,
+            "fast_coarse_move_chunk_m": 0.030,
+            "fast_coarse_bearing_tolerance_deg": 4.0,
+            "fast_emergency_bearing_tolerance_deg": 7.0,
+            "fast_coarse_lateral_tolerance_m": 0.025,
+            "fast_coarse_turn_chunk_deg": 6.0,
+            "fast_final_forward_band_m": 0.035,
+            "fast_max_translation_streak": 3,
+            "fast_orientation_engage_forward_m": 0.025,
+            "fast_orientation_engage_lateral_m": 0.015,
+            "fast_orientation_engage_bearing_deg": 3.0,
+            "fast_direct_3d_orientation_enabled": True,
+            "fast_direct_3d_turn_gain": 1.0,
+            "fast_direct_3d_turn_max_deg": 6.0,
+            "fast_direct_3d_turn_min_deg": 0.75,
+            "fast_coarse_settle_sec": 0.20,
+            "fast_final_settle_sec": 0.35,
+            "fast_reobserve_sec": 0.30,
         }
         for name, value in defaults.items():
             self.declare_parameter(name, value)
@@ -126,6 +153,8 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
                 "camera_motion_sequence": self.camera_motion_sequence,
                 "final_visual_confirmations": self.final_visual_confirmations,
                 "distance_handoff_active": False,
+                "fast_docking_phase": self.fast_docking_phase,
+                "fast_translation_streak": self.fast_translation_streak,
             }
         )
         return payload
@@ -136,6 +165,8 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
         self.final_visual_started_at = 0.0
         self.camera_motion_sequence = 0
         self.camera_motion_completed_at = 0.0
+        self.fast_docking_phase = "coarse"
+        self.fast_translation_streak = 0
         # Explicitly invalidate all pose-like state.  Individual Pico motion
         # results may still contain odometry fields, but this policy never uses
         # them to predict an object point or reproduce a stored pose.
@@ -497,11 +528,197 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
     def _predicted_point(self):
         return None
 
+    def _select_alignment_decision(self, errors):
+        if not bool(self.get_parameter("fast_docking_enabled").value):
+            return super()._select_alignment_decision(errors)
+        result = choose_fast_camera_docking_action(
+            errors,
+            translation_streak=self.fast_translation_streak,
+            final_bearing_tolerance_deg=float(
+                self.get_parameter("precision_bearing_tolerance_deg").value
+            ),
+            final_forward_tolerance_m=float(
+                self.get_parameter("precision_forward_tolerance_m").value
+            ),
+            final_lateral_tolerance_m=float(
+                self.get_parameter("precision_lateral_tolerance_m").value
+            ),
+            final_turn_step_deg=float(
+                self.get_parameter("precision_turn_chunk_deg").value
+            ),
+            final_move_step_m=float(
+                self.get_parameter("precision_move_chunk_m").value
+            ),
+            coarse_bearing_tolerance_deg=float(
+                self.get_parameter(
+                    "fast_coarse_bearing_tolerance_deg"
+                ).value
+            ),
+            emergency_bearing_tolerance_deg=float(
+                self.get_parameter(
+                    "fast_emergency_bearing_tolerance_deg"
+                ).value
+            ),
+            coarse_lateral_tolerance_m=float(
+                self.get_parameter("fast_coarse_lateral_tolerance_m").value
+            ),
+            coarse_turn_step_deg=float(
+                self.get_parameter("fast_coarse_turn_chunk_deg").value
+            ),
+            coarse_move_step_m=float(
+                self.get_parameter("fast_coarse_move_chunk_m").value
+            ),
+            final_forward_band_m=float(
+                self.get_parameter("fast_final_forward_band_m").value
+            ),
+            max_translation_streak=int(
+                self.get_parameter("fast_max_translation_streak").value
+            ),
+        )
+        self.fast_docking_phase = result.phase
+        if result.decision.action == "turn":
+            self.fast_translation_streak = 0
+        elif result.decision.action == "move":
+            self.fast_translation_streak += 1
+        return result.decision
+
+    def _alignment_turn_limit_deg(self) -> float:
+        base = abs(super()._alignment_turn_limit_deg())
+        if (
+            bool(self.get_parameter("fast_docking_enabled").value)
+            and self.fast_docking_phase == "coarse"
+        ):
+            return max(
+                base,
+                abs(
+                    float(
+                        self.get_parameter(
+                            "fast_coarse_turn_chunk_deg"
+                        ).value
+                    )
+                ),
+            )
+        return base
+
+    def _alignment_move_limit_m(self) -> float:
+        base = abs(super()._alignment_move_limit_m())
+        if (
+            bool(self.get_parameter("fast_docking_enabled").value)
+            and self.fast_docking_phase == "coarse"
+        ):
+            return max(
+                base,
+                abs(
+                    float(
+                        self.get_parameter(
+                            "fast_coarse_move_chunk_m"
+                        ).value
+                    )
+                ),
+            )
+        return base
+
+    def _orientation_required(self) -> bool:
+        required = super()._orientation_required()
+        if not required or not bool(
+            self.get_parameter("fast_docking_enabled").value
+        ):
+            return required
+        if self.phase == "final_visual_verify":
+            return True
+        if self.profile is None or self.last_object_point is None:
+            return False
+        try:
+            errors = alignment_errors(
+                self.last_object_point,
+                self.profile.alignment.reference_point_base,
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+        except Exception:
+            return False
+        return orientation_engagement_ready(
+            errors,
+            maximum_forward_error_m=float(
+                self.get_parameter(
+                    "fast_orientation_engage_forward_m"
+                ).value
+            ),
+            maximum_lateral_error_m=float(
+                self.get_parameter(
+                    "fast_orientation_engage_lateral_m"
+                ).value
+            ),
+            maximum_bearing_error_deg=float(
+                self.get_parameter(
+                    "fast_orientation_engage_bearing_deg"
+                ).value
+            ),
+        )
+
+    def _current_orientation_source(self) -> str:
+        payload = self.latest_detection_metadata.get("payload", {})
+        if not isinstance(payload, Mapping):
+            return ""
+        orientation = payload.get("orientation", {})
+        if not isinstance(orientation, Mapping):
+            return ""
+        return str(orientation.get("source", "")).strip()
+
+    def _run_orientation_recovery(self, stable, assessment) -> None:
+        source = self._current_orientation_source()
+        if (
+            bool(
+                self.get_parameter(
+                    "fast_direct_3d_orientation_enabled"
+                ).value
+            )
+            and source == "depth_axis_3d"
+            and assessment.state == "angle_mismatch"
+        ):
+            amount = direct_axis_turn_deg(
+                assessment.signed_error_deg,
+                gain=float(
+                    self.get_parameter("fast_direct_3d_turn_gain").value
+                ),
+                maximum_step_deg=float(
+                    self.get_parameter(
+                        "fast_direct_3d_turn_max_deg"
+                    ).value
+                ),
+                minimum_step_deg=float(
+                    self.get_parameter(
+                        "fast_direct_3d_turn_min_deg"
+                    ).value
+                ),
+            )
+            self._reset_orientation_recovery(keep_direction=False)
+            self.orientation_probe_count += 1
+            self.orientation_total_turn_deg += abs(amount)
+            self._publish_status(
+                "orientation_3d_direct_turn_started",
+                requested_turn_deg=amount,
+                signed_axis_error_deg=assessment.signed_error_deg,
+                orientation_source=source,
+                controller="base_frame_axis_direct_correction",
+            )
+            self._send_turn(amount, "resilient_orientation_probe_turn")
+            return
+        super()._run_orientation_recovery(stable, assessment)
+
     def _send_move(self, physical_forward_positive_m: float, purpose: str) -> None:
         requested = float(physical_forward_positive_m)
         if purpose == "resilient_search_backoff":
             limit = float(
                 self.get_parameter("camera_search_backoff_chunk_m").value
+            )
+        elif (
+            purpose == "resilient_approach_move"
+            and self.fast_docking_phase == "coarse"
+            and bool(self.get_parameter("fast_docking_enabled").value)
+        ):
+            limit = float(
+                self.get_parameter("fast_coarse_move_chunk_m").value
             )
         else:
             limit = float(
@@ -692,10 +909,27 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
             return
         self.phase = "align_settle"
         assert self.profile is not None
-        self.settle_until = time.monotonic() + self.profile.alignment.settle_sec
-        self.reobserve_not_before = self.settle_until + float(
-            self.get_parameter("visual_reobserve_sec").value
-        )
+        if bool(self.get_parameter("fast_docking_enabled").value):
+            settle_parameter = (
+                "fast_coarse_settle_sec"
+                if self.fast_docking_phase == "coarse"
+                else "fast_final_settle_sec"
+            )
+            settle_sec = max(
+                0.0,
+                float(self.get_parameter(settle_parameter).value),
+            )
+            reobserve_sec = max(
+                0.0,
+                float(self.get_parameter("fast_reobserve_sec").value),
+            )
+        else:
+            settle_sec = self.profile.alignment.settle_sec
+            reobserve_sec = float(
+                self.get_parameter("visual_reobserve_sec").value
+            )
+        self.settle_until = time.monotonic() + settle_sec
+        self.reobserve_not_before = self.settle_until + reobserve_sec
         self._publish_status(
             "visual_servo_motion_completed",
             purpose=purpose,
@@ -711,9 +945,15 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
             reference_point_base=list(self.profile.alignment.reference_point_base),
             current_point_base=list(stable.point_base),
             distance_handoff_used=False,
-            translation_chunk_cap_m=min(
+            coarse_translation_chunk_cap_m=float(
+                self.get_parameter("fast_coarse_move_chunk_m").value
+            ),
+            final_translation_chunk_cap_m=min(
                 float(self.get_parameter("camera_max_translation_chunk_m").value),
                 float(self.get_parameter("precision_move_chunk_m").value),
+            ),
+            coarse_turn_chunk_cap_deg=float(
+                self.get_parameter("fast_coarse_turn_chunk_deg").value
             ),
             after_every_move="discard_old_frames_and_remeasure",
         )

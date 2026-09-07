@@ -4,7 +4,7 @@ from collections import deque
 import json
 import math
 import time
-from typing import Deque, Dict, Optional, Tuple
+from typing import Deque, Dict, Mapping, Optional, Tuple
 
 import numpy as np
 import rclpy
@@ -19,6 +19,11 @@ from std_msgs.msg import String
 from tf2_ros import Buffer, TransformException, TransformListener
 
 from .depth_refinement_core import DepthEstimate, decode_depth_image, refine_depth_window
+from .depth_axis_3d import (
+    base_axis_orientation,
+    estimate_axis_3d,
+    orientation_class_from_yaw,
+)
 
 
 Vector3 = Tuple[float, float, float]
@@ -93,6 +98,19 @@ class DetectionLocalizerNode(Node):
             "depth_scale_m": 0.001,
             "require_patch_localization": False,
             "minimum_localization_quality": 0.15,
+            # fast_3d_axis_localizer_v1
+            "enable_depth_axis_3d": True,
+            "orientation_3d_sample_count": 11,
+            "orientation_3d_minor_track_count": 3,
+            "orientation_3d_strip_half_width_ratio": 0.12,
+            "orientation_3d_window_radius_px": 2,
+            "orientation_3d_minimum_valid_samples": 9,
+            "orientation_3d_depth_gate_m": 0.06,
+            "orientation_3d_minimum_span_m": 0.018,
+            "orientation_3d_maximum_residual_m": 0.012,
+            "orientation_3d_minimum_horizontal_ratio": 0.30,
+            "orientation_3d_allow_center_depth_fallback": True,
+            "orientation_2d_fallback_quality_scale": 0.35,
         }
         for name, value in defaults.items():
             self.declare_parameter(name, value)
@@ -239,6 +257,205 @@ class DetectionLocalizerNode(Node):
             rotated[1] + float(translation.y),
             rotated[2] + float(translation.z),
         )
+
+    def _resolve_orientation_bundle(
+        self,
+        *,
+        details: Mapping[str, object],
+        u: float,
+        v: float,
+        center_depth_m: float,
+        measurement_stamp_sec: Optional[float],
+        source_frame: str,
+    ) -> Dict[str, object]:
+        # fast_3d_axis_localizer_v1
+        raw_orientation = details.get("orientation", {})
+        orientation_2d = (
+            dict(raw_orientation)
+            if isinstance(raw_orientation, Mapping)
+            else {}
+        )
+        try:
+            angle_2d = float(orientation_2d.get("angle_deg", 0.0) or 0.0) % 180.0
+            quality_2d = max(
+                0.0,
+                min(1.0, float(orientation_2d.get("quality", 0.0) or 0.0)),
+            )
+        except (TypeError, ValueError):
+            angle_2d = 0.0
+            quality_2d = 0.0
+        class_2d = str(orientation_2d.get("class", "unknown")).strip() or "unknown"
+        orientation_2d = {
+            "angle_deg": angle_2d,
+            "class": class_2d,
+            "quality": quality_2d,
+            "source": "image_axis_2d",
+            "coordinate_frame": "camera_image",
+            "semantics": "axial_angle",
+        }
+
+        def low_authority_2d(reason: str) -> Dict[str, object]:
+            scale = max(
+                0.0,
+                min(
+                    1.0,
+                    float(
+                        self.get_parameter(
+                            "orientation_2d_fallback_quality_scale"
+                        ).value
+                    ),
+                ),
+            )
+            selected = dict(orientation_2d)
+            selected["quality"] = quality_2d * scale
+            selected["reason"] = reason
+            return {
+                "orientation": selected,
+                "orientation_2d": orientation_2d,
+                "orientation_3d": {
+                    "available": False,
+                    "reason": reason,
+                },
+            }
+
+        if not bool(self.get_parameter("enable_depth_axis_3d").value):
+            return low_authority_2d("depth_axis_3d_disabled")
+        info = self.camera_info
+        if info is None or len(info.k) < 9:
+            return low_authority_2d("camera_info_unavailable_for_3d_axis")
+
+        roi_raw = details.get("roi", {})
+        roi = roi_raw if isinstance(roi_raw, Mapping) else {}
+        try:
+            x = float(roi.get("x", roi.get("x_offset", u - 24.0)))
+            y = float(roi.get("y", roi.get("y_offset", v - 24.0)))
+            width = float(roi.get("width", 48.0))
+            height = float(roi.get("height", 48.0))
+        except (TypeError, ValueError):
+            x, y, width, height = u - 24.0, v - 24.0, 48.0, 48.0
+        image_width = max(1, int(info.width or 1))
+        image_height = max(1, int(info.height or 1))
+        x = max(0.0, min(float(image_width - 1), x))
+        y = max(0.0, min(float(image_height - 1), y))
+        width = max(4.0, min(float(image_width) - x, width))
+        height = max(4.0, min(float(image_height) - y, height))
+
+        depth_frame = self._nearest_depth_frame(measurement_stamp_sec)
+        if depth_frame is None:
+            depth_frame = np.zeros((image_height, image_width), dtype=np.float32)
+
+        estimate = estimate_axis_3d(
+            depth_m=depth_frame,
+            center_x=u,
+            center_y=v,
+            center_depth_m=center_depth_m,
+            roi_xywh=(x, y, width, height),
+            orientation_2d_deg=angle_2d,
+            orientation_2d_quality=quality_2d,
+            fx=float(info.k[0]),
+            fy=float(info.k[4]),
+            cx=float(info.k[2]),
+            cy=float(info.k[5]),
+            sample_count=int(
+                self.get_parameter("orientation_3d_sample_count").value
+            ),
+            minor_track_count=int(
+                self.get_parameter("orientation_3d_minor_track_count").value
+            ),
+            strip_half_width_ratio=float(
+                self.get_parameter(
+                    "orientation_3d_strip_half_width_ratio"
+                ).value
+            ),
+            window_radius_px=int(
+                self.get_parameter("orientation_3d_window_radius_px").value
+            ),
+            minimum_valid_samples=int(
+                self.get_parameter(
+                    "orientation_3d_minimum_valid_samples"
+                ).value
+            ),
+            depth_gate_m=float(
+                self.get_parameter("orientation_3d_depth_gate_m").value
+            ),
+            minimum_depth_m=self.minimum_depth,
+            maximum_depth_m=self.maximum_depth,
+            minimum_span_m=float(
+                self.get_parameter("orientation_3d_minimum_span_m").value
+            ),
+            maximum_residual_m=float(
+                self.get_parameter(
+                    "orientation_3d_maximum_residual_m"
+                ).value
+            ),
+            allow_center_depth_fallback=bool(
+                self.get_parameter(
+                    "orientation_3d_allow_center_depth_fallback"
+                ).value
+            ),
+        )
+        if not estimate.available:
+            return low_authority_2d(estimate.reason or "depth_axis_fit_unavailable")
+
+        frame = source_frame or self.optical_frame_override or info.header.frame_id
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                self.base_frame,
+                frame,
+                Time(),
+                timeout=Duration(seconds=self.tf_timeout),
+            )
+            axis_base = rotate_vector_by_quaternion(
+                estimate.axis_optical,
+                transform.transform.rotation,
+            )
+        except TransformException as error:
+            return low_authority_2d(f"orientation_axis_tf_unavailable: {error}")
+
+        base_orientation = base_axis_orientation(
+            axis_base,
+            quality=estimate.quality,
+            source=estimate.source,
+            minimum_horizontal_ratio=float(
+                self.get_parameter(
+                    "orientation_3d_minimum_horizontal_ratio"
+                ).value
+            ),
+        )
+        if not base_orientation.available:
+            return low_authority_2d(
+                base_orientation.reason or "base_axis_orientation_unavailable"
+            )
+
+        selected = {
+            "angle_deg": base_orientation.yaw_deg,
+            "class": orientation_class_from_yaw(base_orientation.yaw_deg),
+            "quality": base_orientation.quality,
+            "source": base_orientation.source,
+            "coordinate_frame": self.base_frame,
+            "semantics": "axial_yaw",
+            "elevation_deg": base_orientation.elevation_deg,
+        }
+        return {
+            "orientation": selected,
+            "orientation_2d": orientation_2d,
+            "orientation_3d": {
+                "available": True,
+                **selected,
+                "axis_base": {
+                    "x": base_orientation.axis_base[0],
+                    "y": base_orientation.axis_base[1],
+                    "z": base_orientation.axis_base[2],
+                },
+                "sample_count": estimate.sample_count,
+                "measured_sample_count": estimate.measured_sample_count,
+                "measured_fraction": estimate.measured_fraction,
+                "span_m": estimate.span_m,
+                "median_residual_m": estimate.median_residual_m,
+                "linearity": estimate.linearity,
+                "horizontal_ratio": base_orientation.horizontal_ratio,
+            },
+        }
 
     def _target_matches(self, object_name: str) -> bool:
         return not self.active_target or object_name.casefold() == self.active_target.casefold()
@@ -401,6 +618,17 @@ class DetectionLocalizerNode(Node):
                 error=str(error),
             )
             return
+        details_out: Dict[str, object] = dict(details or {})
+        details_out.update(
+            self._resolve_orientation_bundle(
+                details=details_out,
+                u=u,
+                v=v,
+                center_depth_m=depth_m,
+                measurement_stamp_sec=measurement_stamp_sec,
+                source_frame=frame,
+            )
+        )
         output_details: Dict[str, object] = {
             "pixel": {"u": u, "v": v},
             "depth_m": depth_m,
@@ -416,8 +644,7 @@ class DetectionLocalizerNode(Node):
                 "z": point_optical[2],
             },
         }
-        if details:
-            output_details.update(details)
+        output_details.update(details_out)
         self._publish_localized(
             object_name=object_name,
             score=score,
@@ -488,6 +715,7 @@ class DetectionLocalizerNode(Node):
                 "finder_depth_std_m": payload.get("depth_std_m"),
                 "localization": payload.get("localization", {}),
                 "orientation": payload.get("orientation", {}),
+                "roi": payload.get("bbox", {}),
             },
         )
 

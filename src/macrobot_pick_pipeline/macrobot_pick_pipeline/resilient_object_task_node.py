@@ -1621,6 +1621,38 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         except Exception:
             return None
 
+    def _select_alignment_decision(self, errors):
+        # fast_docking_decision_hook_v1
+        coarse_decision = choose_alignment_action(errors, self.profile.alignment)
+        if coarse_decision.action == "reject":
+            return coarse_decision
+        if bool(self.get_parameter("precision_docking_enabled").value):
+            return choose_precision_docking_action(
+                errors,
+                bearing_tolerance_deg=float(
+                    self.get_parameter("precision_bearing_tolerance_deg").value
+                ),
+                forward_tolerance_m=float(
+                    self.get_parameter("precision_forward_tolerance_m").value
+                ),
+                lateral_tolerance_m=float(
+                    self.get_parameter("precision_lateral_tolerance_m").value
+                ),
+                max_turn_step_deg=float(
+                    self.get_parameter("precision_turn_chunk_deg").value
+                ),
+                max_move_step_m=float(
+                    self.get_parameter("precision_move_chunk_m").value
+                ),
+            )
+        return coarse_decision
+
+    def _alignment_turn_limit_deg(self) -> float:
+        return float(self.get_parameter("visual_turn_chunk_deg").value)
+
+    def _alignment_move_limit_m(self) -> float:
+        return float(self.get_parameter("visual_move_chunk_m").value)
+
     def _try_alignment_step(self) -> None:
         if self.profile is None:
             return
@@ -1683,44 +1715,7 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
                 forward_axis_sign=self.forward_axis_sign,
                 lateral_axis_sign=self.lateral_axis_sign,
             )
-            coarse_decision = choose_alignment_action(
-                errors, self.profile.alignment
-            )
-            if coarse_decision.action == "reject":
-                decision = coarse_decision
-            elif bool(
-                self.get_parameter("precision_docking_enabled").value
-            ):
-                decision = choose_precision_docking_action(
-                    errors,
-                    bearing_tolerance_deg=float(
-                        self.get_parameter(
-                            "precision_bearing_tolerance_deg"
-                        ).value
-                    ),
-                    forward_tolerance_m=float(
-                        self.get_parameter(
-                            "precision_forward_tolerance_m"
-                        ).value
-                    ),
-                    lateral_tolerance_m=float(
-                        self.get_parameter(
-                            "precision_lateral_tolerance_m"
-                        ).value
-                    ),
-                    max_turn_step_deg=float(
-                        self.get_parameter(
-                            "precision_turn_chunk_deg"
-                        ).value
-                    ),
-                    max_move_step_m=float(
-                        self.get_parameter(
-                            "precision_move_chunk_m"
-                        ).value
-                    ),
-                )
-            else:
-                decision = coarse_decision
+            decision = self._select_alignment_decision(errors)
         except Exception as error:
             self._enter_recovery_hold(
                 "TARGET_POSE_INVALID",
@@ -1778,12 +1773,10 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
         # assessment or any range translation.  After a viewpoint translation,
         # this step re-centres the object so orientation costs are comparable.
         if decision.action == "turn":
+            turn_limit = abs(self._alignment_turn_limit_deg())
             amount = max(
-                -float(self.get_parameter("visual_turn_chunk_deg").value),
-                min(
-                    float(self.get_parameter("visual_turn_chunk_deg").value),
-                    decision.amount,
-                ),
+                -turn_limit,
+                min(turn_limit, decision.amount),
             )
             if self.orientation_probe_stage in {"after_move", "after_recenter"}:
                 self.orientation_probe_stage = "after_recenter"
@@ -1873,9 +1866,10 @@ class ResilientObjectTaskNode(StoredObjectPickNode):
                 resume_mode="manual",
             )
             return
+        move_limit = abs(self._alignment_move_limit_m())
         amount = max(
-            -float(self.get_parameter("visual_move_chunk_m").value),
-            min(float(self.get_parameter("visual_move_chunk_m").value), decision.amount),
+            -move_limit,
+            min(move_limit, decision.amount),
         )
         if amount > 0.0 and not self._clearance_allows(amount):
             self._enter_recovery_hold(
