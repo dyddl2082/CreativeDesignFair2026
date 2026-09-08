@@ -44,6 +44,7 @@ setup(
             "camera_authoritative_task_node = macrobot_pick_pipeline.camera_authoritative_task_node:main",
             "direct_pose_task_node = macrobot_pick_pipeline.direct_pose_task_node:main",
             "fast_axis_task_node = macrobot_pick_pipeline.fast_axis_task_node:main",
+            "depth_only_task_node = macrobot_pick_pipeline.depth_only_task_node:main",
         "joint_pose_task_node = macrobot_pick_pipeline.joint_pose_task_node:main",
             "depth_clearance_node = macrobot_pick_pipeline.depth_clearance_node:main",
             "visible_pick_test_node = macrobot_pick_pipeline.visible_pick_test_node:main",
