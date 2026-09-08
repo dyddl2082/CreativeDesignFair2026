@@ -294,6 +294,9 @@ runtime_profile:
     SET_ARM_JOINTS:
       hard_timeout_s: 20.0
       recommended_wait_timeout_s: 25.0
+    ARM_HOME:
+      hard_timeout_s: 20.0
+      recommended_wait_timeout_s: 25.0
     SET_GRIPPER:
       hard_timeout_s: 12.0
       recommended_wait_timeout_s: 17.0
@@ -308,6 +311,8 @@ runtime_profile:
       grasp_verification_policy: safe_preflight_and_command_completion_without_grip_sensor
     PLACE_NEXTTO_OBJECT:
       max_internal_motion_steps_per_call: 30
+      post_place_home_motion_steps: 1
+      max_total_motion_steps_per_call: 31
       hard_timeout_s: 2400.0
       recommended_wait_timeout_s: 2410.0
       placement_verification_policy: safe_preflight_and_command_completion_without_physical_release_sensor
@@ -357,8 +362,8 @@ known_runtime_ids:
   notes:
   - Session positions and session arm primitives may be created by generated code when the user explicitly requests saving
     them.
-  - Do not assume common names such as home, start, stow, or pre_grasp exist unless listed here or established in the current
-    conversation.
+  - Do not assume common saved primitive IDs such as start, stow, or pre_grasp exist unless listed here or established in the current
+    conversation. ARM_HOME is a built-in public Robot API function, not a saved primitive ID.
 types:
   TaskOutcome:
     kind: frozen_dataclass
@@ -551,13 +556,14 @@ composition_rules:
   handling.
 - PLACE_NEXTTO_OBJECT already confirms the reference object, performs ALIGN when needed, selects a placement candidate, places,
   releases, and performs post-place handling.
+- PLACE_NEXTTO_OBJECT returns SUCCEEDED only after its configured post-place ARM_HOME return also succeeds.
 - Do not generate a separate ALIGN_WITH_OBJECT immediately before PICK_OBJECT or PLACE_NEXTTO_OBJECT unless the user explicitly
   requested alignment as an independently observable step.
 - GET_OBJECT_STATE reports visibility state only; it does not search, rotate, align, return coordinates, or prove graspability.
 - GET_ROBOT_POS is an estimated snapshot and may not be used as a substitute for high-level alignment, path safety, or physical
   feedback.
 - SET_GRIPPER success changes the logical gripper command; it does not prove that an object was grasped.
-- SET_ARM_JOINTS and SET_ARM_PRIMITIVE preserve the current gripper command.
+- SET_ARM_JOINTS, SET_ARM_PRIMITIVE, and ARM_HOME preserve the current gripper command. ARM_HOME moves arm_lift and wrist_pitch to the configured HOME pose.
 - SAVE_ARM_PRIMITIVE stores only arm_lift_deg and wrist_pitch_deg, never gripper_deg.
 - STOP is terminal for motion in the current run. Return from main after a successful STOP and do not start another motion
   action.
@@ -646,6 +652,7 @@ error_catalog:
   IK_FAILED: Manipulation inverse kinematics failed.
   GRASP_FAILED: Configured grasp verification failed.
   GRASP_VERIFICATION_UNAVAILABLE: Required grasp verification source is unavailable.
+  POST_PLACE_HOME_FAILED: The object was released, but the configured post-place ARM HOME return did not complete successfully.
   PLACE_FAILED: Configured placement verification failed.
 functions:
   WAIT_SECOND:
@@ -1108,6 +1115,40 @@ functions:
     - Require exact user-provided or conversation-established target angles.
     - Do not infer angles from vague words such as '조금 올려'.
     - Success means commanded trajectory completion, not measured encoder arrival.
+  ARM_HOME:
+    block: arm_gripper
+    mode: async
+    returns: ActionHandle
+    description: Move arm_lift and wrist_pitch to the configured HOME pose while preserving the current gripper command.
+    arguments: {}
+    resources:
+      exclusive:
+      - ARM_MOTION
+      - PICO_MOTION
+    cancellable: true
+    preserves:
+    - gripper_deg
+    target:
+      arm_lift_deg: 0.0
+      wrist_pitch_deg: 0.0
+    requires_safe_path: true
+    internal_motion_steps: 1
+    recommended_wait_timeout_s: 25.0
+    errors:
+    - ARM_HOME_CONFIG_INVALID
+    - ARM_PATH_UNSAFE
+    - ARM_NOT_READY
+    - ROBOT_STATE_UNAVAILABLE
+    - RESOURCE_BUSY
+    - RUN_LIMIT_EXCEEDED
+    - ARM_EXECUTION_FAILED
+    - PICO_COMMUNICATION_ERROR
+    - ACTION_HARD_TIMEOUT
+    - CANCEL_FAILED
+    generation_rules:
+    - Use ARM_HOME for explicit requests such as '로봇팔 HOME으로', '팔을 홈으로', or 'arm home'.
+    - Do not replace ARM_HOME with guessed SET_ARM_JOINTS angles in generated code.
+    - ARM_HOME preserves the current gripper command; it must not be described as releasing a held object.
   SET_GRIPPER:
     block: arm_gripper
     mode: async
@@ -1299,7 +1340,8 @@ functions:
     - place
     - release
     - post_place
-    internal_motion_steps_max: 30
+    - arm_home_after_successful_release_and_retreat
+    internal_motion_steps_max: 31
     recommended_wait_timeout_s: 2410.0
     errors:
     - NO_HELD_OBJECT
@@ -1316,6 +1358,7 @@ functions:
     - ARM_PATH_UNSAFE
     - GRIPPER_EXECUTION_FAILED
     - PLACE_FAILED
+    - POST_PLACE_HOME_FAILED
     - RESOURCE_BUSY
     - RUN_LIMIT_EXCEEDED
     - ACTION_HARD_TIMEOUT

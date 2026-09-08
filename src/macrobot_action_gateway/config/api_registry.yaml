@@ -129,6 +129,19 @@ functions:
     args:
       arm_lift_deg: float
       wrist_pitch_deg: float
+  ARM_HOME:
+    mode: async
+    returns: ActionHandle
+    resources:
+    - ARM_MOTION
+    - PICO_MOTION
+    preserves:
+    - gripper_deg
+    target:
+      arm_lift_deg: 0.0
+      wrist_pitch_deg: 0.0
+    requires_safe_path: true
+    meaning: Move the arm joints to the configured HOME pose while preserving the current gripper command.
   SET_GRIPPER:
     mode: async
     returns: ActionHandle
@@ -187,6 +200,7 @@ functions:
     execution: camera_authoritative_reference_search_then_safe_reverse_semantic_grasp_sequence
     placement_offset_source: object_catalog
     verification: safe_preflight_and_command_completion_without_physical_release_sensor
+    post_place: arm_home_after_release_and_retreat
     current_runtime_status: implemented_hardware_verification_pending
     held_runtime_profile_source: held_object_catalog
     grasp_keyframe_profile_source: held_object_catalog

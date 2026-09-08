@@ -114,6 +114,9 @@ class RobotFacade:
             },
         )
 
+    def ARM_HOME(self) -> ActionHandle:
+        return self._client.call(self._run_id, "ARM_HOME", {})
+
     def SET_GRIPPER(self, gripper_deg: float) -> ActionHandle:
         return self._client.call(
             self._run_id,

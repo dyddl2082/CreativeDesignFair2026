@@ -25,6 +25,7 @@ ASYNC_FUNCTIONS = {
     "MOVE_BASE_TO_POS",
     "ALIGN_WITH_OBJECT",
     "SET_ARM_JOINTS",
+    "ARM_HOME",
     "SET_GRIPPER",
     "SET_ARM_PRIMITIVE",
     "PICK_OBJECT",
@@ -188,6 +189,8 @@ class GatewayRuntime:
             return self._move_base_to_pos(run, args)
         if name == "ALIGN_WITH_OBJECT":
             return self._align_with_object(run, args)
+        if name == "ARM_HOME":
+            return self._arm_home(run)
         if name == "SET_ARM_JOINTS":
             return self._set_arm_joints(run, args)
         if name == "SET_GRIPPER":
@@ -517,6 +520,36 @@ class GatewayRuntime:
         object_id = self._object_id(args.get("object_id"))
         return self._start_align_pick(run, object_id, execute_pick=False)
 
+    def _configured_arm_home(self) -> tuple[float, float] | None:
+        arm_lift = self._finite_float(self._get("arm_home.arm_lift_deg", 0.0))
+        wrist = self._finite_float(self._get("arm_home.wrist_pitch_deg", 0.0))
+        if arm_lift is None or wrist is None:
+            return None
+        if not self._within(arm_lift, self._get("arm_limits.arm_lift_deg", [-57.3, 57.3])):
+            return None
+        if not self._within(wrist, self._get("arm_limits.wrist_pitch_deg", [-74.5, 74.5])):
+            return None
+        return arm_lift, wrist
+
+    def _arm_home(self, run: RunRecord) -> ActionHandle:
+        def execute(record: ActionRecord, current_run: RunRecord):
+            home = self._configured_arm_home()
+            if home is None:
+                return ActionState.FAILED, "ARM_HOME_CONFIG_INVALID", "ARM HOME 설정이 유효한 안전 각도 범위가 아닙니다."
+            current = self.state.arm_values()
+            if current is None:
+                return ActionState.FAILED, "ROBOT_STATE_UNAVAILABLE", "HOME 이동 중 보존할 그리퍼 commanded state가 없습니다."
+            if not self._motion_start_allowed(current_run, 1):
+                return ActionState.FAILED, "RUN_LIMIT_EXCEEDED", "ARM HOME에 필요한 motion step budget이 없습니다."
+            target = (home[0], home[1], current[2])
+            return self._execute_arm_target(record, target, "ARM_HOME")
+        return self.actions.create(
+            run.run_id,
+            "ARM_HOME",
+            [ResourceId.ARM_MOTION, ResourceId.PICO_MOTION],
+            execute,
+        )
+
     def _set_arm_joints(self, run: RunRecord, args: Mapping[str, Any]) -> ActionHandle:
         arm_lift = self._finite_float(args.get("arm_lift_deg"))
         wrist = self._finite_float(args.get("wrist_pitch_deg"))
@@ -645,8 +678,13 @@ class GatewayRuntime:
             current_held, current_known = self.state.held_object()
             if not current_known or current_held != held:
                 return ActionState.FAILED, "HELD_OBJECT_STATE_CHANGED", "PLACE 시작 전에 보유 물체 상태가 변경되었습니다."
-            if current_run.remaining_motion_steps() < max_steps:
-                return ActionState.FAILED, "RUN_LIMIT_EXCEEDED", "PLACE의 최대 내부 motion budget이 부족합니다."
+            post_home_steps = (
+                int(self._get("manipulation.place_post_home_motion_steps", 1))
+                if bool(self._get("manipulation.place_home_on_success", True))
+                else 0
+            )
+            if current_run.remaining_motion_steps() < max_steps + max(0, post_home_steps):
+                return ActionState.FAILED, "RUN_LIMIT_EXCEEDED", "PLACE와 post-place HOME에 필요한 최대 motion budget이 부족합니다."
             outcome = self.bridge.execute_place_nextto(
                 reference,
                 reference_profile=str(
@@ -663,7 +701,40 @@ class GatewayRuntime:
                 self.state.set_held_object(None, known=False)
                 return ActionState.FAILED, "RUN_LIMIT_EXCEEDED", "PLACE 실행 중 run motion budget을 초과했습니다."
             if outcome.success:
+                # final-orientation-home-v1: post-place ARM_HOME
+                # The semantic PLACE sequence has already completed RELEASE + RETREAT.
+                # Keep held-object truth as empty even if the optional HOME return fails.
                 self.state.set_held_object(None, known=True)
+                if bool(self._get("manipulation.place_home_on_success", True)):
+                    home_steps = int(self._get("manipulation.place_post_home_motion_steps", 1))
+                    if home_steps < 1 or not current_run.consume_motion_steps(home_steps):
+                        return (
+                            ActionState.FAILED,
+                            "POST_PLACE_HOME_FAILED",
+                            "물체 배치는 완료됐지만 ARM HOME 복귀에 필요한 motion budget이 부족합니다.",
+                        )
+                    home = self._configured_arm_home()
+                    if home is None:
+                        return (
+                            ActionState.FAILED,
+                            "POST_PLACE_HOME_FAILED",
+                            "물체 배치는 완료됐지만 ARM HOME 설정이 유효하지 않습니다.",
+                        )
+                    # PLACE success means the semantic release command completed.  HOME/Open
+                    # therefore uses the logical open gripper command instead of re-closing it.
+                    open_gripper = float(self._get("gripper_limits.logical_deg", [0.0, 90.0])[0])
+                    home_result = self._execute_arm_target(
+                        record,
+                        (home[0], home[1], open_gripper),
+                        "ARM_HOME",
+                    )
+                    if home_result[0] != ActionState.SUCCEEDED:
+                        detail = home_result[2] or home_result[1] or "원인을 확인할 수 없습니다."
+                        return (
+                            home_result[0],
+                            "POST_PLACE_HOME_FAILED",
+                            f"물체 배치는 완료됐지만 ARM HOME 복귀에 실패했습니다: {detail}",
+                        )
                 return ActionState.SUCCEEDED, None, None
             if outcome.started:
                 self.state.mark_base_unreliable()

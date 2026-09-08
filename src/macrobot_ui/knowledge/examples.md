@@ -803,6 +803,48 @@ def main() -> TaskOutcome:
 
 ---
 
+## 15A. 로봇팔 HOME
+
+### 사용자
+
+> 로봇팔 HOME으로 이동해.
+
+### 응답
+
+STATUS: CODE
+
+OBJECT_BINDINGS:
+- 없음
+
+ASSUMPTIONS:
+- 없음
+
+CODE:
+
+```python
+def main() -> TaskOutcome:
+    home_action = robot.ARM_HOME()
+    home_result = robot.WAIT_ACTION(
+        home_action,
+        timeout_s=25.0,
+    )
+
+    if home_result.state != ActionState.SUCCEEDED:
+        return TaskOutcome(
+            status=TaskStatus.FAILED,
+            message=home_result.error_message or "로봇팔 HOME 이동에 실패했습니다.",
+        )
+
+    return TaskOutcome(
+        status=TaskStatus.SUCCEEDED,
+        message="로봇팔을 HOME으로 이동했습니다.",
+    )
+```
+
+`ARM_HOME`은 arm_lift와 wrist_pitch만 HOME으로 이동하고 현재 gripper command는 보존한다.
+
+---
+
 ## 16. 시스템 motion 정지
 
 ### 사용자
