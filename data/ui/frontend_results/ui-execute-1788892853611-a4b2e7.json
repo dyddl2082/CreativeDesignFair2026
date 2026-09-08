@@ -1,0 +1,39 @@
+{
+  "schema": "macrobot.ui.task_result/v1",
+  "request_id": "ui-execute-1788892853611-a4b2e7",
+  "ok": false,
+  "event": "ui_task_failed",
+  "runner_result": {
+    "valid": false,
+    "issues": [
+      {
+        "line": 3,
+        "column": 18,
+        "code": "ENUM_MEMBER_FORBIDDEN",
+        "message": "허용되지 않은 enum member입니다: ObjectId.RUBBER"
+      },
+      {
+        "line": 17,
+        "column": 28,
+        "code": "ENUM_MEMBER_FORBIDDEN",
+        "message": "허용되지 않은 enum member입니다: ObjectId.ERASER"
+      }
+    ],
+    "function_names": [
+      "main"
+    ],
+    "robot_calls": [
+      "PICK_OBJECT",
+      "WAIT_ACTION",
+      "PLACE_NEXTTO_OBJECT",
+      "WAIT_ACTION"
+    ]
+  },
+  "mode": "execute",
+  "source_sha256": "31e6851f9a0106813e0f76158d4e13e6e9a8d65f179c22c39c581b0777d0acb5",
+  "runner_returncode": 3,
+  "code_path": "/home/dyddl2082/MacRobot/data/ui/approved_tasks/ui-execute-1788892853611-a4b2e7/task.py",
+  "metadata_path": "/home/dyddl2082/MacRobot/data/ui/approved_tasks/ui-execute-1788892853611-a4b2e7/request.json",
+  "started_at_unix_ms": 1788892853854,
+  "finished_at_unix_ms": 1788892854704
+}

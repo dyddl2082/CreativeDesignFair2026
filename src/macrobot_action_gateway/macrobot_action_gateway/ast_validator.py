@@ -4,6 +4,7 @@ import ast
 from dataclasses import dataclass
 from typing import Iterable
 
+from .api_types import ENUM_TYPES
 from .gateway_runtime import ASYNC_FUNCTIONS, PUBLIC_FUNCTIONS
 
 
@@ -46,14 +47,8 @@ INJECTED_NAMES = {
 
 
 ENUM_MEMBERS = {
-    "TaskStatus": {"SUCCEEDED", "PARTIALLY_SUCCEEDED", "FAILED", "CANCELED", "TIMED_OUT"},
-    "ActionState": {"PENDING", "RUNNING", "CANCEL_REQUESTED", "SUCCEEDED", "FAILED", "CANCELED", "TIMED_OUT"},
-    "ResourceId": {"BASE_MOTION", "ARM_MOTION", "GRIPPER_MOTION", "PICO_MOTION", "POSITION_STORE", "ARM_PRIMITIVE_STORE"},
-    "ObjectId": {"BUDS3", "CUP"},
-    "ObjectState": {"VISIBLE", "NOT_VISIBLE", "AMBIGUOUS", "STALE", "PERCEPTION_UNAVAILABLE", "UNKNOWN"},
-    "EstimateState": {"VALID", "TRANSIENT", "UNRELIABLE", "UNAVAILABLE"},
-    "StateSource": {"COMMAND_HISTORY", "COMMANDED_STATE", "MEASURED_STATE"},
-    "RobotSnapshotState": {"COMPLETE", "PARTIAL", "UNAVAILABLE"},
+    enum_name: frozenset(enum_cls.__members__)
+    for enum_name, enum_cls in ENUM_TYPES.items()
 }
 
 READ_ONLY_RESULT_FIELDS = {

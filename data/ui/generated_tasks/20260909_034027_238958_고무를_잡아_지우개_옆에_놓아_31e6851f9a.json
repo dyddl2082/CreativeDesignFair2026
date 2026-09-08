@@ -1,0 +1,30 @@
+{
+  "request": "고무를 잡아. 지우개 옆에 놓아.",
+  "status": "CODE",
+  "object_bindings": "- 고무 -> ObjectId.RUBBER\n- 지우개 -> ObjectId.ERASER",
+  "assumptions": "- 없음",
+  "raw_response": "STATUS: CODE\n\nOBJECT_BINDINGS:\n- 고무 -> ObjectId.RUBBER\n- 지우개 -> ObjectId.ERASER\n\nASSUMPTIONS:\n- 없음\n\nCODE:\n\n```python\ndef main() -> TaskOutcome:\n    pick_action = robot.PICK_OBJECT(\n        object_id=ObjectId.RUBBER,\n    )\n    pick_result = robot.WAIT_ACTION(\n        pick_action,\n        timeout_s=2410.0,\n    )\n\n    if pick_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.FAILED,\n            message=pick_result.error_message or \"고무를 잡지 못했습니다.\",\n        )\n\n    place_action = robot.PLACE_NEXTTO_OBJECT(\n        reference_object_id=ObjectId.ERASER,\n    )\n    place_result = robot.WAIT_ACTION(\n        place_action,\n        timeout_s=2410.0,\n    )\n\n    if place_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.PARTIALLY_SUCCEEDED,\n            message=place_result.error_message or \"고무를 잡았지만 지우개 옆에 놓지 못했습니다.\",\n        )\n\n    return TaskOutcome(\n        status=TaskStatus.SUCCEEDED,\n        message=\"고무를 잡아 지우개 옆에 놓았습니다.\",\n    )\n```",
+  "validation": [],
+  "validator": "gateway",
+  "conversation": [
+    {
+      "role": "user",
+      "text": "그것을 잡고 그것의 옆에 옮겨줘."
+    },
+    {
+      "role": "assistant",
+      "text": "STATUS: NEED_CLARIFICATION\n\nQUESTION:\n- 무엇을 잡을까요? 지우개 또는 고무 중에서 지정해 주세요.\n- 잡은 물체를 어느 물체 옆에 놓을까요? 기준 물체는 잡을 물체와 달라야 합니다."
+    },
+    {
+      "role": "user",
+      "text": "고무를 잡아. 지우개 옆에 놓아."
+    },
+    {
+      "role": "assistant",
+      "text": "STATUS: CODE\n\nOBJECT_BINDINGS:\n- 고무 -> ObjectId.RUBBER\n- 지우개 -> ObjectId.ERASER\n\nASSUMPTIONS:\n- 없음\n\nCODE:\n\n```python\ndef main() -> TaskOutcome:\n    pick_action = robot.PICK_OBJECT(\n        object_id=ObjectId.RUBBER,\n    )\n    pick_result = robot.WAIT_ACTION(\n        pick_action,\n        timeout_s=2410.0,\n    )\n\n    if pick_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.FAILED,\n            message=pick_result.error_message or \"고무를 잡지 못했습니다.\",\n        )\n\n    place_action = robot.PLACE_NEXTTO_OBJECT(\n        reference_object_id=ObjectId.ERASER,\n    )\n    place_result = robot.WAIT_ACTION(\n        place_action,\n        timeout_s=2410.0,\n    )\n\n    if place_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.PARTIALLY_SUCCEEDED,\n            message=place_result.error_message or \"고무를 잡았지만 지우개 옆에 놓지 못했습니다.\",\n        )\n\n    return TaskOutcome(\n        status=TaskStatus.SUCCEEDED,\n        message=\"고무를 잡아 지우개 옆에 놓았습니다.\",\n    )\n```"
+    }
+  ],
+  "source_sha256": "31e6851f9a0106813e0f76158d4e13e6e9a8d65f179c22c39c581b0777d0acb5",
+  "code_path": "/home/dyddl2082/MacRobot/data/ui/generated_tasks/20260909_034027_238958_고무를_잡아_지우개_옆에_놓아_31e6851f9a.py",
+  "saved_at": "2026-09-09T03:40:27.243292+09:00"
+}

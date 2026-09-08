@@ -1,4 +1,5 @@
-from macrobot_action_gateway.ast_validator import compile_validated_source, validate_source
+from macrobot_action_gateway.api_types import ObjectId
+from macrobot_action_gateway.ast_validator import ENUM_MEMBERS, compile_validated_source, validate_source
 
 
 GOOD = '''
@@ -96,11 +97,11 @@ def main() -> TaskOutcome:
 def test_pick_and_place_nextto_program_is_allowed():
     source = '''
 def main() -> TaskOutcome:
-    pick = robot.PICK_OBJECT(object_id=ObjectId.BUDS3)
+    pick = robot.PICK_OBJECT(object_id=ObjectId.ERASER)
     pick_result = robot.WAIT_ACTION(pick, timeout_s=180.0)
     if pick_result.state != ActionState.SUCCEEDED:
         return TaskOutcome(TaskStatus.FAILED, "pick failed")
-    place = robot.PLACE_NEXTTO_OBJECT(reference_object_id=ObjectId.CUP)
+    place = robot.PLACE_NEXTTO_OBJECT(reference_object_id=ObjectId.RUBBER)
     place_result = robot.WAIT_ACTION(place, timeout_s=180.0)
     if place_result.state != ActionState.SUCCEEDED:
         return TaskOutcome(TaskStatus.PARTIALLY_SUCCEEDED, "place failed")
@@ -111,3 +112,8 @@ def main() -> TaskOutcome:
     assert "PICK_OBJECT" in report.robot_calls
     assert "PLACE_NEXTTO_OBJECT" in report.robot_calls
     compile_validated_source(source)
+
+def test_object_id_validator_members_match_runtime_enum():
+    assert ENUM_MEMBERS["ObjectId"] == frozenset(ObjectId.__members__)
+    assert ENUM_MEMBERS["ObjectId"] == {"ERASER", "RUBBER"}
+
