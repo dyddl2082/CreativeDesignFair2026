@@ -1416,7 +1416,7 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
     # intentionally yaw the chassis a small amount and place at the held
     # object's taught reachable arm point.  Do not visually re-center the
     # reference after this deliberate side turn.
-    def _alignment_complete(self) -> None:
+    def _alignment_complete_before_simple_place_v2(self) -> None:
         if self.task_kind != "place":
             super()._alignment_complete()
             return
@@ -1785,7 +1785,7 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
             self.last_odom = None
             self.last_visual_object_odom = None
 
-    def _after_camera_motion(self, purpose: str, physical_amount: float) -> None:
+    def _after_camera_motion_before_simple_place_v2(self, purpose: str, physical_amount: float) -> None:
         if purpose == "resilient_place_side_turn":
             self.camera_motion_completed_at = time.time()
             guard = max(
@@ -2224,6 +2224,144 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
             return
         super()._timer_callback()
 
+
+    # SIMPLE_PLACE_SINGLE_TURN_V2
+    # PLACE is intentionally simple:
+    # normal camera-authoritative search/alignment
+    # -> one +15 deg (default) physical-left-positive base turn
+    # -> no re-observation / no re-centering
+    # -> semantic PLACE preflight immediately.
+    def _alignment_complete(self) -> None:
+        if self.task_kind != "place":
+            self._alignment_complete_before_simple_place_v2()
+            return
+
+        self._simple_place_side_turn_pending = False
+        self._cancel_finder("place_reference_aligned_simple")
+        self._clear_active_target()
+
+        if self.last_object_point is None:
+            self._fail(
+                "OBJECT_LOST",
+                reason="reference object point unavailable after final PLACE alignment",
+            )
+            return
+
+        try:
+            held_runtime = self.profile_store.get(
+                self.held_runtime_profile,
+                self.held_object_name,
+            )
+            placement_point = tuple(
+                float(value)
+                for value in held_runtime.alignment.reference_point_base
+            )
+            if len(placement_point) != 3 or not all(
+                math.isfinite(value) for value in placement_point
+            ):
+                raise ValueError("held taught reference point is invalid")
+        except Exception as exc:
+            self._fail(
+                "POSITION_STORE_ERROR",
+                reason=f"held taught reachable point unavailable for PLACE: {exc}",
+            )
+            return
+
+        reference_point = tuple(float(v) for v in self.last_object_point)
+        self.steps["alignment"] = {
+            "iterations": self.alignment_iterations,
+            "errors": self._error_mapping(self.last_errors),
+            "reference_point_base": list(reference_point),
+        }
+
+        self.placement_point_base = placement_point
+
+        side_turn_deg = 15.0
+        if self.has_parameter("place_side_turn_deg"):
+            try:
+                side_turn_deg = float(
+                    self.get_parameter("place_side_turn_deg").value
+                )
+            except (TypeError, ValueError):
+                side_turn_deg = 15.0
+        if not math.isfinite(side_turn_deg):
+            side_turn_deg = 15.0
+        side_turn_deg = max(-30.0, min(30.0, side_turn_deg))
+
+        self._publish_status(
+            "place_target_resolved",
+            reference_object=self.place_reference_object,
+            reference_point_base=list(reference_point),
+            placement_point_base=list(self.placement_point_base),
+            placement_policy="single_side_turn_then_held_taught_reachable_point",
+            legacy_offset_used=False,
+            side_turn_deg=side_turn_deg,
+        )
+
+        if abs(side_turn_deg) < 1e-6:
+            self._publish_status(
+                "place_side_turn_skipped",
+                side_turn_deg=side_turn_deg,
+                next="semantic_place_preflight",
+            )
+            self._start_place_preflight()
+            return
+
+        self._simple_place_side_turn_pending = True
+        self._publish_status(
+            "place_side_turn_started",
+            requested_deg=side_turn_deg,
+            chunks=1,
+            recenter_after_turn=False,
+            next="semantic_place_preflight",
+        )
+
+        # Bypass the camera servo 4-degree clamp for this intentional final
+        # offset while preserving the inherited Pico TURN sign conversion.
+        super(CameraAuthoritativeTaskNode, self)._send_turn(
+            side_turn_deg,
+            "resilient_place_side_turn_simple",
+        )
+
+    def _after_camera_motion(
+        self,
+        purpose: str,
+        physical_amount: float,
+    ) -> None:
+        if purpose != "resilient_place_side_turn_simple":
+            self._after_camera_motion_before_simple_place_v2(
+                purpose,
+                physical_amount,
+            )
+            return
+
+        if not getattr(self, "_simple_place_side_turn_pending", False):
+            self._fail(
+                "INTERNAL_ERROR",
+                reason="unexpected PLACE side-turn completion without pending state",
+            )
+            return
+
+        self._simple_place_side_turn_pending = False
+        self.camera_motion_completed_at = time.time()
+
+        self.pending_detections.clear()
+        self.filter.clear()
+        self.cached_stable_detection = None
+        self.latest_stable_detection = None
+        self.last_object_point = None
+        self.require_fresh_after_turn = False
+        self.reobserve_not_before = 0.0
+
+        self._publish_status(
+            "place_side_turn_completed",
+            completed_deg=float(physical_amount),
+            chunks=1,
+            recenter_after_turn=False,
+            perception_after_turn="disabled_for_intentional_place_offset",
+            next="semantic_place_preflight",
+        )
+        self._start_place_preflight()
 
 def main(args=None) -> None:
     rclpy.init(args=args)
