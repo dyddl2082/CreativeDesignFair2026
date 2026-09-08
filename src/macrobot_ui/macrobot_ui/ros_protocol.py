@@ -13,21 +13,76 @@ TASK_STATUS_SCHEMA = "macrobot.ui.task_status/v1"
 TASK_RESULT_SCHEMA = "macrobot.ui.task_result/v1"
 STOP_REQUEST_SCHEMA = "macrobot.ui.stop_request/v1"
 BACKEND_STATUS_SCHEMA = "macrobot.ui.backend_status/v1"
+HELD_RESET_REQUEST_SCHEMA = "macrobot.ui.held_reset_request/v1"
 
 REQUEST_ID_PATTERN = re.compile(r"^[0-9A-Za-z_.:-]{1,128}$")
 TERMINAL_EVENTS = {
     "ui_task_validated",
     "ui_task_validation_failed",
     "ui_task_completed",
+    "ui_task_partially_succeeded",
+    "ui_task_canceled",
     "ui_task_failed",
     "ui_task_rejected",
     "ui_task_timed_out",
+    "ui_held_state_cleared",
+    "ui_held_state_clear_failed",
 }
 
 
 class ProtocolError(ValueError):
     pass
 
+
+
+def extract_runner_task_outcome(
+    payload: Mapping[str, Any] | None,
+) -> tuple[str, str]:
+    """Return TaskOutcome status/message from either v4.5 fields or legacy wire data."""
+    if not isinstance(payload, Mapping):
+        return "", ""
+    status = str(payload.get("task_status", "")).strip().casefold()
+    message = str(payload.get("task_message", "")).strip()
+    outcome = payload.get("outcome")
+    if isinstance(outcome, Mapping):
+        if not status:
+            raw_status = outcome.get("status")
+            if isinstance(raw_status, Mapping):
+                status = str(raw_status.get("value", "")).strip().casefold()
+            elif isinstance(raw_status, str):
+                status = raw_status.strip().casefold()
+        if not message:
+            raw_message = outcome.get("message", "")
+            if raw_message is not None:
+                message = str(raw_message).strip()
+    return status, message
+
+
+def classify_runner_execution(
+    payload: Mapping[str, Any] | None,
+    returncode: int,
+) -> tuple[bool, str, str, str]:
+    """Separate runner success from the generated task's TaskOutcome."""
+    status, message = extract_runner_task_outcome(payload)
+    runner_ok = bool(isinstance(payload, Mapping) and payload.get("ok"))
+    if not runner_ok or int(returncode) != 0:
+        return False, "ui_task_failed", status, message
+    events = {
+        "succeeded": "ui_task_completed",
+        "partially_succeeded": "ui_task_partially_succeeded",
+        "failed": "ui_task_failed",
+        "canceled": "ui_task_canceled",
+        "timed_out": "ui_task_timed_out",
+    }
+    event = events.get(status)
+    if event is None:
+        return (
+            False,
+            "ui_task_failed",
+            status,
+            message or "runner finished without a recognized TaskOutcome status",
+        )
+    return status == "succeeded", event, status, message
 
 @dataclass(frozen=True)
 class TaskRequest:

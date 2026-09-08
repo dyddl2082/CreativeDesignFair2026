@@ -1,0 +1,26 @@
+{
+  "schema": "macrobot.ui.task_result/v1",
+  "request_id": "ui-validate-1788893752464-3e80bf",
+  "ok": true,
+  "event": "ui_task_validated",
+  "validation": {
+    "valid": true,
+    "issues": [],
+    "function_names": [
+      "main"
+    ],
+    "robot_calls": [
+      "PICK_OBJECT",
+      "WAIT_ACTION",
+      "PLACE_NEXTTO_OBJECT",
+      "WAIT_ACTION"
+    ]
+  },
+  "mode": "validate",
+  "source_sha256": "e39bbeca00d7510f8eaefd1d92968a8934b2596452b3978c0713ceb44693e006",
+  "runner_returncode": 0,
+  "code_path": "/home/dyddl2082/MacRobot/data/ui/approved_tasks/ui-validate-1788893752464-3e80bf/task.py",
+  "metadata_path": "/home/dyddl2082/MacRobot/data/ui/approved_tasks/ui-validate-1788893752464-3e80bf/request.json",
+  "started_at_unix_ms": 1788893752748,
+  "finished_at_unix_ms": 1788893753561
+}

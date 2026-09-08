@@ -36,7 +36,11 @@ from .models import (
 from .openai_service import ApiResponse, OpenAIChatService
 from .prompt_repository import PromptRepository
 from .response_parser import parse_response
-from .ros_protocol import STOP_REQUEST_SCHEMA, make_task_request
+from .ros_protocol import (
+    HELD_RESET_REQUEST_SCHEMA,
+    STOP_REQUEST_SCHEMA,
+    make_task_request,
+)
 from .storage import TaskStorage
 from .widgets import ChatTranscript, WrappingLabel
 
@@ -279,6 +283,7 @@ class CodePane(QWidget):
     copy_requested = Signal()
     backend_validate_requested = Signal()
     execute_requested = Signal()
+    held_reset_requested = Signal()
     stop_requested = Signal()
 
     def __init__(self, code_font: QFont | None = None) -> None:
@@ -341,8 +346,12 @@ class CodePane(QWidget):
         self.execute_button = self._button(
             "승인 후 실행", "primaryButton", self.execute_requested
         )
+        self.held_reset_button = self._button(
+            "보유 상태 비우기", "secondaryButton", self.held_reset_requested
+        )
         self.stop_button = self._button("긴급 STOP", "dangerButton", self.stop_requested)
         second_row.addWidget(self.execute_button, 2)
+        second_row.addWidget(self.held_reset_button, 1)
         second_row.addWidget(self.stop_button, 1)
         root.addLayout(second_row)
         self.set_code("")
@@ -402,6 +411,7 @@ class CodePane(QWidget):
             and local_valid
             and not request_pending
         )
+        self.held_reset_button.setEnabled(backend_reachable and not request_pending)
         self.stop_button.setEnabled(backend_reachable)
 
 
@@ -433,6 +443,7 @@ class MainWindow(QMainWindow):
         self._backend_last_seen = 0.0
         self._pending_payload: dict[str, Any] | None = None
         self._pending_request_id = ""
+        self._held_reset_pending_id = ""
         self._pending_acknowledged = False
         self._pending_started = 0.0
         self._request_timer = QTimer(self)
@@ -510,6 +521,7 @@ class MainWindow(QMainWindow):
         self.code_pane.save_requested.connect(self._save_code)
         self.code_pane.backend_validate_requested.connect(self._backend_validate)
         self.code_pane.execute_requested.connect(self._execute_code)
+        self.code_pane.held_reset_requested.connect(self._request_held_reset)
         self.code_pane.stop_requested.connect(self._request_stop)
 
     def _connect_ros(self) -> None:
@@ -757,6 +769,39 @@ class MainWindow(QMainWindow):
             return
         self._ros.publish_task(self._pending_payload)
 
+    def _request_held_reset(self) -> None:
+        if not self._backend_state.reachable:
+            QMessageBox.warning(self, "UI backend 연결 필요", "Pi UI backend가 연결되어 있지 않습니다.")
+            return
+        if self._pending_payload is not None or self._held_reset_pending_id:
+            return
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setWindowTitle("보유 상태 초기화")
+        box.setText("실제 그리퍼가 비어 있습니까?")
+        box.setInformativeText(
+            "확인을 누르면 stored-pick source-of-truth의 held-object 상태를 empty로 바꿉니다. "
+            "실제로 물체를 잡고 있는 상태에서는 사용하지 마세요."
+        )
+        box.setStandardButtons(
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        box.setDefaultButton(QMessageBox.StandardButton.No)
+        if box.exec() != QMessageBox.StandardButton.Yes:
+            return
+        request_id = f"ui-held-clear-{int(time.time() * 1000)}-{secrets.token_hex(3)}"
+        self._held_reset_pending_id = request_id
+        self._ros.publish_held_reset(
+            {
+                "schema": HELD_RESET_REQUEST_SCHEMA,
+                "request_id": request_id,
+                "operator_confirmed_empty": True,
+                "created_at_unix_ms": int(time.time() * 1000),
+            }
+        )
+        self.code_pane.set_status("보유 상태 초기화 요청", "pending")
+        self._refresh_action_buttons()
+
     def _request_stop(self) -> None:
         request_id = f"ui-stop-{int(time.time() * 1000)}-{secrets.token_hex(3)}"
         self._ros.publish_stop(
@@ -802,14 +847,15 @@ class MainWindow(QMainWindow):
             path = self._storage.save_backend_result(request_id, payload)
         except Exception:
             path = None
-        if request_id == self._pending_request_id:
+        event = str(payload.get("event", "ui_task_result"))
+        if request_id == self._held_reset_pending_id:
             ok = bool(payload.get("ok", False))
-            event = str(payload.get("event", "ui_task_result"))
+            self._held_reset_pending_id = ""
             self.code_pane.set_status(
-                "Pi 작업 완료" if ok else "Pi 작업 실패",
+                "보유 상태 비움" if ok else "보유 상태 초기화 실패",
                 "success" if ok else "error",
             )
-            self._clear_pending_request()
+            self._refresh_action_buttons()
             details = json.dumps(payload, ensure_ascii=False, indent=2)
             if path is not None:
                 details += f"\n\n저장 결과: {path}"
@@ -818,10 +864,66 @@ class MainWindow(QMainWindow):
                 QMessageBox.Icon.Information if ok else QMessageBox.Icon.Critical
             )
             box.setWindowTitle(event)
-            box.setText("작업이 완료되었습니다." if ok else "작업이 실패했습니다.")
+            box.setText(
+                str(payload.get("message", ""))
+                or ("보유 상태가 empty로 동기화되었습니다." if ok else "보유 상태 초기화에 실패했습니다.")
+            )
             box.setDetailedText(details)
             box.exec()
-        elif str(payload.get("event", "")).startswith("ui_stop_"):
+            return
+        if request_id == self._pending_request_id:
+            task_status = str(payload.get("task_status", "")).strip().casefold()
+            task_message = str(
+                payload.get("task_message", payload.get("message", ""))
+            ).strip()
+            if event == "ui_task_validated":
+                label, kind = "Pi 검증 완료", "success"
+                icon = QMessageBox.Icon.Information
+                summary = "Pi 검증을 통과했습니다."
+            elif event == "ui_task_validation_failed":
+                label, kind = "Pi 검증 실패", "error"
+                icon = QMessageBox.Icon.Critical
+                summary = "Pi 검증에 실패했습니다."
+            elif task_status == "succeeded":
+                label, kind = "Pi 작업 성공", "success"
+                icon = QMessageBox.Icon.Information
+                summary = task_message or "로봇 작업이 성공했습니다."
+            elif task_status == "partially_succeeded":
+                label, kind = "Pi 작업 부분 성공", "error"
+                icon = QMessageBox.Icon.Warning
+                summary = task_message or "로봇 작업이 부분 성공으로 종료되었습니다."
+            elif task_status == "canceled":
+                label, kind = "Pi 작업 취소", "error"
+                icon = QMessageBox.Icon.Warning
+                summary = task_message or "로봇 작업이 취소되었습니다."
+            elif task_status == "timed_out" or event == "ui_task_timed_out":
+                label, kind = "Pi 작업 시간 초과", "error"
+                icon = QMessageBox.Icon.Critical
+                summary = task_message or "로봇 작업이 제한시간을 초과했습니다."
+            elif task_status == "failed":
+                label, kind = "Pi 작업 실패", "error"
+                icon = QMessageBox.Icon.Critical
+                summary = task_message or "로봇 작업이 실패했습니다."
+            else:
+                ok = bool(payload.get("ok", False))
+                label = "Pi 작업 완료" if ok else "Pi 작업 실패"
+                kind = "success" if ok else "error"
+                icon = QMessageBox.Icon.Information if ok else QMessageBox.Icon.Critical
+                summary = str(payload.get("message", "")).strip() or (
+                    "작업이 완료되었습니다." if ok else "작업이 실패했습니다."
+                )
+            self.code_pane.set_status(label, kind)
+            self._clear_pending_request()
+            details = json.dumps(payload, ensure_ascii=False, indent=2)
+            if path is not None:
+                details += f"\n\n저장 결과: {path}"
+            box = QMessageBox(self)
+            box.setIcon(icon)
+            box.setWindowTitle(event)
+            box.setText(summary)
+            box.setDetailedText(details)
+            box.exec()
+        elif event.startswith("ui_stop_"):
             self.robot_status.set_task_status(payload)
 
     @Slot(str, object)
@@ -851,7 +953,10 @@ class MainWindow(QMainWindow):
             and self._backend_state.gateway_reachable
             and self._config.execution_controls_enabled,
             local_valid,
-            request_pending=self._pending_payload is not None,
+            request_pending=(
+                self._pending_payload is not None
+                or bool(self._held_reset_pending_id)
+            ),
         )
 
     def _clear_pending_request(self) -> None:

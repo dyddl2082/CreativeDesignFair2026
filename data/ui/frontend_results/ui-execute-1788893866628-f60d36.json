@@ -1,0 +1,38 @@
+{
+  "schema": "macrobot.ui.task_result/v1",
+  "request_id": "ui-execute-1788893866628-f60d36",
+  "ok": true,
+  "event": "ui_task_completed",
+  "runner_result": {
+    "ok": true,
+    "outcome": {
+      "status": {
+        "__enum__": "TaskStatus",
+        "value": "failed"
+      },
+      "message": "다른 물체를 이미 보유 중입니다.",
+      "data": null,
+      "__type__": "TaskOutcome"
+    },
+    "loop_iterations_used": 0,
+    "close_result": {
+      "run_id": "run-1788893867623-f6b77cad",
+      "closed": true,
+      "had_active_actions": false,
+      "active_action_count": 0,
+      "cancel_success": true,
+      "stop_success": null,
+      "stop_error_code": null,
+      "clean_shutdown": true
+    },
+    "run_id": "run-1788893867623-f6b77cad",
+    "log_path": "/home/dyddl2082/MacRobot/data/llm_runs/run-1788893867623-f6b77cad/run.json"
+  },
+  "mode": "execute",
+  "source_sha256": "e39bbeca00d7510f8eaefd1d92968a8934b2596452b3978c0713ceb44693e006",
+  "runner_returncode": 0,
+  "code_path": "/home/dyddl2082/MacRobot/data/ui/approved_tasks/ui-execute-1788893866628-f60d36/task.py",
+  "metadata_path": "/home/dyddl2082/MacRobot/data/ui/approved_tasks/ui-execute-1788893866628-f60d36/request.json",
+  "started_at_unix_ms": 1788893866850,
+  "finished_at_unix_ms": 1788893867829
+}

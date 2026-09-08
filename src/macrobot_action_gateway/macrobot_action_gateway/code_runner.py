@@ -82,6 +82,7 @@ def _worker_entry(
     source: str,
     socket_path: str,
     run_id: str,
+    gateway_rpc_timeout_s: float,
     loop_budget: int,
     cpu_seconds: int,
     memory_mb: int,
@@ -99,7 +100,7 @@ def _worker_entry(
             if remaining < 0:
                 raise LoopBudgetExceeded("반복문 실행 budget을 초과했습니다.")
 
-        client = GatewayRpcClient(socket_path, timeout_s=190.0)
+        client = GatewayRpcClient(socket_path, timeout_s=gateway_rpc_timeout_s)
         client.open_run(run_id)
         robot = RobotFacade(client, run_id)
         environment: dict[str, Any] = {
@@ -138,6 +139,8 @@ def _worker_entry(
         connection.send(
             {
                 "ok": True,
+                "task_status": outcome.status.value,
+                "task_message": outcome.message,
                 "outcome": to_wire(outcome),
                 "loop_iterations_used": loop_budget - remaining,
                 "close_result": close_result,
@@ -196,7 +199,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Explicit confirmation that the user approved this exact source",
     )
-    parser.add_argument("--wall-timeout-s", type=float, default=300.0)
+    parser.add_argument("--wall-timeout-s", type=float, default=5000.0)
     parser.add_argument("--cpu-seconds", type=int, default=30)
     parser.add_argument("--memory-mb", type=int, default=256)
     parser.add_argument("--loop-budget", type=int, default=1000)
@@ -255,6 +258,7 @@ def main(argv: list[str] | None = None) -> int:
             source,
             args.socket,
             run_id,
+            max(30.0, float(args.wall_timeout_s) + 30.0),
             args.loop_budget,
             args.cpu_seconds,
             args.memory_mb,

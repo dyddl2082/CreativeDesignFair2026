@@ -20,10 +20,12 @@ from std_msgs.msg import String
 from .gateway_client import GatewaySocketClient
 from .ros_protocol import (
     BACKEND_STATUS_SCHEMA,
+    HELD_RESET_REQUEST_SCHEMA,
     STOP_REQUEST_SCHEMA,
     TASK_RESULT_SCHEMA,
     TASK_STATUS_SCHEMA,
     ProtocolError,
+    classify_runner_execution,
     compact_json,
     extract_last_json_object,
     parse_json_object,
@@ -41,6 +43,9 @@ class MacRobotUiBackend(Node):
             "status_topic": "/macrobot/ui/task/status",
             "result_topic": "/macrobot/ui/task/result",
             "stop_topic": "/macrobot/ui/stop",
+            "held_reset_topic": "/macrobot/ui/held/reset",
+            "stored_task_admin_topic": "/macrobot/stored_pick/admin",
+            "stored_task_status_topic": "/macrobot/stored_pick/status",
             "backend_status_topic": "/macrobot/ui/backend/status",
             "gateway_socket": "/tmp/macrobot_action_gateway.sock",
             "allow_execution": False,
@@ -48,10 +53,11 @@ class MacRobotUiBackend(Node):
                 Path.home() / "MacRobot" / "data" / "ui" / "approved_tasks"
             ),
             "run_log_root": str(Path.home() / "MacRobot" / "data" / "llm_runs"),
-            "runner_wall_timeout_s": 300.0,
+            "runner_wall_timeout_s": 5000.0,
             "max_code_bytes": 200000,
             "request_cache_size": 64,
             "heartbeat_period_s": 1.0,
+            "held_reset_timeout_s": 5.0,
         }
         for name, value in defaults.items():
             self.declare_parameter(name, value)
@@ -64,6 +70,9 @@ class MacRobotUiBackend(Node):
         ).expanduser()
         self.runner_wall_timeout_s = float(
             self.get_parameter("runner_wall_timeout_s").value
+        )
+        self.held_reset_timeout_s = float(
+            self.get_parameter("held_reset_timeout_s").value
         )
         self.max_code_bytes = int(self.get_parameter("max_code_bytes").value)
         self.request_cache_size = max(
@@ -96,6 +105,11 @@ class MacRobotUiBackend(Node):
             str(self.get_parameter("backend_status_topic").value),
             heartbeat_qos,
         )
+        self.stored_task_admin_pub = self.create_publisher(
+            String,
+            str(self.get_parameter("stored_task_admin_topic").value),
+            control_qos,
+        )
         self.create_subscription(
             String,
             str(self.get_parameter("request_topic").value),
@@ -108,9 +122,25 @@ class MacRobotUiBackend(Node):
             self._stop_callback,
             control_qos,
         )
+        self.create_subscription(
+            String,
+            str(self.get_parameter("held_reset_topic").value),
+            self._held_reset_callback,
+            control_qos,
+        )
+        self.create_subscription(
+            String,
+            str(self.get_parameter("stored_task_status_topic").value),
+            self._stored_task_status_callback,
+            control_qos,
+        )
 
         self._gateway = GatewaySocketClient(self.gateway_socket, timeout_s=1.0)
         self._lock = threading.RLock()
+        self._held_reset_cv = threading.Condition(self._lock)
+        self._stored_task_status_seq = 0
+        self._last_stored_task_status: dict[str, Any] = {}
+        self._maintenance_request_id = ""
         self._active_request_id = ""
         self._active_source_hash = ""
         self._active_process: subprocess.Popen[str] | None = None
@@ -125,6 +155,259 @@ class MacRobotUiBackend(Node):
             "MacRobot UI backend ready: "
             f"allow_execution={self.allow_execution}, socket={self.gateway_socket}"
         )
+
+
+    @staticmethod
+    def _active_gateway_actions(gateway: dict[str, Any]) -> list[dict[str, Any]]:
+        snapshot = gateway.get("actions", {}) if isinstance(gateway, dict) else {}
+        actions = snapshot.get("actions", {}) if isinstance(snapshot, dict) else {}
+        terminal = {"succeeded", "failed", "canceled", "timed_out"}
+        active: list[dict[str, Any]] = []
+        if isinstance(actions, dict):
+            for action_id, item in actions.items():
+                if not isinstance(item, dict):
+                    continue
+                state = str(item.get("state", "")).strip().casefold()
+                if state not in terminal:
+                    active.append({"action_id": action_id, **item})
+        return active
+
+    @staticmethod
+    def _stored_task_busy(payload: dict[str, Any]) -> bool:
+        state = str(
+            payload.get("action_state", payload.get("state", ""))
+        ).strip().casefold()
+        return bool(state) and state not in {
+            "idle",
+            "succeeded",
+            "failed",
+            "canceled",
+            "timed_out",
+        }
+
+    def _stored_task_status_callback(self, message: String) -> None:
+        payload = parse_json_object(message.data)
+        if payload is None:
+            return
+        with self._held_reset_cv:
+            self._last_stored_task_status = dict(payload)
+            self._stored_task_status_seq += 1
+            self._held_reset_cv.notify_all()
+
+    def _held_reset_callback(self, message: String) -> None:
+        payload = parse_json_object(message.data)
+        request_id = str(payload.get("request_id", "")) if payload else ""
+        if payload is None or payload.get("schema") != HELD_RESET_REQUEST_SCHEMA:
+            self._publish_result(
+                {
+                    "schema": TASK_RESULT_SCHEMA,
+                    "request_id": request_id,
+                    "ok": False,
+                    "event": "ui_held_state_clear_failed",
+                    "error_code": "INVALID_HELD_RESET_REQUEST",
+                    "message": "invalid held-state reset request",
+                }
+            )
+            return
+        if payload.get("operator_confirmed_empty") is not True:
+            self._publish_result(
+                {
+                    "schema": TASK_RESULT_SCHEMA,
+                    "request_id": request_id,
+                    "ok": False,
+                    "event": "ui_held_state_clear_failed",
+                    "error_code": "PHYSICAL_EMPTY_CONFIRMATION_REQUIRED",
+                    "message": "operator must confirm that the physical gripper is empty",
+                }
+            )
+            return
+        if not request_id:
+            self._publish_result(
+                {
+                    "schema": TASK_RESULT_SCHEMA,
+                    "request_id": "",
+                    "ok": False,
+                    "event": "ui_held_state_clear_failed",
+                    "error_code": "REQUEST_ID_REQUIRED",
+                    "message": "held-state reset request_id is required",
+                }
+            )
+            return
+        with self._lock:
+            if self._active_request_id or self._maintenance_request_id:
+                busy = self._active_request_id or self._maintenance_request_id
+                self._publish_result(
+                    {
+                        "schema": TASK_RESULT_SCHEMA,
+                        "request_id": request_id,
+                        "ok": False,
+                        "event": "ui_held_state_clear_failed",
+                        "error_code": "BACKEND_BUSY",
+                        "message": f"active request: {busy}",
+                    }
+                )
+                return
+            self._maintenance_request_id = request_id
+            with self._held_reset_cv:
+                before_seq = self._stored_task_status_seq
+                stored_status = dict(self._last_stored_task_status)
+        try:
+            gateway = self._gateway.status(timeout_s=0.5)
+        except Exception as exc:
+            self._finish_held_reset(
+                request_id,
+                False,
+                "GATEWAY_UNAVAILABLE",
+                f"{type(exc).__name__}: {exc}",
+            )
+            return
+        active_actions = self._active_gateway_actions(gateway)
+        if active_actions:
+            self._finish_held_reset(
+                request_id,
+                False,
+                "ROBOT_ACTION_ACTIVE",
+                "held state cannot be cleared while a Gateway action is active",
+                active_actions=active_actions,
+            )
+            return
+        if self._stored_task_busy(stored_status):
+            self._finish_held_reset(
+                request_id,
+                False,
+                "STORED_TASK_ACTIVE",
+                "stored-object task node reports an active task",
+                stored_task_status=stored_status,
+            )
+            return
+        self._publish_status(
+            {
+                "schema": TASK_STATUS_SCHEMA,
+                "request_id": request_id,
+                "event": "ui_held_state_clear_started",
+                "state": "MAINTENANCE",
+            }
+        )
+        threading.Thread(
+            target=self._perform_held_reset,
+            args=(request_id, before_seq),
+            name="macrobot-ui-held-reset",
+            daemon=True,
+        ).start()
+
+    def _perform_held_reset(self, request_id: str, before_seq: int) -> None:
+        deadline = time.monotonic() + max(1.0, self.held_reset_timeout_s)
+        next_publish = 0.0
+        source_payload: dict[str, Any] | None = None
+        error_code = "HELD_RESET_TIMEOUT"
+        message = "held_object_cleared acknowledgement was not observed"
+        while time.monotonic() < deadline and not self._shutdown:
+            now = time.monotonic()
+            if now >= next_publish:
+                self.stored_task_admin_pub.publish(
+                    String(
+                        data=compact_json(
+                            {
+                                "action": "clear_held",
+                                "source": "macrobot_ui",
+                                "request_id": request_id,
+                            }
+                        )
+                    )
+                )
+                next_publish = now + 0.5
+            with self._held_reset_cv:
+                if self._stored_task_status_seq <= before_seq:
+                    self._held_reset_cv.wait(timeout=0.1)
+                seq = self._stored_task_status_seq
+                payload = dict(self._last_stored_task_status)
+            if seq <= before_seq:
+                continue
+            event = str(payload.get("event", ""))
+            if event == "object_memory_admin_failed":
+                source_payload = payload
+                error_code = "HELD_RESET_SOURCE_FAILED"
+                message = str(payload.get("error", "object memory admin failed"))
+                break
+            held = payload.get("held_object")
+            held_state = (
+                str(held.get("state", "")).strip().casefold()
+                if isinstance(held, dict)
+                else ""
+            )
+            if event == "held_object_cleared" and held_state == "empty":
+                source_payload = payload
+                error_code = ""
+                message = ""
+                break
+            before_seq = seq
+        if source_payload is None or error_code:
+            self._finish_held_reset(
+                request_id,
+                False,
+                error_code,
+                message,
+                stored_task_status=source_payload,
+            )
+            return
+        sync_deadline = time.monotonic() + 2.0
+        gateway_status: dict[str, Any] | None = None
+        while time.monotonic() < sync_deadline:
+            try:
+                gateway_status = self._gateway.status(timeout_s=0.5)
+            except Exception:
+                gateway_status = None
+            robot_state = (
+                gateway_status.get("robot_state", {})
+                if isinstance(gateway_status, dict)
+                else {}
+            )
+            if (
+                isinstance(robot_state, dict)
+                and robot_state.get("held_object_known") is True
+                and robot_state.get("held_object") is None
+            ):
+                self._finish_held_reset(
+                    request_id,
+                    True,
+                    "",
+                    "보유 상태를 empty로 초기화했고 Gateway 동기화까지 확인했습니다.",
+                    stored_task_status=source_payload,
+                    gateway_robot_state=robot_state,
+                )
+                return
+            time.sleep(0.1)
+        self._finish_held_reset(
+            request_id,
+            False,
+            "GATEWAY_HELD_STATE_SYNC_TIMEOUT",
+            "source memory is empty but Gateway did not confirm held_object_known=true/held_object=None",
+            stored_task_status=source_payload,
+            gateway_status=gateway_status,
+        )
+
+    def _finish_held_reset(
+        self,
+        request_id: str,
+        ok: bool,
+        error_code: str,
+        message: str,
+        **details: Any,
+    ) -> None:
+        with self._lock:
+            if self._maintenance_request_id == request_id:
+                self._maintenance_request_id = ""
+        payload = {
+            "schema": TASK_RESULT_SCHEMA,
+            "request_id": request_id,
+            "ok": bool(ok),
+            "event": "ui_held_state_cleared" if ok else "ui_held_state_clear_failed",
+            "message": message,
+            **details,
+        }
+        if error_code:
+            payload["error_code"] = error_code
+        self._publish_result(payload)
 
     def _request_callback(self, message: String) -> None:
         payload = parse_json_object(message.data)
@@ -156,6 +439,19 @@ class MacRobotUiBackend(Node):
             return
 
         with self._lock:
+            if self._maintenance_request_id:
+                self._publish_result(
+                    {
+                        "schema": TASK_RESULT_SCHEMA,
+                        "request_id": request.request_id,
+                        "ok": False,
+                        "event": "ui_task_rejected",
+                        "error_code": "BACKEND_MAINTENANCE",
+                        "message": f"maintenance request active: {self._maintenance_request_id}",
+                        "source_sha256": request.source_sha256,
+                    }
+                )
+                return
             cached = self._cache.get(request.request_id)
             if cached is not None:
                 if cached.get("source_sha256") != request.source_sha256:
@@ -359,16 +655,17 @@ class MacRobotUiBackend(Node):
                     "validation": runner_payload,
                 }
             else:
-                succeeded = bool(runner_payload and runner_payload.get("ok"))
+                task_ok, task_event, task_status, task_message = (
+                    classify_runner_execution(runner_payload, process.returncode)
+                )
                 result = {
                     "schema": TASK_RESULT_SCHEMA,
                     "request_id": request.request_id,
-                    "ok": succeeded and process.returncode == 0,
-                    "event": (
-                        "ui_task_completed"
-                        if succeeded and process.returncode == 0
-                        else "ui_task_failed"
-                    ),
+                    "ok": task_ok,
+                    "event": task_event,
+                    "task_status": task_status,
+                    "task_message": task_message,
+                    "runner_ok": bool(runner_payload and runner_payload.get("ok")),
                     "runner_result": runner_payload,
                 }
             result.update(
@@ -528,12 +825,14 @@ class MacRobotUiBackend(Node):
             gateway_reachable = False
         with self._lock:
             active = self._active_request_id
+            maintenance = self._maintenance_request_id
         payload = {
             "schema": BACKEND_STATUS_SCHEMA,
             "event": "ui_backend_heartbeat",
             "stamp_unix_ms": int(time.time() * 1000),
             "allow_execution": self.allow_execution,
             "active_request_id": active,
+            "maintenance_request_id": maintenance,
             "gateway_reachable": gateway_reachable,
             "gateway_socket": self.gateway_socket,
             "gateway_real_motion_enabled": bool(

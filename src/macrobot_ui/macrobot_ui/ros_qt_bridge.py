@@ -30,6 +30,7 @@ class RosUiBridge:
             "task_status_topic": "/macrobot/ui/task/status",
             "task_result_topic": "/macrobot/ui/task/result",
             "stop_topic": "/macrobot/ui/stop",
+            "held_reset_topic": "/macrobot/ui/held/reset",
             "backend_status_topic": "/macrobot/ui/backend/status",
             "stored_pick_status_topic": "/macrobot/stored_pick/status",
             "stored_pick_result_topic": "/macrobot/stored_pick/result",
@@ -61,6 +62,9 @@ class RosUiBridge:
         )
         self._stop_pub = node.create_publisher(
             String, str(node.get_parameter("stop_topic").value), control_qos
+        )
+        self._held_reset_pub = node.create_publisher(
+            String, str(node.get_parameter("held_reset_topic").value), control_qos
         )
         node.create_subscription(
             String,
@@ -101,6 +105,9 @@ class RosUiBridge:
 
     def publish_stop(self, payload: dict[str, Any]) -> None:
         self._stop_pub.publish(String(data=compact_json(payload)))
+
+    def publish_held_reset(self, payload: dict[str, Any]) -> None:
+        self._held_reset_pub.publish(String(data=compact_json(payload)))
 
     def _callback(
         self,

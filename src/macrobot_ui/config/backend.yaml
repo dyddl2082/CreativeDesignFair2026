@@ -4,6 +4,9 @@ macrobot_ui_backend:
     status_topic: /macrobot/ui/task/status
     result_topic: /macrobot/ui/task/result
     stop_topic: /macrobot/ui/stop
+    held_reset_topic: /macrobot/ui/held/reset
+    stored_task_admin_topic: /macrobot/stored_pick/admin
+    stored_task_status_topic: /macrobot/stored_pick/status
     backend_status_topic: /macrobot/ui/backend/status
     gateway_socket: /tmp/macrobot_action_gateway.sock
     allow_execution: false
@@ -13,3 +16,4 @@ macrobot_ui_backend:
     max_code_bytes: 200000
     request_cache_size: 64
     heartbeat_period_s: 1.0
+    held_reset_timeout_s: 5.0
