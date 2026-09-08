@@ -34,7 +34,7 @@ profiles:
       stability_radius_m: 0.012
       bearing_tolerance_deg: 2.0
       range_tolerance_m: 0.015
-      height_tolerance_m: 0.03
+      height_tolerance_m: 0.1
       max_turn_step_deg: 4.0
       max_move_step_m: 0.04
       turn_speed: 150
@@ -135,7 +135,7 @@ profiles:
       stability_radius_m: 0.012
       bearing_tolerance_deg: 1.0
       range_tolerance_m: 0.008
-      height_tolerance_m: 0.03
+      height_tolerance_m: 0.1
       max_turn_step_deg: 4.0
       max_move_step_m: 0.04
       turn_speed: 150

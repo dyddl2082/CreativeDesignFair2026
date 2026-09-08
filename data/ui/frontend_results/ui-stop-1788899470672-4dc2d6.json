@@ -1,0 +1,36 @@
+{
+  "schema": "macrobot.ui.task_result/v1",
+  "request_id": "ui-stop-1788899470672-4dc2d6",
+  "ok": true,
+  "event": "ui_stop_completed",
+  "reason": "operator_pressed_ui_stop",
+  "gateway_result": {
+    "run_id": "ui-stop-1788899471251-4968a2",
+    "reason": "operator_pressed_ui_stop",
+    "open_result": {
+      "run_id": "ui-stop-1788899471251-4968a2",
+      "max_wall_time_s": 5000.0,
+      "max_internal_motion_steps": 80
+    },
+    "stop_result": {
+      "function_name": "STOP",
+      "run_id": "ui-stop-1788899471251-4968a2",
+      "success": true,
+      "error_code": null,
+      "error_message": null,
+      "finished_at_unix_ms": 1788899471410,
+      "__type__": "OperationResult"
+    },
+    "close_result": {
+      "run_id": "ui-stop-1788899471251-4968a2",
+      "closed": true,
+      "had_active_actions": false,
+      "active_action_count": 0,
+      "cancel_success": true,
+      "stop_success": null,
+      "stop_error_code": null,
+      "clean_shutdown": true
+    }
+  },
+  "message": ""
+}

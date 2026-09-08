@@ -29,7 +29,7 @@ macrobot_stored_object_pick:
     orientation_tolerance_deg: 20.0
     bearing_tolerance_deg: 1.0
     range_tolerance_m: 0.008
-    height_tolerance_m: 0.03
+    height_tolerance_m: 0.10
     max_turn_step_deg: 4.0
     max_move_step_m: 0.04
     alignment_turn_speed: 150

@@ -286,6 +286,7 @@ class CodePane(QWidget):
     held_reset_requested = Signal()
     stop_requested = Signal()
 
+    arm_home_requested = Signal()
     def __init__(self, code_font: QFont | None = None) -> None:
         super().__init__()
         root = QVBoxLayout(self)
@@ -349,9 +350,13 @@ class CodePane(QWidget):
         self.held_reset_button = self._button(
             "보유 상태 비우기", "secondaryButton", self.held_reset_requested
         )
+        self.arm_home_button = self._button(
+            "로봇팔 HOME", "secondaryButton", self.arm_home_requested
+        )
         self.stop_button = self._button("긴급 STOP", "dangerButton", self.stop_requested)
         second_row.addWidget(self.execute_button, 2)
         second_row.addWidget(self.held_reset_button, 1)
+        second_row.addWidget(self.arm_home_button, 1)
         second_row.addWidget(self.stop_button, 1)
         root.addLayout(second_row)
         self.set_code("")
@@ -412,6 +417,9 @@ class CodePane(QWidget):
             and not request_pending
         )
         self.held_reset_button.setEnabled(backend_reachable and not request_pending)
+        self.arm_home_button.setEnabled(
+            backend_reachable and allow_execution and not request_pending
+        )
         self.stop_button.setEnabled(backend_reachable)
 
 
@@ -521,6 +529,9 @@ class MainWindow(QMainWindow):
         self.code_pane.save_requested.connect(self._save_code)
         self.code_pane.backend_validate_requested.connect(self._backend_validate)
         self.code_pane.execute_requested.connect(self._execute_code)
+        self.code_pane.arm_home_requested.connect(
+            self._request_arm_home
+        )
         self.code_pane.held_reset_requested.connect(self._request_held_reset)
         self.code_pane.stop_requested.connect(self._request_stop)
 
@@ -704,6 +715,59 @@ class MainWindow(QMainWindow):
         if box.exec() != QMessageBox.StandardButton.Yes:
             return
         self._submit_backend("execute", approved=True, stored=stored)
+
+    def _request_arm_home(self) -> None:
+        # Move the arm to HOME through the validated/approved Robot API path.
+        if self._pending_payload is not None:
+            QMessageBox.warning(
+                self,
+                "요청 진행 중",
+                "이전 Pi 요청이 아직 진행 중입니다.",
+            )
+            return
+        if not self._backend_state.reachable or not self._backend_state.allow_execution:
+            QMessageBox.warning(
+                self,
+                "HOME 실행 불가",
+                "Pi backend 연결 및 실행 허용 상태를 확인하세요.",
+            )
+            return
+
+        code = (
+            "def main() -> TaskOutcome:\n"
+            "    action = robot.SET_ARM_JOINTS(\n"
+            "        arm_lift_deg=0.0,\n"
+            "        wrist_pitch_deg=0.0,\n"
+            "    )\n"
+            "    result = robot.WAIT_ACTION(\n"
+            "        action,\n"
+            "        timeout_s=25.0,\n"
+            "    )\n"
+            "    if result.state != ActionState.SUCCEEDED:\n"
+            "        return TaskOutcome(\n"
+            "            status=TaskStatus.FAILED,\n"
+            "            message=result.error_message or \"로봇팔 HOME 이동에 실패했습니다.\",\n"
+            "        )\n"
+            "    return TaskOutcome(\n"
+            "        status=TaskStatus.SUCCEEDED,\n"
+            "        message=\"로봇팔을 HOME 위치로 이동했습니다.\",\n"
+            "    )\n"
+        )
+        self._last_user_request = "UI quick action: robot arm HOME"
+        self._current_response = None
+        self._current_report = None
+        self._stored_task = None
+        self.code_pane.set_code(code)
+        self._validate_code()
+        if self._current_report is None or not self._current_report.is_valid:
+            QMessageBox.critical(
+                self,
+                "HOME 코드 검증 실패",
+                "SET_ARM_JOINTS 기반 HOME 코드가 로컬 검증을 통과하지 못했습니다.",
+            )
+            return
+
+        self._execute_code()
 
     def _submit_backend(
         self,
