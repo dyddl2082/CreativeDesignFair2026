@@ -1,5 +1,6 @@
 macrobot_stored_object_pick:
   ros__parameters:
+    # PLACE_STOP_SPIN_V3
     profile_file: ~/MacRobot/data/stored_objects/runtime_profiles.yaml
     recordings_dir: ~/MacRobot/data/arm_primitives
     grasp_keyframe_profile_file: ~/MacRobot/data/grasp_keyframes/profiles.yaml
@@ -127,7 +128,7 @@ macrobot_stored_object_pick:
     camera_motion_frame_guard_sec: 0.25
     camera_max_translation_chunk_m: 0.012
     camera_search_backoff_chunk_m: 0.02
-    camera_search_turn_chunk_deg: 10.0
+    camera_search_turn_chunk_deg: 4.0
     camera_disable_location_memory: true
     camera_disable_distance_handoff: true
     camera_allow_legacy_record_commands: false
@@ -415,8 +416,8 @@ macrobot_stored_object_pick:
     legacy2d_fallback_to_current_controller: false
     # macrobot_legacy_2d_orientation_v8_1 END
     # PLACE_SIDE_TURN_CAMERA_POLICY_V1_1
-    place_side_turn_enabled: true
-    place_side_turn_deg: 15.0
+    place_side_turn_enabled: false
+    place_side_turn_deg: 0.0
     place_side_turn_chunk_deg: 4.0
     place_side_turn_max_abs_deg: 30.0
     place_side_turn_finish_tolerance_deg: 0.05

@@ -946,7 +946,7 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
         self.pose_relocation_active = True
         self.pose_relocation_queue = list(plan.primitives)
         self._dispatch_pose_relocation_primitive()
-    def _try_alignment_step(self) -> None:
+    def _try_alignment_step_before_place_stop_spin_v3(self) -> None:
         # camera_reset_pose_relocation_v1
         if not bool(self.get_parameter("pose_relocation_enabled").value):
             super()._try_alignment_step()
@@ -1604,7 +1604,7 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
             )
         super()._send_move(bounded, purpose)
 
-    def _send_turn(self, physical_left_positive_deg: float, purpose: str) -> None:
+    def _send_turn_before_place_stop_spin_v3(self, physical_left_positive_deg: float, purpose: str) -> None:
         requested = float(physical_left_positive_deg)
         parameter = (
             "camera_search_turn_chunk_deg"
@@ -2362,6 +2362,273 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
             next="semantic_place_preflight",
         )
         self._start_place_preflight()
+
+    # PLACE_STOP_SPIN_V3
+    # Deterministic PLACE safety policy:
+    #   1. normal camera-authoritative acquisition/alignment,
+    #   2. commit after the first genuinely aligned 3-D observation,
+    #   3. NO post-alignment base turn,
+    #   4. NO automatic full-search rotation after identity confirmation,
+    #   5. if 3-D localization disappears before alignment, hold stationary.
+    def _start_place_goal(self, request) -> None:
+        self._place_identity_latched_v3 = False
+        self._place_commit_started_v3 = False
+        self._place_identity_source_v3 = ""
+        super()._start_place_goal(request)
+        if self.task_kind == "place" and self.state == "RUNNING":
+            self._publish_status(
+                "place_stop_spin_policy_active",
+                post_alignment_base_turn_deg=0.0,
+                first_aligned_observation_commits=True,
+                automatic_search_after_identity=False,
+                loss_policy="stationary_manual_hold",
+            )
+
+    def _mark_identity_confirmed(self, source: str) -> None:
+        super()._mark_identity_confirmed(source)
+        if self.task_kind != "place" or self.state != "RUNNING":
+            return
+        first = not getattr(self, "_place_identity_latched_v3", False)
+        self._place_identity_latched_v3 = True
+        self._place_identity_source_v3 = str(source)
+        if first:
+            self._publish_status(
+                "place_reference_identity_latched",
+                confirmation_source=str(source),
+                automatic_full_search_disabled=True,
+                physical_motion="stationary_until_3d_alignment",
+            )
+
+    def _try_alignment_step(self) -> None:
+        if self.task_kind != "place" or getattr(
+            self, "_place_commit_started_v3", False
+        ):
+            self._try_alignment_step_before_place_stop_spin_v3()
+            return
+
+        self._try_alignment_step_before_place_stop_spin_v3()
+
+        # The reference center is not a precision placement target in this
+        # project.  One complete aligned 3-D assessment is enough.  Do not wait
+        # for a second confirmation that can disappear and trigger recovery.
+        if (
+            self.state == "RUNNING"
+            and not getattr(self, "_place_commit_started_v3", False)
+            and not self.base_active
+            and not self.arm_active
+            and self.phase in {"align", "align_settle"}
+            and self.aligned_confirmations >= 1
+            and self.last_object_point is not None
+        ):
+            self._publish_status(
+                "place_first_alignment_accepted",
+                aligned_confirmations=self.aligned_confirmations,
+                policy="single_aligned_3d_observation",
+                next="semantic_place_preflight",
+            )
+            self._alignment_complete()
+
+    def _alignment_complete(self) -> None:
+        if self.task_kind != "place":
+            super()._alignment_complete()
+            return
+        if getattr(self, "_place_commit_started_v3", False):
+            return
+        if self.base_active or self.arm_active:
+            return
+
+        reference_point = self.last_object_point
+        if reference_point is None and self.latest_stable_detection is not None:
+            reference_point = self.latest_stable_detection.point_base
+        if reference_point is None:
+            self._enter_recovery_hold(
+                "PLACE_REFERENCE_3D_UNAVAILABLE",
+                "reference identity was confirmed but no usable 3-D point remains",
+                resume_mode="manual",
+                automatic_full_search_disabled=True,
+            )
+            return
+
+        try:
+            held_runtime = self.profile_store.get(
+                self.held_runtime_profile,
+                self.held_object_name,
+            )
+            held_runtime.validate_for_execution(
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+            placement_point = tuple(
+                float(value)
+                for value in held_runtime.alignment.reference_point_base
+            )
+            if len(placement_point) != 3 or not all(
+                math.isfinite(value) for value in placement_point
+            ):
+                raise ValueError("held taught reachable point is invalid")
+        except Exception as exc:
+            self._fail(
+                "POSITION_STORE_ERROR",
+                reason=f"held taught reachable point unavailable for PLACE: {exc}",
+            )
+            return
+
+        self._place_commit_started_v3 = True
+        self._cancel_finder("place_alignment_committed_no_turn_v3")
+        self._clear_active_target()
+        self.search_actions.clear()
+        self.search_observe_until = 0.0
+        self.require_fresh_after_turn = False
+        self.reobserve_not_before = 0.0
+        self.placement_point_base = placement_point
+
+        error_payload = (
+            None
+            if self.last_errors is None
+            else self._error_mapping(self.last_errors)
+        )
+        self.steps["alignment"] = {
+            "iterations": self.alignment_iterations,
+            "errors": error_payload,
+            "reference_point_base": list(reference_point),
+            "confirmation_policy": "single_aligned_3d_observation",
+        }
+        self._publish_status(
+            "place_alignment_committed_no_base_turn",
+            reference_object=self.place_reference_object,
+            reference_point_base=list(reference_point),
+            placement_point_base=list(self.placement_point_base),
+            placement_policy="held_taught_reachable_point_no_base_turn",
+            post_alignment_base_turn_deg=0.0,
+            legacy_offset_used=False,
+            finder_cancelled=True,
+            next="semantic_place_preflight",
+        )
+        self._start_place_preflight()
+
+    def _fail(self, error_code: str, *, reason: str, **details) -> None:
+        perception_codes = {
+            "OBJECT_LOST",
+            "OBJECT_NOT_FOUND",
+            "PERCEPTION_UNAVAILABLE",
+            "ALIGNMENT_TIMEOUT",
+        }
+        if (
+            self.task_kind == "place"
+            and getattr(self, "_place_identity_latched_v3", False)
+            and not getattr(self, "_place_commit_started_v3", False)
+            and error_code in perception_codes
+        ):
+            if self.aligned_confirmations >= 1 and self.last_object_point is not None:
+                self._publish_status(
+                    "place_perception_loss_after_alignment_committing",
+                    original_error_code=error_code,
+                    original_reason=reason,
+                    automatic_full_search_disabled=True,
+                )
+                self._alignment_complete()
+                return
+            if self.phase != "recovery_hold":
+                self._enter_recovery_hold(
+                    "PLACE_REFERENCE_LOST_AFTER_IDENTITY",
+                    reason,
+                    resume_mode="manual",
+                    original_error_code=error_code,
+                    identity_source=getattr(
+                        self, "_place_identity_source_v3", ""
+                    ),
+                    automatic_full_search_disabled=True,
+                        **details,
+                )
+            return
+        super()._fail(error_code, reason=reason, **details)
+
+    def _restart_full_search(self, reason: str) -> None:
+        if (
+            self.task_kind == "place"
+            and (
+                getattr(self, "_place_identity_latched_v3", False)
+                or getattr(self, "_place_commit_started_v3", False)
+            )
+        ):
+            if getattr(self, "_place_commit_started_v3", False):
+                self._publish_status(
+                    "place_search_restart_ignored_after_commit",
+                    reason=reason,
+                    phase=self.phase,
+                )
+                return
+            if self.aligned_confirmations >= 1 and self.last_object_point is not None:
+                self._publish_status(
+                    "place_search_restart_replaced_by_commit",
+                    reason=reason,
+                    automatic_full_search_disabled=True,
+                )
+                self._alignment_complete()
+                return
+            if self.phase != "recovery_hold":
+                self._enter_recovery_hold(
+                    "PLACE_REFERENCE_LOST_AFTER_IDENTITY",
+                    reason,
+                    resume_mode="manual",
+                    automatic_full_search_disabled=True,
+                    )
+            return
+        super()._restart_full_search(reason)
+
+    def _send_turn(
+        self,
+        physical_left_positive_deg: float,
+        purpose: str,
+    ) -> None:
+        block_side_turn = (
+            self.task_kind == "place"
+            and purpose.startswith("resilient_place_side_turn")
+        )
+        block_search_after_identity = (
+            self.task_kind == "place"
+            and getattr(self, "_place_identity_latched_v3", False)
+            and (
+                purpose == "search_turn"
+                or purpose.startswith("resilient_search")
+            )
+        )
+        if block_side_turn or block_search_after_identity:
+            self._publish_status(
+                "place_base_turn_blocked",
+                requested_deg=float(physical_left_positive_deg),
+                purpose=purpose,
+                reason=(
+                    "post_alignment_side_turn_disabled"
+                    if block_side_turn
+                    else "automatic_search_after_identity_disabled"
+                ),
+                physical_motion="not_commanded",
+            )
+            if (
+                not getattr(self, "_place_commit_started_v3", False)
+                and self.aligned_confirmations >= 1
+                and self.last_object_point is not None
+            ):
+                self._alignment_complete()
+            elif (
+                not getattr(self, "_place_commit_started_v3", False)
+                and self.phase != "recovery_hold"
+            ):
+                self._enter_recovery_hold(
+                    "PLACE_BASE_TURN_BLOCKED",
+                    "unsafe PLACE search/side-turn request was suppressed",
+                    resume_mode="manual",
+                    blocked_purpose=purpose,
+                    requested_deg=float(physical_left_positive_deg),
+                    )
+            return
+
+        self._send_turn_before_place_stop_spin_v3(
+            physical_left_positive_deg,
+            purpose,
+        )
+
 
 def main(args=None) -> None:
     rclpy.init(args=args)

@@ -1,0 +1,43 @@
+{
+  "schema": "macrobot.ui.task_result/v1",
+  "request_id": "ui-execute-1788903081161-d750ec",
+  "ok": false,
+  "event": "ui_task_partially_succeeded",
+  "task_status": "partially_succeeded",
+  "task_message": "배치 액션이 취소되었습니다.",
+  "runner_ok": true,
+  "runner_result": {
+    "ok": true,
+    "task_status": "partially_succeeded",
+    "task_message": "배치 액션이 취소되었습니다.",
+    "outcome": {
+      "status": {
+        "__enum__": "TaskStatus",
+        "value": "partially_succeeded"
+      },
+      "message": "배치 액션이 취소되었습니다.",
+      "data": null,
+      "__type__": "TaskOutcome"
+    },
+    "loop_iterations_used": 0,
+    "close_result": {
+      "run_id": "run-1788903082253-fe30ef1d",
+      "closed": true,
+      "had_active_actions": false,
+      "active_action_count": 0,
+      "cancel_success": true,
+      "stop_success": null,
+      "stop_error_code": null,
+      "clean_shutdown": true
+    },
+    "run_id": "run-1788903082253-fe30ef1d",
+    "log_path": "/home/dyddl2082/MacRobot/data/llm_runs/run-1788903082253-fe30ef1d/run.json"
+  },
+  "mode": "execute",
+  "source_sha256": "7b9416a2fe67150e9b20dad981f5869c3bf4d38ee8a07e2feaba00396e659ce6",
+  "runner_returncode": 0,
+  "code_path": "/home/dyddl2082/MacRobot/data/ui/approved_tasks/ui-execute-1788903081161-d750ec/task.py",
+  "metadata_path": "/home/dyddl2082/MacRobot/data/ui/approved_tasks/ui-execute-1788903081161-d750ec/request.json",
+  "started_at_unix_ms": 1788903081456,
+  "finished_at_unix_ms": 1788903190060
+}

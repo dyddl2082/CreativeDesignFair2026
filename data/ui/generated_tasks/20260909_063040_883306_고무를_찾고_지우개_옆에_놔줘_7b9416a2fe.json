@@ -1,0 +1,22 @@
+{
+  "request": "고무를 찾고 지우개 옆에 놔줘.",
+  "status": "CODE",
+  "object_bindings": "- 고무 -> ObjectId.RUBBER\n- 지우개 -> ObjectId.ERASER",
+  "assumptions": "- “고무를 찾고”는 고무를 확인·정렬하여 집는 과정으로 해석합니다.",
+  "raw_response": "STATUS: CODE\n\nOBJECT_BINDINGS:\n- 고무 -> ObjectId.RUBBER\n- 지우개 -> ObjectId.ERASER\n\nASSUMPTIONS:\n- “고무를 찾고”는 고무를 확인·정렬하여 집는 과정으로 해석합니다.\n\nCODE:\n\n```python\ndef main() -> TaskOutcome:\n    pick_action = robot.PICK_OBJECT(\n        object_id=ObjectId.RUBBER,\n    )\n    pick_result = robot.WAIT_ACTION(\n        pick_action,\n        timeout_s=2410.0,\n    )\n\n    if pick_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.FAILED,\n            message=pick_result.error_message or \"고무를 찾아 집지 못했습니다.\",\n        )\n\n    place_action = robot.PLACE_NEXTTO_OBJECT(\n        reference_object_id=ObjectId.ERASER,\n    )\n    place_result = robot.WAIT_ACTION(\n        place_action,\n        timeout_s=2410.0,\n    )\n\n    if place_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.PARTIALLY_SUCCEEDED,\n            message=place_result.error_message or \"고무를 집었지만 지우개 옆에 놓지 못했습니다.\",\n        )\n\n    return TaskOutcome(\n        status=TaskStatus.SUCCEEDED,\n        message=\"고무를 찾아 집은 뒤 지우개 옆에 놓았습니다.\",\n    )\n```",
+  "validation": [],
+  "validator": "gateway",
+  "conversation": [
+    {
+      "role": "user",
+      "text": "고무를 찾고 지우개 옆에 놔줘."
+    },
+    {
+      "role": "assistant",
+      "text": "STATUS: CODE\n\nOBJECT_BINDINGS:\n- 고무 -> ObjectId.RUBBER\n- 지우개 -> ObjectId.ERASER\n\nASSUMPTIONS:\n- “고무를 찾고”는 고무를 확인·정렬하여 집는 과정으로 해석합니다.\n\nCODE:\n\n```python\ndef main() -> TaskOutcome:\n    pick_action = robot.PICK_OBJECT(\n        object_id=ObjectId.RUBBER,\n    )\n    pick_result = robot.WAIT_ACTION(\n        pick_action,\n        timeout_s=2410.0,\n    )\n\n    if pick_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.FAILED,\n            message=pick_result.error_message or \"고무를 찾아 집지 못했습니다.\",\n        )\n\n    place_action = robot.PLACE_NEXTTO_OBJECT(\n        reference_object_id=ObjectId.ERASER,\n    )\n    place_result = robot.WAIT_ACTION(\n        place_action,\n        timeout_s=2410.0,\n    )\n\n    if place_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.PARTIALLY_SUCCEEDED,\n            message=place_result.error_message or \"고무를 집었지만 지우개 옆에 놓지 못했습니다.\",\n        )\n\n    return TaskOutcome(\n        status=TaskStatus.SUCCEEDED,\n        message=\"고무를 찾아 집은 뒤 지우개 옆에 놓았습니다.\",\n    )\n```"
+    }
+  ],
+  "source_sha256": "7b9416a2fe67150e9b20dad981f5869c3bf4d38ee8a07e2feaba00396e659ce6",
+  "code_path": "/home/dyddl2082/MacRobot/data/ui/generated_tasks/20260909_063040_883306_고무를_찾고_지우개_옆에_놔줘_7b9416a2fe.py",
+  "saved_at": "2026-09-09T06:30:40.884923+09:00"
+}
