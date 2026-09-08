@@ -89,6 +89,9 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
     """Vision-first task node with no persistent-odometry navigation authority."""
 
     def __init__(self) -> None:
+        self.place_side_turn_target_deg = 0.0
+        self.place_side_turn_completed_deg = 0.0
+        self.place_side_turn_remaining_deg = 0.0
         # The parent constructor dynamically calls status/reset helpers.
         self.final_visual_confirmations = 0
         self.final_visual_started_at = 0.0
@@ -191,6 +194,16 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
         for name, value in relocation_defaults.items():
             self.declare_parameter(name, value)
 
+        # PLACE_SIDE_TURN_CAMERA_POLICY_V1_1
+        place_side_turn_defaults: Dict[str, Any] = {
+            "place_side_turn_enabled": True,
+            "place_side_turn_deg": 15.0,
+            "place_side_turn_chunk_deg": 4.0,
+            "place_side_turn_max_abs_deg": 30.0,
+            "place_side_turn_finish_tolerance_deg": 0.05,
+        }
+        for name, value in place_side_turn_defaults.items():
+            self.declare_parameter(name, value)
     def _status_payload(
         self,
         event: str,
@@ -227,6 +240,9 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
         return payload
 
     def _reset_action_state(self) -> None:
+        self.place_side_turn_target_deg = 0.0
+        self.place_side_turn_completed_deg = 0.0
+        self.place_side_turn_remaining_deg = 0.0
         super()._reset_action_state()
         self.final_visual_confirmations = 0
         self.final_visual_started_at = 0.0
@@ -1392,6 +1408,170 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
 
         super()._run_orientation_recovery(stable, assessment)
 
+    # PLACE_SIDE_TURN_CAMERA_POLICY_V1_1
+    # Reference-based PLACE only: after normal camera-authoritative alignment,
+    # intentionally yaw the chassis a small amount and place at the held
+    # object's taught reachable arm point.  Do not visually re-center the
+    # reference after this deliberate side turn.
+    def _alignment_complete(self) -> None:
+        if self.task_kind != "place":
+            super()._alignment_complete()
+            return
+        if not bool(self.get_parameter("place_side_turn_enabled").value):
+            super()._alignment_complete()
+            return
+        target_deg = float(self.get_parameter("place_side_turn_deg").value)
+        max_abs_deg = max(
+            0.0,
+            float(self.get_parameter("place_side_turn_max_abs_deg").value),
+        )
+        finish_tolerance_deg = max(
+            0.01,
+            abs(float(self.get_parameter("place_side_turn_finish_tolerance_deg").value)),
+        )
+        if not math.isfinite(target_deg):
+            self._fail("INVALID_ARGUMENT", reason="place_side_turn_deg must be finite")
+            return
+        if abs(target_deg) > max_abs_deg + 1e-9:
+            self._fail(
+                "INVALID_ARGUMENT",
+                reason=(
+                    "place_side_turn_deg exceeds configured safety bound: "
+                    f"requested={target_deg:.3f}, max={max_abs_deg:.3f} deg"
+                ),
+            )
+            return
+        if abs(target_deg) <= finish_tolerance_deg:
+            super()._alignment_complete()
+            return
+        if self.last_object_point is None:
+            self._fail(
+                "OBJECT_LOST",
+                reason="reference object point unavailable before PLACE side turn",
+            )
+            return
+        try:
+            held_runtime = self.profile_store.get(
+                self.held_runtime_profile,
+                self.held_object_name,
+            )
+            held_runtime.validate_for_execution(
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+            reachable_point = tuple(
+                float(value)
+                for value in held_runtime.alignment.reference_point_base
+            )
+            if len(reachable_point) != 3 or not all(
+                math.isfinite(value) for value in reachable_point
+            ):
+                raise ValueError("held taught reachable point is invalid")
+        except Exception as error:
+            self._fail(
+                "INVALID_ARGUMENT",
+                reason=f"held-object taught reachable point unavailable: {error}",
+            )
+            return
+
+        reference_point = tuple(float(value) for value in self.last_object_point)
+        self._cancel_finder("place_reference_aligned_side_turn")
+        self._clear_active_target()
+        self.steps["alignment"] = {
+            "iterations": self.alignment_iterations,
+            "errors": self._error_mapping(self.last_errors),
+            "reference_point_base": list(reference_point),
+        }
+        self.placement_point_base = reachable_point
+        self.place_side_turn_target_deg = target_deg
+        self.place_side_turn_completed_deg = 0.0
+        self.place_side_turn_remaining_deg = target_deg
+        self._publish_status(
+            "place_target_resolved",
+            reference_object=self.place_reference_object,
+            reference_point_base=list(reference_point),
+            placement_policy="camera_side_turn_then_held_taught_reachable_point",
+            requested_side_turn_deg=target_deg,
+            legacy_placement_offset_base=list(self.place_offset_base),
+            legacy_offset_used=False,
+            placement_point_base=list(self.placement_point_base),
+            visual_recenter_after_side_turn=False,
+        )
+        self._publish_status(
+            "place_side_turn_started",
+            target_deg=target_deg,
+            direction=("left_ccw" if target_deg > 0.0 else "right_cw"),
+            high_level_sign_contract="positive_is_left_ccw",
+            visual_recenter_after_side_turn=False,
+        )
+        self._continue_place_side_turn()
+
+    def _continue_place_side_turn(self) -> None:
+        if self.state in TERMINAL_STATES or self.state == "CANCEL_REQUESTED":
+            return
+        if self.base_active:
+            return
+        tolerance = max(
+            0.01,
+            abs(float(self.get_parameter("place_side_turn_finish_tolerance_deg").value)),
+        )
+        remaining = self.place_side_turn_target_deg - self.place_side_turn_completed_deg
+        self.place_side_turn_remaining_deg = remaining
+        if abs(remaining) <= tolerance:
+            self.place_side_turn_remaining_deg = 0.0
+            self.phase = "place_side_turn_completed"
+            self._publish_status(
+                "place_side_turn_completed",
+                target_deg=self.place_side_turn_target_deg,
+                completed_deg=self.place_side_turn_completed_deg,
+                placement_point_base=(
+                    None
+                    if self.placement_point_base is None
+                    else list(self.placement_point_base)
+                ),
+                visual_recenter_after_side_turn=False,
+                next="semantic_place_preflight",
+            )
+            self._start_place_preflight()
+            return
+        configured_chunk = max(
+            0.1,
+            abs(float(self.get_parameter("place_side_turn_chunk_deg").value)),
+        )
+        camera_chunk = max(
+            0.1,
+            abs(float(self.get_parameter("camera_max_turn_chunk_deg").value)),
+        )
+        chunk_limit = min(configured_chunk, camera_chunk)
+        amount = max(-chunk_limit, min(chunk_limit, remaining))
+        self.phase = "place_side_turn"
+        self._publish_status(
+            "place_side_turn_chunk_started",
+            chunk_deg=amount,
+            target_deg=self.place_side_turn_target_deg,
+            completed_deg=self.place_side_turn_completed_deg,
+            remaining_before_deg=remaining,
+            chunk_limit_deg=chunk_limit,
+        )
+        # Keep sign conversion centralized in StoredObjectPickNode._send_turn:
+        # + here means physical left/CCW; pico_turn_positive_is_right=true then
+        # converts it to negative TURN_DEG at the Pico boundary.
+        self._send_turn(amount, "resilient_place_side_turn")
+
+    def _after_place_side_turn_chunk(self, physical_amount: float) -> None:
+        self.place_side_turn_completed_deg += float(physical_amount)
+        self.place_side_turn_remaining_deg = (
+            self.place_side_turn_target_deg - self.place_side_turn_completed_deg
+        )
+        self._publish_status(
+            "place_side_turn_chunk_completed",
+            completed_chunk_deg=float(physical_amount),
+            completed_total_deg=self.place_side_turn_completed_deg,
+            remaining_deg=self.place_side_turn_remaining_deg,
+            visual_recenter_after_side_turn=False,
+        )
+        self._continue_place_side_turn()
+
     def _send_move(self, physical_forward_positive_m: float, purpose: str) -> None:
         requested = float(physical_forward_positive_m)
         if purpose == "resilient_search_backoff":
@@ -1603,6 +1783,23 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
             self.last_visual_object_odom = None
 
     def _after_camera_motion(self, purpose: str, physical_amount: float) -> None:
+        if purpose == "resilient_place_side_turn":
+            self.camera_motion_completed_at = time.time()
+            guard = max(
+                0.0,
+                float(self.get_parameter("camera_motion_frame_guard_sec").value),
+                float(self.get_parameter("post_motion_frame_guard_sec").value),
+            )
+            self.fresh_detection_not_before_wall_sec = (
+                self.camera_motion_completed_at + guard
+            )
+            self.pending_detections.clear()
+            self.filter.clear()
+            self.cached_stable_detection = None
+            self.latest_stable_detection = None
+            self.last_object_point = None
+            self._after_place_side_turn_chunk(physical_amount)
+            return
         self.camera_motion_completed_at = time.time()
         guard = max(
             0.0,

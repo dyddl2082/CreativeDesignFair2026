@@ -1,0 +1,96 @@
+{
+  "schema": "macrobot.ui.task_result/v1",
+  "request_id": "ui-held-clear-1788896475955-0aa327",
+  "ok": true,
+  "event": "ui_held_state_cleared",
+  "message": "보유 상태를 empty로 초기화했고 Gateway 동기화까지 확인했습니다.",
+  "stored_task_status": {
+    "ok": true,
+    "event": "held_object_cleared",
+    "action_state": "CANCELED",
+    "state": "CANCELED",
+    "phase": "terminal",
+    "request_id": "gateway-place-67c0ff52240a48b196fb3ceed3182bb8",
+    "object_name": "Eraser",
+    "profile": "Eraser",
+    "mode": "place",
+    "execute_pick": false,
+    "task": "place",
+    "search_policy": "rotation_first_visual_replanning",
+    "location_hint_state": "disabled",
+    "location_hint_reason": "camera_authoritative_mode",
+    "pending_delayed_detections": 0,
+    "held_object": {
+      "state": "empty",
+      "object_name": null,
+      "grasp_profile": null,
+      "updated_at": "2026-09-08T19:41:16.277560+00:00",
+      "epoch": null,
+      "source": "operator_clear"
+    },
+    "orientation_probe_stage": "idle",
+    "orientation_probe_count": 3,
+    "orientation_last_assessment": {
+      "state": "aligned",
+      "signed_error_deg": 0.34635947199015504,
+      "absolute_error_deg": 0.34635947199015504,
+      "quality": 0.9850442918072745,
+      "cost": 0.023090631466010335
+    },
+    "orientation_reference": {
+      "angle_deg": 179.92102859368256,
+      "class": "horizontal",
+      "quality": 0.9456298005835175,
+      "source": "upright_face_plane_3d"
+    },
+    "recovery_hold": {
+      "code": "PLACE_PATH_NOT_READY",
+      "reason": "place_above_lateral_alignment_failed",
+      "resume_mode": "manual"
+    },
+    "terminal_policy": "full_360_not_found_or_explicit_stop_or_critical_fault",
+    "execution_authority": "fresh_rgbd_localization",
+    "persistent_odometry_used": false,
+    "encoder_role": "proportional_relative_pose_actuation_and_fault_detection",
+    "camera_motion_sequence": 20,
+    "final_visual_confirmations": 0,
+    "distance_handoff_active": false,
+    "fast_docking_phase": "coarse",
+    "fast_translation_streak": 0,
+    "pose_relocation_enabled": false,
+    "pose_relocation_stage": "viewpoint",
+    "pose_relocation_anchor_range_m": 0.26075239020699376,
+    "pose_relocation_iteration": 0,
+    "pose_relocation_compound_active": false
+  },
+  "gateway_robot_state": {
+    "base": {
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "state": "unreliable",
+      "updated_at_unix_ms": 1788896436013
+    },
+    "arm": {
+      "values": [
+        0.8377893518302328,
+        7.698766445142009
+      ],
+      "state": "valid",
+      "updated_at_unix_ms": 1788896476303
+    },
+    "gripper": {
+      "values": [
+        77.45533068948218
+      ],
+      "state": "valid",
+      "updated_at_unix_ms": 1788896476303
+    },
+    "positions": {},
+    "arm_primitives": {},
+    "held_object": null,
+    "held_object_known": true
+  }
+}
