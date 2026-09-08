@@ -45,6 +45,7 @@ setup(
             "direct_pose_task_node = macrobot_pick_pipeline.direct_pose_task_node:main",
             "fast_axis_task_node = macrobot_pick_pipeline.fast_axis_task_node:main",
             "depth_only_task_node = macrobot_pick_pipeline.depth_only_task_node:main",
+            "legacy_2d_orientation_task_node = macrobot_pick_pipeline.legacy_2d_orientation_task_node:main",
         "joint_pose_task_node = macrobot_pick_pipeline.joint_pose_task_node:main",
             "depth_clearance_node = macrobot_pick_pipeline.depth_clearance_node:main",
             "visible_pick_test_node = macrobot_pick_pipeline.visible_pick_test_node:main",

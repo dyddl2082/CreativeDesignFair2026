@@ -395,6 +395,25 @@ macrobot_stored_object_pick:
     depth_only_max_moves: 10
     depth_only_fallback_to_legacy: false
     # macrobot_depth_only_grasp_v7_1 END
+    # macrobot_legacy_2d_orientation_v8_1 BEGIN
+    # Legacy/pre-full-3D orientation policy.  Search/localization/IK stay current.
+    legacy2d_enabled: true
+    legacy2d_bearing_tolerance_deg: 6.0
+    legacy2d_forward_tolerance_m: 0.010
+    legacy2d_lateral_tolerance_m: 0.015
+    legacy2d_position_turn_max_deg: 10.0
+    legacy2d_position_move_max_m: 0.050
+    legacy2d_position_progress: 0.85
+    legacy2d_allow_reverse: true
+    legacy2d_reverse_max_m: 0.020
+    legacy2d_orientation_enabled: true
+    legacy2d_orientation_trigger_deg: 18.0
+    legacy2d_orientation_turn_max_deg: 7.0
+    legacy2d_orientation_min_quality: 0.35
+    legacy2d_orientation_max_corrections: 2
+    legacy2d_confirmation_count: 1
+    legacy2d_fallback_to_current_controller: false
+    # macrobot_legacy_2d_orientation_v8_1 END
 macrobot_visible_pick_test:
   ros__parameters:
     detection_max_age_sec: 8.0
