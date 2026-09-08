@@ -25,7 +25,7 @@ from .camera_authoritative_task_node import CameraAuthoritativeTaskNode
 from .camera_pose_relocation import MotionPrimitive, RelocationPlan, relative_pose_from_primitives
 from .legacy_2d_controller import Legacy2DPlan, choose_legacy_2d_plan
 
-PATCH_MARKER = "macrobot_legacy_2d_orientation_v8_1"
+PATCH_MARKER = "macrobot_legacy_2d_orientation_v8_2"
 
 
 class Legacy2DOrientationTaskNode(CameraAuthoritativeTaskNode):
@@ -35,6 +35,8 @@ class Legacy2DOrientationTaskNode(CameraAuthoritativeTaskNode):
         self.legacy2d_orientation_corrections = 0
         self.legacy2d_alignment_confirmations = 0
         self.legacy2d_last_plan: dict[str, object] = {}
+        self.legacy2d_parent_handoff_pending = False
+        self.legacy2d_parent_handoff_count = 0
         super().__init__()
         self._publish_status(
             "legacy2d_orientation_controller_ready",
@@ -56,7 +58,7 @@ class Legacy2DOrientationTaskNode(CameraAuthoritativeTaskNode):
             "legacy2d_enabled": True,
             "legacy2d_bearing_tolerance_deg": 6.0,
             "legacy2d_forward_tolerance_m": 0.010,
-            "legacy2d_lateral_tolerance_m": 0.015,
+            "legacy2d_lateral_tolerance_m": 0.060,
             "legacy2d_position_turn_max_deg": 10.0,
             "legacy2d_position_move_max_m": 0.050,
             "legacy2d_position_progress": 0.85,
@@ -87,6 +89,8 @@ class Legacy2DOrientationTaskNode(CameraAuthoritativeTaskNode):
                 "legacy2d_alignment_confirmations": self.legacy2d_alignment_confirmations,
                 "legacy2d_last_plan": dict(self.legacy2d_last_plan),
                 "legacy2d_uses_3d_orientation": False,
+                "legacy2d_parent_handoff_pending": bool(self.legacy2d_parent_handoff_pending),
+                "legacy2d_parent_handoff_count": int(self.legacy2d_parent_handoff_count),
             }
         )
         return payload
@@ -96,12 +100,16 @@ class Legacy2DOrientationTaskNode(CameraAuthoritativeTaskNode):
         self.legacy2d_orientation_corrections = 0
         self.legacy2d_alignment_confirmations = 0
         self.legacy2d_last_plan = {}
+        self.legacy2d_parent_handoff_pending = False
+        self.legacy2d_parent_handoff_count = 0
 
     def _begin_visual_approach(self, stable) -> None:
         super()._begin_visual_approach(stable)
         self.legacy2d_orientation_corrections = 0
         self.legacy2d_alignment_confirmations = 0
         self.legacy2d_last_plan = {}
+        self.legacy2d_parent_handoff_pending = False
+        self.legacy2d_parent_handoff_count = 0
         self._publish_status(
             "legacy2d_alignment_started",
             reference_point_base=list(self.profile.alignment.reference_point_base),
@@ -155,6 +163,22 @@ class Legacy2DOrientationTaskNode(CameraAuthoritativeTaskNode):
             self._restart_full_search("visual target lost during legacy 2D alignment")
 
     def _complete_alignment(self, stable, plan: Legacy2DPlan) -> None:
+        """Finish legacy geometry, then hand alignment ownership back to parent.
+
+        v8.1 called ``_alignment_complete()`` directly after consuming the stable
+        observation.  The current camera-authoritative parent owns an additional
+        fresh-visual/finalization state machine.  Directly calling the terminal
+        hook therefore starved that state machine: every new stable frame was
+        consumed by this subclass, ``legacy2d_alignment_confirmations`` kept
+        increasing, while the parent's ``final_visual_confirmations`` remained
+        zero.
+
+        v8.2 performs an explicit state handoff instead.  From the next timer
+        iteration onward ``super()._try_alignment_step()`` owns fresh detections
+        and can execute its normal final-visual -> semantic-preflight -> grasp
+        transition.  ``_orientation_required()`` remains overridden to False, so
+        this handoff does not restore the full-3D orientation hard requirement.
+        """
         self.legacy2d_alignment_confirmations += 1
         required = max(1, int(self.get_parameter("legacy2d_confirmation_count").value))
         if self.legacy2d_alignment_confirmations < required:
@@ -166,17 +190,32 @@ class Legacy2DOrientationTaskNode(CameraAuthoritativeTaskNode):
                 plan=self._plan_payload(plan),
             )
             return
+
         self.latest_stable_detection = stable
         self.last_object_point = stable.point_base
+        self.legacy2d_parent_handoff_pending = True
+        self.legacy2d_parent_handoff_count += 1
+
+        # Do not feed the just-consumed frame back as a supposedly fresh final
+        # confirmation.  The parent receives the next actual stable observation.
+        self.cached_stable_detection = None
+        self.filter.clear()
         self._publish_status(
-            "legacy2d_alignment_completed",
+            "legacy2d_alignment_handoff_to_parent",
             final_plan=self._plan_payload(plan),
             orientation_policy="soft_2d_advisory",
-            next="semantic_preflight_and_grasp",
+            next="parent_fresh_visual_confirmation_then_semantic_preflight_and_grasp",
+            direct_alignment_complete_call=False,
         )
-        self._alignment_complete()
 
     def _try_alignment_step(self) -> None:
+        if self.legacy2d_parent_handoff_pending:
+            # Critical v8.2 fix: once legacy geometry has been accepted, stop
+            # consuming stable frames in this subclass.  Let the current
+            # camera-authoritative implementation own its final fresh-visual
+            # confirmation and the semantic-preflight/grasp transition.
+            super()._try_alignment_step()
+            return
         if not bool(self.get_parameter("legacy2d_enabled").value):
             super()._try_alignment_step()
             return
