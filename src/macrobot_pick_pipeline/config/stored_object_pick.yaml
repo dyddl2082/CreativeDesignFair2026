@@ -216,6 +216,78 @@ macrobot_stored_object_pick:
     pose_relocation_max_drive_yaw_deg: 6.0
     pose_relocation_min_drive_radius_m: 0.08
     pose_relocation_drive_speed: 0
+    # macrobot_joint_pose_lattice_v2 BEGIN
+    # Restore the taught camera-relative object point and taught axial direction
+    # with one bounded weighted-A* SE(2) planner. The selected primitive is
+    # followed by a fresh RGB-D reset before replanning.
+    joint_pose_controller_enabled: true
+
+    # Reverse is useful for viewpoint restoration, but the current platform has
+    # no rear depth-clearance sensor. It is therefore disabled until an operator
+    # has physically checked the rear corridor and explicitly changes the ACK.
+    joint_pose_allow_reverse: true
+    joint_pose_rear_clearance_ack: false
+    joint_pose_drive_enabled: false
+    joint_pose_position_only_when_orientation_unreliable: true
+
+    # Low-level bounded action lattice.
+    joint_pose_maximum_move_step_m: 0.018
+    joint_pose_maximum_reverse_step_m: 0.012
+    joint_pose_maximum_turn_step_deg: 8.0
+    joint_pose_maximum_drive_yaw_deg: 6.0
+    joint_pose_minimum_move_step_m: 0.003
+    joint_pose_minimum_turn_step_deg: 0.5
+    joint_pose_turn_action_levels: 3
+    joint_pose_move_action_levels: 3
+
+    # Predicted camera/FOV/object-clearance envelope.
+    joint_pose_minimum_object_range_m: 0.10
+    joint_pose_maximum_object_range_m: 0.80
+    joint_pose_minimum_object_forward_m: 0.04
+    joint_pose_maximum_predicted_bearing_deg: 48.0
+    joint_pose_path_sample_count: 9
+
+    # Weighted-A* lattice resolution and hard search budget.
+    joint_pose_position_resolution_m: 0.004
+    joint_pose_orientation_resolution_deg: 2.0
+    joint_pose_search_maximum_expansions: 25000
+    # Prevent an infeasible local pose from blocking the ROS executor.
+    joint_pose_search_maximum_wall_time_sec: 0.15
+    joint_pose_search_maximum_depth: 72
+    joint_pose_search_maximum_translation_m: 0.40
+    joint_pose_search_maximum_turn_deg: 220.0
+    joint_pose_heuristic_weight: 3.5
+    joint_pose_execution_prefix_length: 1
+
+    # Route preference, reversal hysteresis and measured-cycle suppression.
+    joint_pose_action_cost: 1.0
+    joint_pose_motion_cost_weight: 0.08
+    joint_pose_reverse_cost_penalty: 0.20
+    joint_pose_drive_cost_penalty: 0.08
+    joint_pose_action_family_change_penalty: 0.04
+    joint_pose_immediate_reversal_penalty: 1.80
+    joint_pose_same_direction_bonus: 0.08
+    joint_pose_recent_cycle_penalty: 4.0
+    joint_pose_hard_reject_recent_cycle: true
+    joint_pose_cycle_position_radius_m: 0.010
+    joint_pose_cycle_orientation_radius_deg: 5.0
+    joint_pose_cycle_required_cost_improvement: 0.20
+    joint_pose_minimum_frontier_improvement: 0.08
+
+    # Logging, camera-reset residual monitoring and controlled hold behaviour.
+    joint_pose_top_candidate_count: 6
+    joint_pose_route_preview_count: 12
+    joint_pose_history_size: 8
+    joint_pose_hold_reobserve_sec: 0.30
+    joint_pose_hold_limit: 8
+    joint_pose_stall_limit: 5
+    joint_pose_stall_step_shrink: 0.80
+    joint_pose_minimum_step_scale: 0.35
+    joint_pose_model_position_residual_tolerance_m: 0.018
+    joint_pose_model_orientation_residual_tolerance_deg: 8.0
+    joint_pose_minimum_observed_position_change_m: 0.0015
+    joint_pose_minimum_observed_orientation_change_deg: 0.5
+    # macrobot_joint_pose_lattice_v2 END
 macrobot_visible_pick_test:
   ros__parameters:
     detection_max_age_sec: 8.0
