@@ -7,7 +7,7 @@ macrobot_stored_object_pick:
     base_frame: base_link
     forward_axis_sign: 1.0
     lateral_axis_sign: 1.0
-    pico_turn_positive_is_right: false
+    pico_turn_positive_is_right: true
     pico_move_positive_is_forward: true
     dry_run_base: false
     stow_before_base_motion: true

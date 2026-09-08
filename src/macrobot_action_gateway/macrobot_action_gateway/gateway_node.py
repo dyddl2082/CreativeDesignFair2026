@@ -51,7 +51,7 @@ class MacRobotActionGatewayNode(Node):
         self.declare_parameter("object_catalog_file", str(share / "config" / "object_catalog.yaml"))
         self.declare_parameter("socket_path", "/tmp/macrobot_action_gateway.sock")
         self.declare_parameter("real_motion_enabled", False)
-        self.declare_parameter("pico_turn_positive_is_right", False)
+        self.declare_parameter("pico_turn_positive_is_right", True)
         self.declare_parameter("pico_move_positive_is_forward", True)
 
         self.declare_parameter("pico_command_topic", "/pico_debug/cmd")
