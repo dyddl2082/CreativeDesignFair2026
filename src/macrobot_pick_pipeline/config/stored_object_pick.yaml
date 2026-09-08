@@ -343,6 +343,36 @@ macrobot_stored_object_pick:
     direct_pose_min_drive_radius_m: 0.08
     direct_pose_confirmation_count: 2
     direct_pose_fallback_to_legacy: true
+    # macrobot_fast_axis_intercept_v6 BEGIN
+    # Coarse orientation-axis interception before legacy precision docking.
+    # Pico TURN_DEG remains clockwise/right-positive; internal yaw is CCW/left-positive.
+    fast_axis_enabled: true
+    fast_axis_pregrasp_standoff_m: 0.08
+    fast_axis_corridor_tolerance_m: 0.015
+    fast_axis_orientation_tolerance_deg: 7.0
+    fast_axis_handoff_forward_tolerance_m: 0.035
+    fast_axis_handoff_lateral_tolerance_m: 0.012
+    fast_axis_handoff_orientation_tolerance_deg: 5.0
+    fast_axis_precision_reentry_forward_m: 0.07
+    fast_axis_precision_reentry_lateral_m: 0.03
+    fast_axis_precision_reentry_orientation_deg: 12.0
+    fast_axis_intercept_progress: 0.92
+    fast_axis_intercept_max_translation_m: 0.18
+    fast_axis_intercept_max_turn_deg: 105.0
+    fast_axis_approach_progress: 0.90
+    fast_axis_approach_max_translation_m: 0.15
+    fast_axis_approach_max_turn_deg: 30.0
+    fast_axis_minimum_object_range_m: 0.12
+    fast_axis_allow_reverse: false
+    fast_axis_reverse_turn_penalty_deg: 30.0
+    fast_axis_min_turn_deg: 0.75
+    fast_axis_min_move_m: 0.004
+    fast_axis_prefer_drive_rel: false
+    fast_axis_max_drive_yaw_deg: 25.0
+    fast_axis_min_drive_radius_m: 0.10
+    fast_axis_max_macros_before_handoff: 8
+    fast_axis_fallback_to_legacy: true
+    # macrobot_fast_axis_intercept_v6 END
 macrobot_visible_pick_test:
   ros__parameters:
     detection_max_age_sec: 8.0
