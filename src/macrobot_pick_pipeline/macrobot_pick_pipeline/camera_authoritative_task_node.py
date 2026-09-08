@@ -204,6 +204,9 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
         }
         for name, value in place_side_turn_defaults.items():
             self.declare_parameter(name, value)
+        # PLACE_REFERENCE_UNIFIED_SEARCH_V1
+        if not self.has_parameter("place_reference_keep_finder_on_lost"):
+            self.declare_parameter("place_reference_keep_finder_on_lost", True)
     def _status_payload(
         self,
         event: str,
@@ -1869,6 +1872,96 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
             next="fresh_post_motion_camera_observation",
             correction_policy="measure_move_measure_reverse_if_overshot",
         )
+
+    # PLACE_REFERENCE_UNIFIED_SEARCH_V1
+    # Reference-based PLACE uses the same camera-authoritative search/alignment
+    # path as ordinary object alignment.  The held-object state is only a PLACE
+    # safety contract; it does not change target acquisition or visual servoing.
+    #
+    # The object finder already runs in continuous mode and transitions back to
+    # SEARCHING after a temporal track is deconfirmed/expired.  Therefore a
+    # PLACE reference loss should restart only the base search plan while
+    # preserving a healthy finder session.  Repeatedly cancelling/restarting
+    # the finder unnecessarily resets temporal confirmation and target readiness.
+    def _start_place_goal(self, request) -> None:
+        super()._start_place_goal(request)
+        if (
+            self.task_kind == "place"
+            and self.state == "RUNNING"
+            and self.direct_placement_point is None
+        ):
+            self._publish_status(
+                "place_reference_search_unified",
+                reference_object=self.place_reference_object,
+                held_object=self.held_object_name,
+                acquisition_pipeline="same_camera_authoritative_search_and_alignment",
+                held_object_changes_search_policy=False,
+                place_specific_behavior_starts_after_alignment=True,
+                lost_reacquisition="preserve_continuous_finder_restart_base_search",
+            )
+
+    def _restart_full_search(self, reason: str) -> None:
+        if (
+            self.task_kind != "place"
+            or self.direct_placement_point is not None
+            or not bool(
+                self.get_parameter(
+                    "place_reference_keep_finder_on_lost"
+                ).value
+            )
+        ):
+            super()._restart_full_search(reason)
+            return
+        if self.base_active or self.arm_active:
+            return
+
+        self.filter.clear()
+        self.pending_detections.clear()
+        self.cached_stable_detection = None
+        self.latest_stable_detection = None
+        self.last_visual_wall_sec = 0.0
+        self.reobserve_not_before = 0.0
+        self._reset_orientation_recovery()
+
+        finder_state = str(
+            self.last_finder_status.get("state", "")
+        ).strip().upper()
+        finder_terminal = finder_state in {
+            "IDLE",
+            "TIMED_OUT",
+            "CANCELLED",
+            "CANCELED",
+            "ERROR",
+        }
+
+        # A healthy continuous finder is deliberately preserved.  If the finder
+        # really reached a terminal state, mark the Pi-side state inactive so
+        # _start_resilient_search() creates a fresh finder goal.
+        if self.start_finder_for_goal and self.finder_active and finder_terminal:
+            self.finder_active = False
+            self.finder_goal_payload = {}
+            self.finder_goal_acknowledged = False
+            self.finder_target_ready = False
+            self.finder_target_ready_at = 0.0
+
+        self._publish_status(
+            "place_reference_reacquire_started",
+            reason=reason,
+            reference_object=self.place_reference_object,
+            finder_preserved=bool(
+                self.start_finder_for_goal
+                and self.finder_active
+                and not finder_terminal
+            ),
+            finder_state=finder_state or "unknown",
+            policy="same_camera_authoritative_search_keep_continuous_finder",
+            place_specific_behavior_starts_after_alignment=True,
+        )
+
+        # Rebuild the exact same rotation-first camera-authoritative base search
+        # used by the normal alignment path.  This method will keep an active
+        # finder and merely reassert the target, or start a new one if needed.
+        self._start_resilient_search()
 
     def _begin_visual_approach(self, stable) -> None:
         super()._begin_visual_approach(stable)

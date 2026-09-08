@@ -1,0 +1,43 @@
+{
+  "schema": "macrobot.ui.task_result/v1",
+  "request_id": "ui-execute-1788900226145-653737",
+  "ok": true,
+  "event": "ui_task_completed",
+  "task_status": "succeeded",
+  "task_message": "로봇팔을 HOME 위치로 이동했습니다.",
+  "runner_ok": true,
+  "runner_result": {
+    "ok": true,
+    "task_status": "succeeded",
+    "task_message": "로봇팔을 HOME 위치로 이동했습니다.",
+    "outcome": {
+      "status": {
+        "__enum__": "TaskStatus",
+        "value": "succeeded"
+      },
+      "message": "로봇팔을 HOME 위치로 이동했습니다.",
+      "data": null,
+      "__type__": "TaskOutcome"
+    },
+    "loop_iterations_used": 0,
+    "close_result": {
+      "run_id": "run-1788900227244-cf8bdb86",
+      "closed": true,
+      "had_active_actions": false,
+      "active_action_count": 0,
+      "cancel_success": true,
+      "stop_success": null,
+      "stop_error_code": null,
+      "clean_shutdown": true
+    },
+    "run_id": "run-1788900227244-cf8bdb86",
+    "log_path": "/home/dyddl2082/MacRobot/data/llm_runs/run-1788900227244-cf8bdb86/run.json"
+  },
+  "mode": "execute",
+  "source_sha256": "9fa84a7779a0bc5a4f2f46f7c49675ae197a631ccc4b0bfcc098057094bac93e",
+  "runner_returncode": 0,
+  "code_path": "/home/dyddl2082/MacRobot/data/ui/approved_tasks/ui-execute-1788900226145-653737/task.py",
+  "metadata_path": "/home/dyddl2082/MacRobot/data/ui/approved_tasks/ui-execute-1788900226145-653737/request.json",
+  "started_at_unix_ms": 1788900226652,
+  "finished_at_unix_ms": 1788900227699
+}

@@ -1,0 +1,13 @@
+{
+  "request": "UI quick action: robot arm HOME",
+  "status": "",
+  "object_bindings": "",
+  "assumptions": "",
+  "raw_response": "",
+  "validation": [],
+  "validator": "gateway",
+  "conversation": [],
+  "source_sha256": "9fa84a7779a0bc5a4f2f46f7c49675ae197a631ccc4b0bfcc098057094bac93e",
+  "code_path": "/home/dyddl2082/MacRobot/data/ui/generated_tasks/20260909_054233_642073_UI_quick_action_robot_arm_HOME_9fa84a7779.py",
+  "saved_at": "2026-09-09T05:42:33.643772+09:00"
+}
