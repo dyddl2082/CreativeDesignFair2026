@@ -79,17 +79,10 @@ class ResourceId(str, Enum):
 
 
 class ObjectId(str, Enum):
-    """Initial canonical object catalog used by the v0.2 examples.
+    """Canonical objects exposed to generated UI programs."""
 
-    Extend this enum together with ``config/object_catalog.yaml`` whenever a new
-    object becomes part of the public LLM contract.  Runtime-only free-form
-    object names intentionally are not accepted by the generated-code API.
-    """
-
-    BUDS3 = "Buds3"
-    CUP = "Cup"
-
-
+    ERASER = "Eraser"
+    RUBBER = "Rubber"
 class ObjectState(str, Enum):
     VISIBLE = "visible"
     NOT_VISIBLE = "not_visible"

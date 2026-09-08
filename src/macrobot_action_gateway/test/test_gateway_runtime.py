@@ -35,18 +35,18 @@ SETTINGS = {
     "perception": {"object_state_max_age_ms": 1500, "health_max_age_ms": 5000},
 }
 CATALOG = {
-    "BUDS3": {
-        "runtime_name": "Buds3",
-        "alignment_profile": "Buds3",
-        "pick_profile": "Buds3",
-        "placement_profile": "Buds3",
+    "ERASER": {
+        "runtime_name": "Eraser",
+        "alignment_profile": "Eraser",
+        "pick_profile": "Eraser",
+        "placement_profile": "Eraser",
     },
-    "CUP": {
-        "runtime_name": "Cup",
-        "alignment_profile": "Cup",
-        "pick_profile": "Cup",
-        "placement_profile": "Cup",
-        "placement_offset_base": [0.0, 0.15, 0.0],
+    "RUBBER": {
+        "runtime_name": "Rubber",
+        "alignment_profile": "Rubber",
+        "pick_profile": "Rubber",
+        "placement_profile": "Rubber",
+        "placement_offset_base": [0.0, 0.12, 0.0],
     },
 }
 
@@ -91,15 +91,15 @@ def test_arm_primitive_excludes_gripper_and_preserves_it():
 
 def test_pick_and_place_reverse_sequence_bridge():
     gateway, bridge = runtime()
-    pick = gateway.call("r", "PICK_OBJECT", {"object_id": ObjectId.BUDS3})
+    pick = gateway.call("r", "PICK_OBJECT", {"object_id": ObjectId.ERASER})
     assert wait(gateway, pick).state == ActionState.SUCCEEDED
-    place = gateway.call("r", "PLACE_NEXTTO_OBJECT", {"reference_object_id": ObjectId.CUP})
+    place = gateway.call("r", "PLACE_NEXTTO_OBJECT", {"reference_object_id": ObjectId.RUBBER})
     result = wait(gateway, place)
     assert result.state == ActionState.SUCCEEDED
     assert bridge.calls[-1][0] == "PLACE"
-    assert bridge.calls[-1][1]["reference_object"] == "Cup"
-    assert bridge.calls[-1][1]["held_object"] == "Buds3"
-    assert bridge.calls[-1][1]["placement_offset_base"] == (0.0, 0.15, 0.0)
+    assert bridge.calls[-1][1]["reference_object"] == "Rubber"
+    assert bridge.calls[-1][1]["held_object"] == "Eraser"
+    assert bridge.calls[-1][1]["placement_offset_base"] == (0.0, 0.12, 0.0)
     held, known = gateway.state.held_object()
     assert known is True
     assert held is None
@@ -107,7 +107,7 @@ def test_pick_and_place_reverse_sequence_bridge():
 
 def test_place_rejects_empty_gripper():
     gateway, _ = runtime()
-    place = gateway.call("r", "PLACE_NEXTTO_OBJECT", {"reference_object_id": ObjectId.CUP})
+    place = gateway.call("r", "PLACE_NEXTTO_OBJECT", {"reference_object_id": ObjectId.RUBBER})
     result = wait(gateway, place)
     assert result.state == ActionState.FAILED
     assert result.error_code == "NO_HELD_OBJECT"
@@ -119,7 +119,7 @@ def test_pick_rejects_unknown_held_state_until_synchronized():
     gateway = GatewayRuntime(bridge, SETTINGS, CATALOG)
     gateway.open_run("unknown-held")
     pick = gateway.call(
-        "unknown-held", "PICK_OBJECT", {"object_id": ObjectId.BUDS3}
+        "unknown-held", "PICK_OBJECT", {"object_id": ObjectId.ERASER}
     )
     result = gateway.call(
         "unknown-held", "WAIT_ACTION", {"action": pick, "timeout_s": 5.0}

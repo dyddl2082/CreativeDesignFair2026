@@ -1,6 +1,6 @@
 api:
   name: macrobot_llm_robot_api
-  version: 0.2.0
+  version: 0.3.0
   facade: robot
   entrypoint: main
   entrypoint_return: TaskOutcome
@@ -115,6 +115,9 @@ functions:
     - PICO_MOTION
     args:
       object_id: ObjectId
+    execution: visible_test_request_id_bridge_execute_pick_false
+    runtime_profile_source: object_catalog.alignment_profile
+    hard_timeout_s: 2400.0
   SET_ARM_JOINTS:
     mode: async
     returns: ActionHandle
@@ -168,6 +171,9 @@ functions:
     - PICO_MOTION
     args:
       object_id: ObjectId
+    execution: visible_test_request_id_bridge_execute_pick_true
+    runtime_profile_source: object_catalog.pick_profile
+    hard_timeout_s: 2400.0
   PLACE_NEXTTO_OBJECT:
     mode: async
     returns: ActionHandle
@@ -178,7 +184,14 @@ functions:
     - PICO_MOTION
     args:
       reference_object_id: ObjectId
-    execution: visual_reference_search_then_reverse_pick_sequence
-    placement_offset_source: object_catalog_or_gateway_default
-    verification: commanded_sequence_only
-    current_runtime_status: safe_fail_until_placement_profile_is_defined
+    execution: camera_authoritative_reference_search_then_safe_reverse_semantic_grasp_sequence
+    placement_offset_source: object_catalog
+    verification: safe_preflight_and_command_completion_without_physical_release_sensor
+    current_runtime_status: implemented_hardware_verification_pending
+    held_runtime_profile_source: held_object_catalog
+    grasp_keyframe_profile_source: held_object_catalog
+    hard_timeout_s: 2400.0
+    requires_different_reference_object: true
+canonical_objects:
+  ERASER: Eraser
+  RUBBER: Rubber

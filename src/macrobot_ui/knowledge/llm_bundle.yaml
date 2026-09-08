@@ -1,112 +1,106 @@
-schema_version: "1.0"
-
+schema_version: '1.0'
 bundle:
   name: macrobot_custom_gpt_llm_bundle
   api_name: macrobot_llm_robot_api
-  api_version: "0.2.0"
+  api_version: 0.3.0
   language: ko
-  source_document: macrobot_llm_robot_api_spec_v0.2.md
+  source_document: docs/macrobot_llm_robot_api_spec_v0.3.md
   intended_use:
-    - Custom GPT knowledge source
-    - MacRobot natural-language-to-Python code generation
-    - deterministic validator registry seed
-  configuration_status: provisional_development_defaults
+  - Custom GPT knowledge source
+  - MacRobot natural-language-to-Python code generation
+  - deterministic validator registry seed
+  configuration_status: provisional_hardware_unverified_eraser_rubber_place_v4
   authoritative_scope:
-    - public Robot API names and signatures
-    - generated Python code contract
-    - common result types and enum values
-    - object ID resolution rules
-    - code-generation behavior
+  - public Robot API names and signatures
+  - generated Python code contract
+  - common result types and enum values
+  - object ID resolution rules
+  - code-generation behavior
   not_authoritative_for:
-    - final hardware safety certification
-    - final motion limits after physical testing
-    - private ROS topic, service, or action names
-    - safe-region geometry and calibration files
+  - final hardware safety certification
+  - final motion limits after physical testing
+  - private ROS topic, service, or action names
+  - safe-region geometry and calibration files
   warnings:
-    - Runtime limit values in this bundle are conservative development defaults and must be revalidated before real-hardware automatic execution.
-    - Only ObjectId values listed in object_catalog may appear in generated code.
-    - This bundle describes code generation. It never grants permission to execute code or directly operate ROS hardware.
-
+  - Runtime limit values in this bundle are conservative development defaults and must be revalidated before real-hardware
+    automatic execution.
+  - Only ObjectId values listed in object_catalog may appear in generated code.
+  - This bundle describes code generation. It never grants permission to execute code or directly operate ROS hardware.
 agent_policy:
-  role: >-
-    You are the MacRobot Python code generator. Convert the user's current-chat natural-language
-    command into restricted Python that uses only the injected robot facade and types in this bundle.
+  role: You are the MacRobot Python code generator. Convert the user's current-chat natural-language command into restricted
+    Python that uses only the injected robot facade and types in this bundle.
   goals:
-    - preserve the user's requested order, conditions, and bounded repetition
-    - use the highest-level suitable API without redundant lower-level actions
-    - produce code only when the command is sufficiently clear and supported
-    - ask one focused clarification question when a missing detail is required
-    - refuse unsupported commands without inventing APIs, objects, positions, primitives, or robot state
+  - preserve the user's requested order, conditions, and bounded repetition
+  - use the highest-level suitable API without redundant lower-level actions
+  - produce code only when the command is sufficiently clear and supported
+  - ask one focused clarification question when a missing detail is required
+  - refuse unsupported commands without inventing APIs, objects, positions, primitives, or robot state
   non_goals:
-    - execute generated code
-    - connect to ROS or hardware
-    - infer unprovided live robot state
-    - redesign or repair code after runtime failure
-    - create automatic retries unless the user explicitly requested repetition or retry
-    - use common-sense actions that are not represented by this API
+  - execute generated code
+  - connect to ROS or hardware
+  - infer unprovided live robot state
+  - redesign or repair code after runtime failure
+  - create automatic retries unless the user explicitly requested repetition or retry
+  - use common-sense actions that are not represented by this API
   decision_order:
-    - resolve the requested action sequence from the current conversation
-    - resolve every referenced object to exactly one canonical ObjectId
-    - verify that all required numerical values or saved IDs are known
-    - verify that the task is expressible with the public functions
-    - choose CODE, NEED_CLARIFICATION, UNSUPPORTED, or GENERATION_ERROR
-  authority_rule: >-
-    Treat this bundle as authoritative. Never invent a function, argument, enum member, result field,
-    object ID, saved position, or arm primitive that is absent from this bundle or the current conversation.
-
+  - resolve the requested action sequence from the current conversation
+  - resolve every referenced object to exactly one canonical ObjectId
+  - verify that all required numerical values or saved IDs are known
+  - verify that the task is expressible with the public functions
+  - choose CODE, NEED_CLARIFICATION, UNSUPPORTED, or GENERATION_ERROR
+  authority_rule: Treat this bundle as authoritative. Never invent a function, argument, enum member, result field, object
+    ID, saved position, or arm primitive that is absent from this bundle or the current conversation.
 response_contract:
   format: markdown_sections
   allowed_statuses:
-    - CODE
-    - NEED_CLARIFICATION
-    - UNSUPPORTED
-    - GENERATION_ERROR
+  - CODE
+  - NEED_CLARIFICATION
+  - UNSUPPORTED
+  - GENERATION_ERROR
   common_rules:
-    - Start with exactly one line in the form "STATUS: <STATUS>".
-    - Do not place executable Python outside the CODE section.
-    - Do not claim that generated code has been executed or proven safe.
+  - Start with exactly one line in the form "STATUS: <STATUS>".
+  - Do not place executable Python outside the CODE section.
+  - Do not claim that generated code has been executed or proven safe.
   CODE:
     required_sections:
-      - STATUS
-      - OBJECT_BINDINGS
-      - ASSUMPTIONS
-      - CODE
+    - STATUS
+    - OBJECT_BINDINGS
+    - ASSUMPTIONS
+    - CODE
     section_rules:
-      OBJECT_BINDINGS: >-
-        List each user object expression and its canonical enum, for example
-        '버즈 -> ObjectId.BUDS3'. Write '없음' when no object is referenced.
-      ASSUMPTIONS: >-
-        List only assumptions that do not change the requested physical behavior. If a missing detail
-        would change behavior, use NEED_CLARIFICATION instead. Write '없음' when empty.
-      CODE: >-
-        Provide one Python code fence containing exactly the generated restricted program with
-        def main() -> TaskOutcome as its entrypoint.
+      OBJECT_BINDINGS: List each user object expression and its canonical enum, for example '지우개 -> ObjectId.ERASER'. Write
+        '없음' when no object is referenced.
+      ASSUMPTIONS: List only assumptions that do not change the requested physical behavior. If a missing detail would change
+        behavior, use NEED_CLARIFICATION instead. Write '없음' when empty.
+      CODE: Provide one Python code fence containing exactly the generated restricted program with def main() -> TaskOutcome
+        as its entrypoint.
   NEED_CLARIFICATION:
     required_sections:
-      - STATUS
-      - QUESTION
+    - STATUS
+    - QUESTION
     rules:
-      - Ask one concise clarification message that resolves every currently blocking ambiguity.
-      - When multiple independent details are missing, ask for all of them as a short Korean bullet list in the same QUESTION section.
-      - Use NEED_CLARIFICATION, not UNSUPPORTED, when a condition is mentioned but its content is not specified.
-      - Use NEED_CLARIFICATION, not UNSUPPORTED, when an object is described only by a general property such as color, material, size, or category and does not resolve to one ObjectId.
-      - Do not provide partial executable code.
+    - Ask one concise clarification message that resolves every currently blocking ambiguity.
+    - When multiple independent details are missing, ask for all of them as a short Korean bullet list in the same QUESTION
+      section.
+    - Use NEED_CLARIFICATION, not UNSUPPORTED, when a condition is mentioned but its content is not specified.
+    - Use NEED_CLARIFICATION, not UNSUPPORTED, when an object is described only by a general property such as color, material,
+      size, or category and does not resolve to one ObjectId.
+    - Do not provide partial executable code.
   UNSUPPORTED:
     required_sections:
-      - STATUS
-      - REASON
+    - STATUS
+    - REASON
     rules:
-      - Use only after the requested action and object are sufficiently specific.
-      - State which requested capability or specifically identified object is unavailable.
-      - Do not use for missing conditions, vague object descriptions, or other information that the user can provide in a follow-up.
-      - Do not suggest a nonexistent Robot API.
+    - Use only after the requested action and object are sufficiently specific.
+    - State which requested capability or specifically identified object is unavailable.
+    - Do not use for missing conditions, vague object descriptions, or other information that the user can provide in a follow-up.
+    - Do not suggest a nonexistent Robot API.
   GENERATION_ERROR:
     required_sections:
-      - STATUS
-      - REASON
+    - STATUS
+    - REASON
     rules:
-      - Use only when a valid response cannot be produced despite a clear and supported request.
-
+    - Use only when a valid response cannot be produced despite a clear and supported request.
 conversation_policy:
   use_current_chat_history: true
   use_cross_chat_memory: false
@@ -120,19 +114,18 @@ conversation_policy:
     never_assume_current_pose_object_visibility_held_object_or_resource_availability: true
   saved_identifier_policy:
     position_id_may_be_used_when:
-      - the same generated program saves it before use
-      - it is listed in known_runtime_ids.positions
-      - the current conversation explicitly establishes that it already exists
+    - the same generated program saves it before use
+    - it is listed in known_runtime_ids.positions
+    - the current conversation explicitly establishes that it already exists
     primitive_id_may_be_used_when:
-      - the same generated program saves it before use
-      - it is listed in known_runtime_ids.arm_primitives
-      - the current conversation explicitly establishes that it already exists
+    - the same generated program saves it before use
+    - it is listed in known_runtime_ids.arm_primitives
+    - the current conversation explicitly establishes that it already exists
     never_invent_saved_ids: true
-
 code_contract:
   language: python
   entrypoint:
-    exact_signature: "def main() -> TaskOutcome"
+    exact_signature: def main() -> TaskOutcome
     required: true
     count: 1
   top_level_robot_calls_allowed: false
@@ -150,58 +143,58 @@ code_contract:
   direct_ros_access_allowed: false
   direct_file_network_subprocess_access_allowed: false
   allowed_statements:
-    - function_definition
-    - assignment
-    - annotated_assignment
-    - if_elif_else
-    - bounded_for
-    - bounded_while
-    - break
-    - continue
-    - match_case
-    - return
-    - expression_statement_for_allowed_robot_call_only
+  - function_definition
+  - assignment
+  - annotated_assignment
+  - if_elif_else
+  - bounded_for
+  - bounded_while
+  - break
+  - continue
+  - match_case
+  - return
+  - expression_statement_for_allowed_robot_call_only
   allowed_expressions:
-    - finite_numeric_literal
-    - string_literal
-    - boolean_literal
-    - none_literal
-    - enum_member
-    - local_variable
-    - list_tuple_dict_literal
-    - read_only_allowed_field_access
-    - comparison
-    - boolean_operation
-    - basic_arithmetic
-    - formatted_string_literal
-    - call_to_allowed_robot_function
-    - call_to_allowed_local_helper
-    - call_to_allowed_builtin
+  - finite_numeric_literal
+  - string_literal
+  - boolean_literal
+  - none_literal
+  - enum_member
+  - local_variable
+  - list_tuple_dict_literal
+  - read_only_allowed_field_access
+  - comparison
+  - boolean_operation
+  - basic_arithmetic
+  - formatted_string_literal
+  - call_to_allowed_robot_function
+  - call_to_allowed_local_helper
+  - call_to_allowed_builtin
   allowed_builtins:
-    - range
-    - len
-    - abs
-    - min
-    - max
-    - round
+  - range
+  - len
+  - abs
+  - min
+  - max
+  - round
   forbidden_names:
-    - eval
-    - exec
-    - compile
-    - open
-    - input
-    - __import__
-    - getattr
-    - setattr
-    - delattr
-    - globals
-    - locals
-    - vars
-    - dir
-    - help
-    - breakpoint
-    - memoryview
-    - super
+  - eval
+  - exec
+  - compile
+  - open
+  - input
+  - __import__
+  - getattr
+  - setattr
+  - delattr
+  - globals
+  - locals
+  - vars
+  - dir
+  - help
+  - breakpoint
+  - memoryview
+  - super
   loop_rules:
     for_loop_must_have_static_or_bounded_range: true
     while_loop_must_have_visible_counter_and_finite_limit: true
@@ -213,24 +206,23 @@ code_contract:
     helpers_may_not_capture_or_modify_globals: true
   injected_names:
     objects:
-      - robot
+    - robot
     types:
-      - TaskOutcome
-      - ActionHandle
-      - ActionResult
-      - OperationResult
-      - ObjectStateResult
-      - RobotPosResult
+    - TaskOutcome
+    - ActionHandle
+    - ActionResult
+    - OperationResult
+    - ObjectStateResult
+    - RobotPosResult
     enums:
-      - TaskStatus
-      - ActionState
-      - ResourceId
-      - ObjectId
-      - ObjectState
-      - EstimateState
-      - StateSource
-      - RobotSnapshotState
-
+    - TaskStatus
+    - ActionState
+    - ResourceId
+    - ObjectId
+    - ObjectState
+    - EstimateState
+    - StateSource
+    - RobotSnapshotState
 conventions:
   facade: robot
   function_naming: uppercase_snake_case
@@ -245,43 +237,42 @@ conventions:
   negative_angular_direction: clockwise_right
   speed_argument_exposed: false
   identifiers:
-    position_id_regex: "^[a-z][a-z0-9_]{0,31}$"
-    primitive_id_regex: "^[a-z][a-z0-9_]{0,31}$"
-
+    position_id_regex: ^[a-z][a-z0-9_]{0,31}$
+    primitive_id_regex: ^[a-z][a-z0-9_]{0,31}$
 runtime_profile:
-  profile_name: custom_gpt_prototype_dev
+  profile_name: camera_authoritative_visible_test_eraser_rubber_v4
   provisional: true
   run_limits:
-    max_wall_time_s: 120.0
-    max_internal_motion_steps_per_run: 30
+    max_wall_time_s: 5000.0
+    max_internal_motion_steps_per_run: 80
   control_limits:
-    max_wait_seconds_per_call: 30.0
-    max_wait_action_timeout_s: 90.0
-    max_wait_resource_timeout_s: 30.0
+    max_wait_seconds_per_call: 60.0
+    max_wait_action_timeout_s: 2410.0
+    max_wait_resource_timeout_s: 120.0
   control_timeouts_s:
     cancel_action: 5.0
     cancel_all: 8.0
     stop: 5.0
   base_limits:
-    max_move_distance_m_per_call: 0.30
+    max_move_distance_m_per_call: 1.0
     max_turn_angle_deg_per_call: 180.0
   base_action_hard_timeouts:
     MOVE_BASE:
-      formula: "min(22.0, max(5.0, abs(distance_m) * 50.0) + 2.0)"
-      maximum_s: 22.0
-      recommended_wait_timeout_s: 25.0
+      formula: min(15.0, max(5.0, abs(distance_m) * 13.0) + 2.0)
+      maximum_s: 15.0
+      recommended_wait_timeout_s: 20.0
     TURN_BASE:
-      formula: "min(22.0, max(5.0, abs(angle_deg) * 0.08) + 2.0)"
-      maximum_s: 22.0
-      recommended_wait_timeout_s: 25.0
+      formula: min(15.0, max(5.0, abs(angle_deg) * 0.07) + 2.0)
+      maximum_s: 15.0
+      recommended_wait_timeout_s: 20.0
     MOVE_BASE_TO_POS:
       hard_timeout_s: 45.0
       recommended_wait_timeout_s: 50.0
     ALIGN_WITH_OBJECT:
-      hard_timeout_s: 45.0
-      recommended_wait_timeout_s: 50.0
+      hard_timeout_s: 2400.0
+      recommended_wait_timeout_s: 2410.0
   alignment:
-    max_internal_motion_steps_per_call: 8
+    max_internal_motion_steps_per_call: 20
     horizontal_error_tolerance_norm: 0.12
     distance_adjustment: internal_black_box_profile
     graspable_region_confirmation: internal_black_box_profile
@@ -301,25 +292,25 @@ runtime_profile:
     close_direction: positive
   arm_gripper_action_timeouts:
     SET_ARM_JOINTS:
-      hard_timeout_s: 15.0
-      recommended_wait_timeout_s: 20.0
+      hard_timeout_s: 20.0
+      recommended_wait_timeout_s: 25.0
     SET_GRIPPER:
-      hard_timeout_s: 8.0
-      recommended_wait_timeout_s: 12.0
+      hard_timeout_s: 12.0
+      recommended_wait_timeout_s: 17.0
     SET_ARM_PRIMITIVE:
-      hard_timeout_s: 15.0
-      recommended_wait_timeout_s: 20.0
+      hard_timeout_s: 20.0
+      recommended_wait_timeout_s: 25.0
   manipulation:
     PICK_OBJECT:
-      max_internal_motion_steps_per_call: 12
-      hard_timeout_s: 60.0
-      recommended_wait_timeout_s: 70.0
-      grasp_verification_policy: command_completion_only_development
+      max_internal_motion_steps_per_call: 30
+      hard_timeout_s: 2400.0
+      recommended_wait_timeout_s: 2410.0
+      grasp_verification_policy: safe_preflight_and_command_completion_without_grip_sensor
     PLACE_NEXTTO_OBJECT:
-      max_internal_motion_steps_per_call: 12
-      hard_timeout_s: 60.0
-      recommended_wait_timeout_s: 70.0
-      placement_verification_policy: command_completion_only_development
+      max_internal_motion_steps_per_call: 30
+      hard_timeout_s: 2400.0
+      recommended_wait_timeout_s: 2410.0
+      placement_verification_policy: safe_preflight_and_command_completion_without_physical_release_sensor
   perception:
     object_state_max_age_ms: 2000
   robot_state:
@@ -327,103 +318,55 @@ runtime_profile:
     base_source: command_history
     arm_source: commanded_state
     gripper_source: commanded_state
-
 object_resolution:
   generated_code_must_use_canonical_enum: true
   raw_object_strings_in_robot_calls_forbidden: true
   match_policy:
-    - exact ID and exact alias matches are preferred
-    - contextual aliases may be used only when they resolve uniquely in the current catalog and conversation
-    - if multiple IDs remain possible, return NEED_CLARIFICATION
-    - if an object is described only by color, material, size, category, or another general property and no single ID follows, return NEED_CLARIFICATION
-    - if no registered ID matches a clearly specified object, return UNSUPPORTED
-    - do not add a new ObjectId from general knowledge
-
+  - exact ID and exact alias matches are preferred
+  - contextual aliases may be used only when they resolve uniquely in the current catalog and conversation
+  - if multiple IDs remain possible, return NEED_CLARIFICATION
+  - if an object is described only by color, material, size, category, or another general property and no single ID follows,
+    return NEED_CLARIFICATION
+  - if no registered ID matches a clearly specified object, return UNSUPPORTED
+  - do not add a new ObjectId from general knowledge
 object_catalog:
-  catalog_status: partial_current_project_catalog
-  update_rule: Add every new object here and to enums.ObjectId before allowing code generation for it.
+  catalog_status: complete_current_project_catalog
+  update_rule: Change this catalog, enums.ObjectId and Gateway object_catalog.yaml together.
   objects:
-    - id: BUDS3
-      enum_expression: ObjectId.BUDS3
-      display_name_ko: 갤럭시 버즈3
-      exact_aliases:
-        - Buds3
-        - buds3
-        - buds 3
-        - 갤럭시 버즈3
-        - 버즈3
-      contextual_aliases:
-        - 버즈
-        - 갤럭시 버즈
-        - 삼성 이어폰
-        - 무선 이어폰
-        - 이어폰
-    - id: ERASER
-      enum_expression: ObjectId.ERASER
-      display_name_ko: 검은색 지우개
-      exact_aliases:
-        - Eraser
-        - eraser
-        - Black eraser
-        - black eraser
-      contextual_aliases:
-        - 지우개
-        - 검은색 지우개
-    - id: ARDUINO_WHEEL
-      enum_expression: ObjectId.ARDUINO_WHEEL
-      display_name_ko: 아두이노 바퀴
-      exact_aliases:
-        - Arduino wheel
-        - arduino wheel
-        - Arduino Wheel
-        - 아두이노 바퀴
-      contextual_aliases:
-        - 아두이노 휠
-        - 휠
-    - id: RED_BALL
-      enum_expression: ObjectId.RED_BALL
-      display_name_ko: 빨간 공
-      exact_aliases:
-        - Red ball
-        - red ball
-        - Red Ball
-        - 빨간 공
-        - 빨간색 공
-      contextual_aliases:
-        - 공
-        - 빨간색 공
-        - 레드 볼
-    - id: WHITE_PAPER_CUP
-      enum_expression: ObjectId.WHITE_PAPER_CUP
-      display_name_ko: 흰색 종이컵
-      exact_aliases:
-        - Paper cup
-        - paper cup
-        - White paper cup
-        - white paper cup
-        - 종이컵
-        - 종이 컵
-        - 흰색 종이컵
-        - 흰 종이컵
-      contextual_aliases:
-        - 흰색 컵
-        - 흰 컵
-
+  - id: ERASER
+    enum_expression: ObjectId.ERASER
+    display_name_ko: 지우개
+    exact_aliases:
+    - Eraser
+    - eraser
+    - 지우개
+    - 이레이저
+    contextual_aliases: []
+  - id: RUBBER
+    enum_expression: ObjectId.RUBBER
+    display_name_ko: 고무
+    exact_aliases:
+    - Rubber
+    - rubber
+    - 고무
+    - 러버
+    contextual_aliases: []
 known_runtime_ids:
   positions: []
   system_arm_primitives: []
   notes:
-    - Session positions and session arm primitives may be created by generated code when the user explicitly requests saving them.
-    - Do not assume common names such as home, start, stow, or pre_grasp exist unless listed here or established in the current conversation.
-
+  - Session positions and session arm primitives may be created by generated code when the user explicitly requests saving
+    them.
+  - Do not assume common names such as home, start, stow, or pre_grasp exist unless listed here or established in the current
+    conversation.
 types:
   TaskOutcome:
     kind: frozen_dataclass
-    constructor: "TaskOutcome(status: TaskStatus, message: str, data: dict[str, object] | None = None)"
+    constructor: 'TaskOutcome(status: TaskStatus, message: str, data: dict[str, object] | None = None)'
     fields:
       status: TaskStatus
       message: str
-      data: "dict[str, object] | None"
+      data: dict[str, object] | None
     meaning: Final semantic outcome of the user's requested task, not merely Python process completion.
   ActionHandle:
     kind: frozen_dataclass
@@ -439,24 +382,24 @@ types:
       action_name: str
       run_id: str
       state: ActionState
-      error_code: "str | None"
-      error_message: "str | None"
-      started_at_unix_ms: "int | None"
-      finished_at_unix_ms: "int | None"
-      duration_ms: "int | None"
+      error_code: str | None
+      error_message: str | None
+      started_at_unix_ms: int | None
+      finished_at_unix_ms: int | None
+      duration_ms: int | None
     field_rules:
-      - started_at_unix_ms is set only after the action actually enters RUNNING.
-      - finished_at_unix_ms is set only for a terminal state.
-      - duration_ms is computed with a monotonic clock for actions that actually ran.
-      - Version 0.2 has no function-specific payload field.
+    - started_at_unix_ms is set only after the action actually enters RUNNING.
+    - finished_at_unix_ms is set only for a terminal state.
+    - duration_ms is computed with a monotonic clock for actions that actually ran.
+    - Version 0.2 has no function-specific payload field.
   OperationResult:
     kind: frozen_dataclass
     fields:
       function_name: str
       run_id: str
       success: bool
-      error_code: "str | None"
-      error_message: "str | None"
+      error_code: str | None
+      error_message: str | None
       finished_at_unix_ms: int
   ObjectStateResult:
     kind: frozen_dataclass
@@ -464,39 +407,38 @@ types:
       run_id: str
       object_id: ObjectId
       state: ObjectState
-      confidence: "float | None"
-      observed_at_unix_ms: "int | None"
+      confidence: float | None
+      observed_at_unix_ms: int | None
       checked_at_unix_ms: int
-      error_code: "str | None"
-      error_message: "str | None"
+      error_code: str | None
+      error_message: str | None
   RobotPosResult:
     kind: frozen_dataclass
     fields:
       run_id: str
       snapshot_state: RobotSnapshotState
       captured_at_unix_ms: int
-      x_m: "float | None"
-      y_m: "float | None"
-      yaw_deg: "float | None"
+      x_m: float | None
+      y_m: float | None
+      yaw_deg: float | None
       base_state: EstimateState
       base_source: StateSource
-      base_updated_at_unix_ms: "int | None"
-      arm_lift_deg: "float | None"
-      wrist_pitch_deg: "float | None"
+      base_updated_at_unix_ms: int | None
+      arm_lift_deg: float | None
+      wrist_pitch_deg: float | None
       arm_state: EstimateState
       arm_source: StateSource
-      arm_updated_at_unix_ms: "int | None"
-      gripper_deg: "float | None"
+      arm_updated_at_unix_ms: int | None
+      gripper_deg: float | None
       gripper_state: EstimateState
       gripper_source: StateSource
-      gripper_updated_at_unix_ms: "int | None"
-      error_code: "str | None"
-      error_message: "str | None"
+      gripper_updated_at_unix_ms: int | None
+      error_code: str | None
+      error_message: str | None
     interpretation_rules:
-      - Never replace None with 0.0.
-      - Check the relevant EstimateState before using a value.
-      - Current values are estimates or commanded states, not guaranteed physical encoder measurements.
-
+    - Never replace None with 0.0.
+    - Check the relevant EstimateState before using a value.
+    - Current values are estimates or commanded states, not guaranteed physical encoder measurements.
 enums:
   TaskStatus:
     values:
@@ -515,10 +457,10 @@ enums:
       CANCELED: canceled
       TIMED_OUT: timed_out
     terminal_members:
-      - SUCCEEDED
-      - FAILED
-      - CANCELED
-      - TIMED_OUT
+    - SUCCEEDED
+    - FAILED
+    - CANCELED
+    - TIMED_OUT
   ResourceId:
     values:
       BASE_MOTION: base_motion
@@ -528,17 +470,14 @@ enums:
       POSITION_STORE: position_store
       ARM_PRIMITIVE_STORE: arm_primitive_store
     waitable_members:
-      - BASE_MOTION
-      - ARM_MOTION
-      - GRIPPER_MOTION
-      - PICO_MOTION
+    - BASE_MOTION
+    - ARM_MOTION
+    - GRIPPER_MOTION
+    - PICO_MOTION
   ObjectId:
     values:
-      BUDS3: Buds3
       ERASER: Eraser
-      ARDUINO_WHEEL: Arduino wheel
-      RED_BALL: Red ball
-      WHITE_PAPER_CUP: White paper cup
+      RUBBER: Rubber
   ObjectState:
     values:
       VISIBLE: visible
@@ -563,7 +502,6 @@ enums:
       COMPLETE: complete
       PARTIAL: partial
       UNAVAILABLE: unavailable
-
 resources:
   BASE_MOTION:
     waitable: true
@@ -588,56 +526,62 @@ resources:
     queue_when_busy: false
     busy_result: RESOURCE_BUSY
     wait_resource_does_not_reserve: true
-
 result_handling_rules:
   async_calls:
-    - Store every asynchronous function return value in an ActionHandle variable.
-    - Use WAIT_ACTION when a following step depends on terminal completion.
-    - Use CHECK_ACTION only for a one-time snapshot requested by the user's control flow.
-    - Success is true only when result.state == ActionState.SUCCEEDED.
-    - For ordinary motion and manipulation actions, treat every non-SUCCEEDED terminal result as one failure case; do not generate separate CANCELED or TIMED_OUT branches.
-    - Generate a CANCELED outcome only when the user explicitly requested cancellation or stop behavior and the relevant cancellation API confirms it.
-    - WAIT_SECOND never proves action completion.
-    - Do not create busy polling loops.
+  - Store every asynchronous function return value in an ActionHandle variable.
+  - Use WAIT_ACTION when a following step depends on terminal completion.
+  - Use CHECK_ACTION only for a one-time snapshot requested by the user's control flow.
+  - Success is true only when result.state == ActionState.SUCCEEDED.
+  - For ordinary motion and manipulation actions, treat every non-SUCCEEDED terminal result as one failure case; do not generate
+    separate CANCELED or TIMED_OUT branches.
+  - Generate a CANCELED outcome only when the user explicitly requested cancellation or stop behavior and the relevant cancellation
+    API confirms it.
+  - WAIT_SECOND never proves action completion.
+  - Do not create busy polling loops.
   synchronous_operation_calls:
-    - Check OperationResult.success when later behavior depends on the operation.
+  - Check OperationResult.success when later behavior depends on the operation.
   task_status_mapping:
     ordinary_non_succeeded_action: TaskStatus.FAILED
     explicit_cancellation_or_stop_completed: TaskStatus.CANCELED
   failure_message_rule: Use result.error_message when present, otherwise use a concise function-specific fallback.
-  partial_completion_rule: Use TaskStatus.PARTIALLY_SUCCEEDED only when earlier requested steps succeeded and a later requested step returns a non-SUCCEEDED result.
-
+  partial_completion_rule: Use TaskStatus.PARTIALLY_SUCCEEDED only when earlier requested steps succeeded and a later requested
+    step returns a non-SUCCEEDED result.
 composition_rules:
-  - PICK_OBJECT already performs object confirmation, ALIGN when needed, reachability checks, grasp, verification, and post-grasp handling.
-  - PLACE_NEXTTO_OBJECT already confirms the reference object, performs ALIGN when needed, selects a placement candidate, places, releases, and performs post-place handling.
-  - Do not generate a separate ALIGN_WITH_OBJECT immediately before PICK_OBJECT or PLACE_NEXTTO_OBJECT unless the user explicitly requested alignment as an independently observable step.
-  - GET_OBJECT_STATE reports visibility state only; it does not search, rotate, align, return coordinates, or prove graspability.
-  - GET_ROBOT_POS is an estimated snapshot and may not be used as a substitute for high-level alignment, path safety, or physical feedback.
-  - SET_GRIPPER success changes the logical gripper command; it does not prove that an object was grasped.
-  - SET_ARM_JOINTS and SET_ARM_PRIMITIVE preserve the current gripper command.
-  - SAVE_ARM_PRIMITIVE stores only arm_lift_deg and wrist_pitch_deg, never gripper_deg.
-  - STOP is terminal for motion in the current run. Return from main after a successful STOP and do not start another motion action.
-  - CANCEL_ALL cancels current-run actions but does not prevent later actions in the same run.
-  - WAIT_RESOURCE observes idle state but does not reserve the resource. The following action may still return RESOURCE_BUSY.
-  - Never add retries, search turns, repeated grasp attempts, or fallback motions unless explicitly requested by the user.
-  - Splitting one explicit distance or angle into multiple sequential MOVE_BASE or TURN_BASE calls is allowed only to satisfy per-call limits and must stay within the run motion-step limit.
-
+- PICK_OBJECT already performs object confirmation, ALIGN when needed, reachability checks, grasp, verification, and post-grasp
+  handling.
+- PLACE_NEXTTO_OBJECT already confirms the reference object, performs ALIGN when needed, selects a placement candidate, places,
+  releases, and performs post-place handling.
+- Do not generate a separate ALIGN_WITH_OBJECT immediately before PICK_OBJECT or PLACE_NEXTTO_OBJECT unless the user explicitly
+  requested alignment as an independently observable step.
+- GET_OBJECT_STATE reports visibility state only; it does not search, rotate, align, return coordinates, or prove graspability.
+- GET_ROBOT_POS is an estimated snapshot and may not be used as a substitute for high-level alignment, path safety, or physical
+  feedback.
+- SET_GRIPPER success changes the logical gripper command; it does not prove that an object was grasped.
+- SET_ARM_JOINTS and SET_ARM_PRIMITIVE preserve the current gripper command.
+- SAVE_ARM_PRIMITIVE stores only arm_lift_deg and wrist_pitch_deg, never gripper_deg.
+- STOP is terminal for motion in the current run. Return from main after a successful STOP and do not start another motion
+  action.
+- CANCEL_ALL cancels current-run actions but does not prevent later actions in the same run.
+- WAIT_RESOURCE observes idle state but does not reserve the resource. The following action may still return RESOURCE_BUSY.
+- Never add retries, search turns, repeated grasp attempts, or fallback motions unless explicitly requested by the user.
+- Splitting one explicit distance or angle into multiple sequential MOVE_BASE or TURN_BASE calls is allowed only to satisfy
+  per-call limits and must stay within the run motion-step limit.
 ambiguity_rules:
   require_clarification_when:
-    - a referenced object does not resolve uniquely
-    - an object is described only by color, material, size, category, or another general property
-    - a conditional command does not state the condition to evaluate
-    - a relative movement lacks required distance
-    - a relative turn lacks required angle or direction
-    - a wait duration is missing
-    - a low-level arm or gripper command lacks exact target angle
-    - an existing position_id or primitive_id is requested but not known
-    - the user's requested order cannot be determined
+  - a referenced object does not resolve uniquely
+  - an object is described only by color, material, size, category, or another general property
+  - a conditional command does not state the condition to evaluate
+  - a relative movement lacks required distance
+  - a relative turn lacks required angle or direction
+  - a wait duration is missing
+  - a low-level arm or gripper command lacks exact target angle
+  - an existing position_id or primitive_id is requested but not known
+  - the user's requested order cannot be determined
   unsupported_when:
-    - the requested object is clearly specified but absent from ObjectId
-    - the requested physical capability has no public function
-    - the command requires unsupported long-term memory, arbitrary spatial reasoning, navigation maps, or sensor data not exposed by this API
-
+  - the requested object is clearly specified but absent from ObjectId
+  - the requested physical capability has no public function
+  - the command requires unsupported long-term memory, arbitrary spatial reasoning, navigation maps, or sensor data not exposed
+    by this API
 error_catalog:
   INVALID_ARGUMENT: Invalid type, non-finite value, malformed identifier, or out-of-range argument.
   INTERNAL_ERROR: Unexpected gateway or runtime failure.
@@ -703,7 +647,6 @@ error_catalog:
   GRASP_FAILED: Configured grasp verification failed.
   GRASP_VERIFICATION_UNAVAILABLE: Required grasp verification source is unavailable.
   PLACE_FAILED: Configured placement verification failed.
-
 functions:
   WAIT_SECOND:
     block: control
@@ -716,22 +659,21 @@ functions:
         unit: second
         finite: true
         min_exclusive: 0.0
-        max: 30.0
+        max: 60.0
     resources: []
     internal_motion_steps: 0
     success_guarantees:
-      - requested duration elapsed
-      - no action-completion guarantee
+    - requested duration elapsed
+    - no action-completion guarantee
     errors:
-      - INVALID_ARGUMENT
-      - RUN_CANCELED
-      - RUN_STOPPED
-      - RUN_WALL_TIMEOUT
-      - INTERNAL_ERROR
+    - INVALID_ARGUMENT
+    - RUN_CANCELED
+    - RUN_STOPPED
+    - RUN_WALL_TIMEOUT
+    - INTERNAL_ERROR
     generation_rules:
-      - Use instead of time.sleep.
-      - Do not use as proof that an asynchronous action completed.
-
+    - Use instead of time.sleep.
+    - Do not use as proof that an asynchronous action completed.
   WAIT_ACTION:
     block: control
     mode: sync
@@ -746,30 +688,29 @@ functions:
         unit: second
         finite: true
         min_exclusive: 0.0
-        max: 90.0
+        max: 2410.0
     resources: []
     internal_motion_steps: 0
     cancel_on_timeout: true
     terminal_return_states:
-      - SUCCEEDED
-      - FAILED
-      - CANCELED
-      - TIMED_OUT
+    - SUCCEEDED
+    - FAILED
+    - CANCELED
+    - TIMED_OUT
     errors:
-      - INVALID_ARGUMENT
-      - ACTION_NOT_FOUND
-      - ACTION_OWNERSHIP_MISMATCH
-      - WAIT_TIMEOUT
-      - ACTION_NOT_CANCELLABLE
-      - CANCEL_FAILED
-      - SAFE_STOP_UNCONFIRMED
-      - RUN_CANCELED
-      - RUN_STOPPED
-      - INTERNAL_ERROR
+    - INVALID_ARGUMENT
+    - ACTION_NOT_FOUND
+    - ACTION_OWNERSHIP_MISMATCH
+    - WAIT_TIMEOUT
+    - ACTION_NOT_CANCELLABLE
+    - CANCEL_FAILED
+    - SAFE_STOP_UNCONFIRMED
+    - RUN_CANCELED
+    - RUN_STOPPED
+    - INTERNAL_ERROR
     generation_rules:
-      - Use when later behavior depends on action completion.
-      - Compare result.state to ActionState members.
-
+    - Use when later behavior depends on action completion.
+    - Compare result.state to ActionState members.
   WAIT_RESOURCE:
     block: control
     mode: sync
@@ -779,31 +720,30 @@ functions:
       resource_id:
         type: ResourceId
         allowed_members:
-          - BASE_MOTION
-          - ARM_MOTION
-          - GRIPPER_MOTION
-          - PICO_MOTION
+        - BASE_MOTION
+        - ARM_MOTION
+        - GRIPPER_MOTION
+        - PICO_MOTION
       timeout_s:
         type: float
         unit: second
         finite: true
         min_exclusive: 0.0
-        max: 30.0
+        max: 120.0
     reserves_resource: false
     resources: []
     internal_motion_steps: 0
     errors:
-      - INVALID_ARGUMENT
-      - RESOURCE_NOT_FOUND
-      - RESOURCE_NOT_WAITABLE
-      - WAIT_TIMEOUT
-      - RUN_CANCELED
-      - RUN_STOPPED
-      - INTERNAL_ERROR
+    - INVALID_ARGUMENT
+    - RESOURCE_NOT_FOUND
+    - RESOURCE_NOT_WAITABLE
+    - WAIT_TIMEOUT
+    - RUN_CANCELED
+    - RUN_STOPPED
+    - INTERNAL_ERROR
     generation_rules:
-      - Do not assume the next action is guaranteed to acquire the resource.
-      - Do not cancel the current resource owner on timeout.
-
+    - Do not assume the next action is guaranteed to acquire the resource.
+    - Do not cancel the current resource owner on timeout.
   CHECK_ACTION:
     block: control
     mode: sync
@@ -816,22 +756,21 @@ functions:
     resources: []
     internal_motion_steps: 0
     possible_states:
-      - PENDING
-      - RUNNING
-      - CANCEL_REQUESTED
-      - SUCCEEDED
-      - FAILED
-      - CANCELED
-      - TIMED_OUT
+    - PENDING
+    - RUNNING
+    - CANCEL_REQUESTED
+    - SUCCEEDED
+    - FAILED
+    - CANCELED
+    - TIMED_OUT
     errors:
-      - INVALID_ARGUMENT
-      - ACTION_NOT_FOUND
-      - ACTION_OWNERSHIP_MISMATCH
-      - INTERNAL_ERROR
+    - INVALID_ARGUMENT
+    - ACTION_NOT_FOUND
+    - ACTION_OWNERSHIP_MISMATCH
+    - INTERNAL_ERROR
     generation_rules:
-      - Treat the result as a momentary snapshot that may change immediately.
-      - Do not poll repeatedly in a tight loop.
-
+    - Treat the result as a momentary snapshot that may change immediately.
+    - Do not poll repeatedly in a tight loop.
   CANCEL_ACTION:
     block: control
     mode: sync
@@ -845,17 +784,16 @@ functions:
     resources: []
     internal_motion_steps: 0
     errors:
-      - INVALID_ARGUMENT
-      - ACTION_NOT_FOUND
-      - ACTION_OWNERSHIP_MISMATCH
-      - ACTION_NOT_CANCELLABLE
-      - CANCEL_FAILED
-      - SAFE_STOP_UNCONFIRMED
-      - INTERNAL_ERROR
+    - INVALID_ARGUMENT
+    - ACTION_NOT_FOUND
+    - ACTION_OWNERSHIP_MISMATCH
+    - ACTION_NOT_CANCELLABLE
+    - CANCEL_FAILED
+    - SAFE_STOP_UNCONFIRMED
+    - INTERNAL_ERROR
     generation_rules:
-      - A race may return SUCCEEDED or FAILED instead of CANCELED.
-      - Calling it on an already terminal action returns the existing result.
-
+    - A race may return SUCCEEDED or FAILED instead of CANCELED.
+    - Calling it on an already terminal action returns the existing result.
   CANCEL_ALL:
     block: control
     mode: sync
@@ -867,14 +805,13 @@ functions:
     resources: []
     internal_motion_steps: 0
     success_guarantees:
-      - all current-run actions active at call time are terminal
-      - later actions may still be started in the same run
+    - all current-run actions active at call time are terminal
+    - later actions may still be started in the same run
     errors:
-      - PARTIAL_CANCEL_FAILURE
-      - SAFE_STOP_UNCONFIRMED
-      - CANCEL_FAILED
-      - INTERNAL_ERROR
-
+    - PARTIAL_CANCEL_FAILURE
+    - SAFE_STOP_UNCONFIRMED
+    - CANCEL_FAILED
+    - INTERNAL_ERROR
   STOP:
     block: control
     mode: sync
@@ -889,16 +826,15 @@ functions:
     gripper_behavior: hold_current_command
     internal_motion_steps: 0
     errors:
-      - SAFE_STOP_UNCONFIRMED
-      - PICO_COMMUNICATION_ERROR
-      - ARM_STOP_FAILED
-      - BASE_STOP_FAILED
-      - INTERNAL_ERROR
+    - SAFE_STOP_UNCONFIRMED
+    - PICO_COMMUNICATION_ERROR
+    - ARM_STOP_FAILED
+    - BASE_STOP_FAILED
+    - INTERNAL_ERROR
     generation_rules:
-      - Return from main after a successful STOP.
-      - Do not start new motion in the same run after STOP.
-      - STOP is not an ESTOP reset and does not power off servos.
-
+    - Return from main after a successful STOP.
+    - Do not start new motion in the same run after STOP.
+    - STOP is not an ESTOP reset and does not power off servos.
   GET_OBJECT_STATE:
     block: control
     mode: sync
@@ -911,20 +847,19 @@ functions:
     resources: []
     internal_motion_steps: 0
     possible_states:
-      - VISIBLE
-      - NOT_VISIBLE
-      - AMBIGUOUS
-      - STALE
-      - PERCEPTION_UNAVAILABLE
-      - UNKNOWN
+    - VISIBLE
+    - NOT_VISIBLE
+    - AMBIGUOUS
+    - STALE
+    - PERCEPTION_UNAVAILABLE
+    - UNKNOWN
     errors:
-      - OBJECT_NOT_REGISTERED
-      - PERCEPTION_STATE_ERROR
-      - INTERNAL_ERROR
+    - OBJECT_NOT_REGISTERED
+    - PERCEPTION_STATE_ERROR
+    - INTERNAL_ERROR
     generation_rules:
-      - This function does not search, rotate, align, return coordinates, or prove graspability.
-      - Use ALIGN_WITH_OBJECT or PICK_OBJECT when active alignment or approach is required.
-
+    - This function does not search, rotate, align, return coordinates, or prove graspability.
+    - Use ALIGN_WITH_OBJECT or PICK_OBJECT when active alignment or approach is required.
   GET_ROBOT_POS:
     block: control
     mode: sync
@@ -938,14 +873,13 @@ functions:
       arm: COMMANDED_STATE
       gripper: COMMANDED_STATE
     errors:
-      - ROBOT_STATE_PARTIAL
-      - ROBOT_STATE_UNAVAILABLE
-      - INTERNAL_ERROR
+    - ROBOT_STATE_PARTIAL
+    - ROBOT_STATE_UNAVAILABLE
+    - INTERNAL_ERROR
     generation_rules:
-      - Check the relevant EstimateState before using values.
-      - Do not describe values as guaranteed physical measurements.
-      - Do not use this snapshot to bypass high-level alignment or safety checks.
-
+    - Check the relevant EstimateState before using values.
+    - Do not describe values as guaranteed physical measurements.
+    - Do not use this snapshot to bypass high-level alignment or safety checks.
   MOVE_BASE:
     block: base_drive
     mode: async
@@ -957,33 +891,32 @@ functions:
         unit: meter
         finite: true
         nonzero: true
-        min: -0.30
-        max: 0.30
+        min: -1.0
+        max: 1.0
     sign_rule:
       positive: forward
       negative: backward
     resources:
       exclusive:
-        - BASE_MOTION
-        - PICO_MOTION
+      - BASE_MOTION
+      - PICO_MOTION
     cancellable: true
     internal_motion_steps: 1
-    recommended_wait_timeout_s: 25.0
+    recommended_wait_timeout_s: 20.0
     errors:
-      - INVALID_ARGUMENT
-      - ESTOP_ACTIVE
-      - BASE_NOT_READY
-      - RESOURCE_BUSY
-      - RUN_LIMIT_EXCEEDED
-      - SAFETY_BLOCKED
-      - MOTION_EXECUTION_FAILED
-      - PICO_COMMUNICATION_ERROR
-      - ACTION_HARD_TIMEOUT
-      - CANCEL_FAILED
+    - INVALID_ARGUMENT
+    - ESTOP_ACTIVE
+    - BASE_NOT_READY
+    - RESOURCE_BUSY
+    - RUN_LIMIT_EXCEEDED
+    - SAFETY_BLOCKED
+    - MOTION_EXECUTION_FAILED
+    - PICO_COMMUNICATION_ERROR
+    - ACTION_HARD_TIMEOUT
+    - CANCEL_FAILED
     generation_rules:
-      - Split an explicitly larger distance into bounded sequential calls only when needed to satisfy the per-call limit.
-      - Do not invent a distance for words such as '조금' or '적당히'.
-
+    - Split an explicitly larger distance into bounded sequential calls only when needed to satisfy the per-call limit.
+    - Do not invent a distance for words such as '조금' or '적당히'.
   TURN_BASE:
     block: base_drive
     mode: async
@@ -1002,26 +935,25 @@ functions:
       negative: right_clockwise
     resources:
       exclusive:
-        - BASE_MOTION
-        - PICO_MOTION
+      - BASE_MOTION
+      - PICO_MOTION
     cancellable: true
     internal_motion_steps: 1
-    recommended_wait_timeout_s: 25.0
+    recommended_wait_timeout_s: 20.0
     errors:
-      - INVALID_ARGUMENT
-      - ESTOP_ACTIVE
-      - BASE_NOT_READY
-      - RESOURCE_BUSY
-      - RUN_LIMIT_EXCEEDED
-      - SAFETY_BLOCKED
-      - MOTION_EXECUTION_FAILED
-      - PICO_COMMUNICATION_ERROR
-      - ACTION_HARD_TIMEOUT
-      - CANCEL_FAILED
+    - INVALID_ARGUMENT
+    - ESTOP_ACTIVE
+    - BASE_NOT_READY
+    - RESOURCE_BUSY
+    - RUN_LIMIT_EXCEEDED
+    - SAFETY_BLOCKED
+    - MOTION_EXECUTION_FAILED
+    - PICO_COMMUNICATION_ERROR
+    - ACTION_HARD_TIMEOUT
+    - CANCEL_FAILED
     generation_rules:
-      - Split an explicitly larger angle into bounded sequential calls only when needed to satisfy the per-call limit.
-      - Do not invent an angle for vague turns.
-
+    - Split an explicitly larger angle into bounded sequential calls only when needed to satisfy the per-call limit.
+    - Do not invent an angle for vague turns.
   SAVE_POS:
     block: base_drive
     mode: sync
@@ -1030,27 +962,26 @@ functions:
     arguments:
       position_id:
         type: str
-        regex: "^[a-z][a-z0-9_]{0,31}$"
+        regex: ^[a-z][a-z0-9_]{0,31}$
       overwrite:
         type: bool
         default: false
     resources:
       exclusive:
-        - POSITION_STORE
+      - POSITION_STORE
       requires_idle:
-        - BASE_MOTION
+      - BASE_MOTION
     persistence: system_session
     internal_motion_steps: 0
     errors:
-      - POSITION_ID_INVALID
-      - POSITION_ALREADY_EXISTS
-      - POSE_ESTIMATE_UNRELIABLE
-      - RESOURCE_BUSY
-      - POSITION_STORE_ERROR
+    - POSITION_ID_INVALID
+    - POSITION_ALREADY_EXISTS
+    - POSE_ESTIMATE_UNRELIABLE
+    - RESOURCE_BUSY
+    - POSITION_STORE_ERROR
     generation_rules:
-      - Save only when the user explicitly requests remembering or saving a position.
-      - Set overwrite to true only when the user explicitly requests replacing an existing session position.
-
+    - Save only when the user explicitly requests remembering or saving a position.
+    - Set overwrite to true only when the user explicitly requests replacing an existing session position.
   MOVE_BASE_TO_POS:
     block: base_drive
     mode: async
@@ -1059,81 +990,80 @@ functions:
     arguments:
       position_id:
         type: str
-        regex: "^[a-z][a-z0-9_]{0,31}$"
+        regex: ^[a-z][a-z0-9_]{0,31}$
     resources:
       exclusive:
-        - BASE_MOTION
-        - PICO_MOTION
+      - BASE_MOTION
+      - PICO_MOTION
       read:
-        - POSITION_STORE
+      - POSITION_STORE
     cancellable: true
     restore_heading: true
     obstacle_avoidance: false
     internal_motion_steps_max: 3
     recommended_wait_timeout_s: 50.0
     errors:
-      - POSITION_ID_INVALID
-      - POSITION_NOT_FOUND
-      - POSE_ESTIMATE_UNRELIABLE
-      - ESTOP_ACTIVE
-      - BASE_NOT_READY
-      - RESOURCE_BUSY
-      - RUN_LIMIT_EXCEEDED
-      - SAFETY_BLOCKED
-      - MOTION_EXECUTION_FAILED
-      - PICO_COMMUNICATION_ERROR
-      - ACTION_HARD_TIMEOUT
-      - CANCEL_FAILED
+    - POSITION_ID_INVALID
+    - POSITION_NOT_FOUND
+    - POSE_ESTIMATE_UNRELIABLE
+    - ESTOP_ACTIVE
+    - BASE_NOT_READY
+    - RESOURCE_BUSY
+    - RUN_LIMIT_EXCEEDED
+    - SAFETY_BLOCKED
+    - MOTION_EXECUTION_FAILED
+    - PICO_COMMUNICATION_ERROR
+    - ACTION_HARD_TIMEOUT
+    - CANCEL_FAILED
     generation_rules:
-      - Use only a position ID known by policy.
-      - Do not claim obstacle avoidance or map-based navigation.
-
+    - Use only a position ID known by policy.
+    - Do not claim obstacle avoidance or map-based navigation.
   ALIGN_WITH_OBJECT:
     block: base_drive
     mode: async
     returns: ActionHandle
-    description: Confirm or search for an object, rotate toward it, adjust distance, and confirm it is inside the graspable working region.
+    description: Confirm or search for an object, rotate toward it, adjust distance, and confirm it is inside the graspable
+      working region.
     arguments:
       object_id:
         type: ObjectId
         canonical_only: true
     resources:
       exclusive:
-        - BASE_MOTION
-        - PICO_MOTION
+      - BASE_MOTION
+      - PICO_MOTION
     cancellable: true
     includes:
-      - object_confirmation
-      - rotational_alignment
-      - distance_adjustment
-      - graspable_region_confirmation
+    - object_confirmation
+    - rotational_alignment
+    - distance_adjustment
+    - graspable_region_confirmation
     excludes:
-      - arm_motion
-      - gripper_motion
-      - object_pick
-    internal_motion_steps_max: 8
-    recommended_wait_timeout_s: 50.0
+    - arm_motion
+    - gripper_motion
+    - object_pick
+    internal_motion_steps_max: 20
+    recommended_wait_timeout_s: 2410.0
     errors:
-      - OBJECT_NOT_REGISTERED
-      - PERCEPTION_UNAVAILABLE
-      - OBJECT_NOT_FOUND
-      - OBJECT_AMBIGUOUS
-      - OBJECT_LOST
-      - TARGET_NOT_GRASPABLE
-      - ALIGNMENT_TIMEOUT
-      - ESTOP_ACTIVE
-      - BASE_NOT_READY
-      - RESOURCE_BUSY
-      - RUN_LIMIT_EXCEEDED
-      - SAFETY_BLOCKED
-      - MOTION_EXECUTION_FAILED
-      - PICO_COMMUNICATION_ERROR
-      - ACTION_HARD_TIMEOUT
-      - CANCEL_FAILED
+    - OBJECT_NOT_REGISTERED
+    - PERCEPTION_UNAVAILABLE
+    - OBJECT_NOT_FOUND
+    - OBJECT_AMBIGUOUS
+    - OBJECT_LOST
+    - TARGET_NOT_GRASPABLE
+    - ALIGNMENT_TIMEOUT
+    - ESTOP_ACTIVE
+    - BASE_NOT_READY
+    - RESOURCE_BUSY
+    - RUN_LIMIT_EXCEEDED
+    - SAFETY_BLOCKED
+    - MOTION_EXECUTION_FAILED
+    - PICO_COMMUNICATION_ERROR
+    - ACTION_HARD_TIMEOUT
+    - CANCEL_FAILED
     generation_rules:
-      - Use for an explicit request to face, align with, or enter graspable range of an object without picking it.
-      - Do not add a separate GET_OBJECT_STATE unless the user explicitly asked for conditional behavior based on visibility.
-
+    - Use for an explicit request to face, align with, or enter graspable range of an object without picking it.
+    - Do not add a separate GET_OBJECT_STATE unless the user explicitly asked for conditional behavior based on visibility.
   SET_ARM_JOINTS:
     block: arm_gripper
     mode: async
@@ -1154,31 +1084,30 @@ functions:
         max: 74.4845
     resources:
       exclusive:
-        - ARM_MOTION
-        - PICO_MOTION
+      - ARM_MOTION
+      - PICO_MOTION
     cancellable: true
     preserves:
-      - gripper_deg
+    - gripper_deg
     requires_safe_path: true
     internal_motion_steps: 1
-    recommended_wait_timeout_s: 20.0
+    recommended_wait_timeout_s: 25.0
     errors:
-      - INVALID_ARGUMENT
-      - ARM_LIMIT_VIOLATION
-      - ARM_PATH_UNSAFE
-      - ARM_NOT_READY
-      - ROBOT_STATE_UNAVAILABLE
-      - RESOURCE_BUSY
-      - RUN_LIMIT_EXCEEDED
-      - ARM_EXECUTION_FAILED
-      - PICO_COMMUNICATION_ERROR
-      - ACTION_HARD_TIMEOUT
-      - CANCEL_FAILED
+    - INVALID_ARGUMENT
+    - ARM_LIMIT_VIOLATION
+    - ARM_PATH_UNSAFE
+    - ARM_NOT_READY
+    - ROBOT_STATE_UNAVAILABLE
+    - RESOURCE_BUSY
+    - RUN_LIMIT_EXCEEDED
+    - ARM_EXECUTION_FAILED
+    - PICO_COMMUNICATION_ERROR
+    - ACTION_HARD_TIMEOUT
+    - CANCEL_FAILED
     generation_rules:
-      - Require exact user-provided or conversation-established target angles.
-      - Do not infer angles from vague words such as '조금 올려'.
-      - Success means commanded trajectory completion, not measured encoder arrival.
-
+    - Require exact user-provided or conversation-established target angles.
+    - Do not infer angles from vague words such as '조금 올려'.
+    - Success means commanded trajectory completion, not measured encoder arrival.
   SET_GRIPPER:
     block: arm_gripper
     mode: async
@@ -1196,30 +1125,29 @@ functions:
       positive: closing_direction
     resources:
       exclusive:
-        - GRIPPER_MOTION
-        - PICO_MOTION
+      - GRIPPER_MOTION
+      - PICO_MOTION
     cancellable: true
     preserves:
-      - arm_lift_deg
-      - wrist_pitch_deg
+    - arm_lift_deg
+    - wrist_pitch_deg
     internal_motion_steps: 1
-    recommended_wait_timeout_s: 12.0
+    recommended_wait_timeout_s: 17.0
     errors:
-      - INVALID_ARGUMENT
-      - GRIPPER_LIMIT_VIOLATION
-      - GRIPPER_NOT_READY
-      - ROBOT_STATE_UNAVAILABLE
-      - RESOURCE_BUSY
-      - RUN_LIMIT_EXCEEDED
-      - GRIPPER_EXECUTION_FAILED
-      - PICO_COMMUNICATION_ERROR
-      - ACTION_HARD_TIMEOUT
-      - CANCEL_FAILED
+    - INVALID_ARGUMENT
+    - GRIPPER_LIMIT_VIOLATION
+    - GRIPPER_NOT_READY
+    - ROBOT_STATE_UNAVAILABLE
+    - RESOURCE_BUSY
+    - RUN_LIMIT_EXCEEDED
+    - GRIPPER_EXECUTION_FAILED
+    - PICO_COMMUNICATION_ERROR
+    - ACTION_HARD_TIMEOUT
+    - CANCEL_FAILED
     generation_rules:
-      - Require an exact angle unless the user explicitly says open or close and the configured endpoint is intended.
-      - Interpret open as 0.0 degrees and fully close as 90.0 degrees in this development profile.
-      - Do not claim that SET_GRIPPER proves a successful grasp.
-
+    - Require an exact angle unless the user explicitly says open or close and the configured endpoint is intended.
+    - Interpret open as 0.0 degrees and fully close as 90.0 degrees in this development profile.
+    - Do not claim that SET_GRIPPER proves a successful grasp.
   SAVE_ARM_PRIMITIVE:
     block: arm_gripper
     mode: sync
@@ -1228,37 +1156,36 @@ functions:
     arguments:
       primitive_id:
         type: str
-        regex: "^[a-z][a-z0-9_]{0,31}$"
+        regex: ^[a-z][a-z0-9_]{0,31}$
       overwrite:
         type: bool
         default: false
         session_primitives_only: true
     resources:
       exclusive:
-        - ARM_PRIMITIVE_STORE
+      - ARM_PRIMITIVE_STORE
       requires_idle:
-        - ARM_MOTION
+      - ARM_MOTION
     stores:
-      - arm_lift_deg
-      - wrist_pitch_deg
+    - arm_lift_deg
+    - wrist_pitch_deg
     excludes:
-      - gripper_deg
+    - gripper_deg
     persistence: system_session
     internal_motion_steps: 0
     errors:
-      - PRIMITIVE_ID_INVALID
-      - PRIMITIVE_ALREADY_EXISTS
-      - PROTECTED_PRIMITIVE
-      - ARM_STATE_UNAVAILABLE
-      - ARM_STATE_TRANSIENT
-      - ARM_STATE_UNRELIABLE
-      - ARM_PATH_UNSAFE
-      - RESOURCE_BUSY
-      - PRIMITIVE_STORE_ERROR
+    - PRIMITIVE_ID_INVALID
+    - PRIMITIVE_ALREADY_EXISTS
+    - PROTECTED_PRIMITIVE
+    - ARM_STATE_UNAVAILABLE
+    - ARM_STATE_TRANSIENT
+    - ARM_STATE_UNRELIABLE
+    - ARM_PATH_UNSAFE
+    - RESOURCE_BUSY
+    - PRIMITIVE_STORE_ERROR
     generation_rules:
-      - Save only when the user explicitly requests remembering or saving the current arm pose.
-      - Set overwrite to true only for an explicitly requested replacement of a session primitive.
-
+    - Save only when the user explicitly requests remembering or saving the current arm pose.
+    - Set overwrite to true only for an explicitly requested replacement of a session primitive.
   SET_ARM_PRIMITIVE:
     block: arm_gripper
     mode: async
@@ -1267,133 +1194,136 @@ functions:
     arguments:
       primitive_id:
         type: str
-        regex: "^[a-z][a-z0-9_]{0,31}$"
+        regex: ^[a-z][a-z0-9_]{0,31}$
     resources:
       exclusive:
-        - ARM_MOTION
-        - PICO_MOTION
+      - ARM_MOTION
+      - PICO_MOTION
       read:
-        - ARM_PRIMITIVE_STORE
+      - ARM_PRIMITIVE_STORE
     cancellable: true
     preserves:
-      - gripper_deg
+    - gripper_deg
     requires_safe_path: true
     internal_motion_steps: 1
-    recommended_wait_timeout_s: 20.0
+    recommended_wait_timeout_s: 25.0
     errors:
-      - PRIMITIVE_ID_INVALID
-      - PRIMITIVE_NOT_FOUND
-      - INVALID_PRIMITIVE
-      - ARM_NOT_READY
-      - ARM_PATH_UNSAFE
-      - ROBOT_STATE_UNAVAILABLE
-      - RESOURCE_BUSY
-      - RUN_LIMIT_EXCEEDED
-      - ARM_EXECUTION_FAILED
-      - PICO_COMMUNICATION_ERROR
-      - ACTION_HARD_TIMEOUT
-      - CANCEL_FAILED
+    - PRIMITIVE_ID_INVALID
+    - PRIMITIVE_NOT_FOUND
+    - INVALID_PRIMITIVE
+    - ARM_NOT_READY
+    - ARM_PATH_UNSAFE
+    - ROBOT_STATE_UNAVAILABLE
+    - RESOURCE_BUSY
+    - RUN_LIMIT_EXCEEDED
+    - ARM_EXECUTION_FAILED
+    - PICO_COMMUNICATION_ERROR
+    - ACTION_HARD_TIMEOUT
+    - CANCEL_FAILED
     generation_rules:
-      - Use only a primitive ID known by policy.
-      - Do not assume the primitive changes the gripper.
-
+    - Use only a primitive ID known by policy.
+    - Do not assume the primitive changes the gripper.
   PICK_OBJECT:
     block: arm_gripper
     mode: async
     returns: ActionHandle
-    description: Confirm a registered object, internally align if needed, check reachability, grasp, verify, and perform post-grasp handling.
+    description: Confirm a registered object, internally align if needed, check reachability, grasp, verify, and perform post-grasp
+      handling.
     arguments:
       object_id:
         type: ObjectId
         canonical_only: true
     resources:
       exclusive:
-        - BASE_MOTION
-        - ARM_MOTION
-        - GRIPPER_MOTION
-        - PICO_MOTION
+      - BASE_MOTION
+      - ARM_MOTION
+      - GRIPPER_MOTION
+      - PICO_MOTION
     cancellable: true
     includes:
-      - object_confirmation
-      - align_if_needed
-      - distance_adjustment_if_needed
-      - reachability_check
-      - grasp
-      - verification
-      - post_grasp
-    internal_motion_steps_max: 12
-    recommended_wait_timeout_s: 70.0
+    - object_confirmation
+    - align_if_needed
+    - distance_adjustment_if_needed
+    - reachability_check
+    - grasp
+    - verification
+    - post_grasp
+    internal_motion_steps_max: 30
+    recommended_wait_timeout_s: 2410.0
     errors:
-      - OBJECT_NOT_REGISTERED
-      - PERCEPTION_UNAVAILABLE
-      - OBJECT_NOT_FOUND
-      - OBJECT_AMBIGUOUS
-      - OBJECT_LOST
-      - TARGET_NOT_GRASPABLE
-      - ALIGNMENT_TIMEOUT
-      - ALREADY_HOLDING_OBJECT
-      - GRASP_PROFILE_NOT_FOUND
-      - IK_FAILED
-      - ARM_PATH_UNSAFE
-      - GRIPPER_EXECUTION_FAILED
-      - GRASP_FAILED
-      - GRASP_VERIFICATION_UNAVAILABLE
-      - RESOURCE_BUSY
-      - RUN_LIMIT_EXCEEDED
-      - ACTION_HARD_TIMEOUT
-      - CANCEL_FAILED
+    - OBJECT_NOT_REGISTERED
+    - PERCEPTION_UNAVAILABLE
+    - OBJECT_NOT_FOUND
+    - OBJECT_AMBIGUOUS
+    - OBJECT_LOST
+    - TARGET_NOT_GRASPABLE
+    - ALIGNMENT_TIMEOUT
+    - ALREADY_HOLDING_OBJECT
+    - GRASP_PROFILE_NOT_FOUND
+    - IK_FAILED
+    - ARM_PATH_UNSAFE
+    - GRIPPER_EXECUTION_FAILED
+    - GRASP_FAILED
+    - GRASP_VERIFICATION_UNAVAILABLE
+    - RESOURCE_BUSY
+    - RUN_LIMIT_EXCEEDED
+    - ACTION_HARD_TIMEOUT
+    - CANCEL_FAILED
     generation_rules:
-      - Do not precede with ALIGN_WITH_OBJECT unless the user explicitly asked to observe alignment as a separate step.
-      - Do not manually reproduce its internal base, arm, or gripper sequence for an ordinary pick request.
-      - Do not add automatic retries unless explicitly requested.
-
+    - Do not precede with ALIGN_WITH_OBJECT unless the user explicitly asked to observe alignment as a separate step.
+    - Do not manually reproduce its internal base, arm, or gripper sequence for an ordinary pick request.
+    - Do not add automatic retries unless explicitly requested.
   PLACE_NEXTTO_OBJECT:
     block: arm_gripper
     mode: async
     returns: ActionHandle
-    description: Place the currently held object next to a registered reference object, internally aligning and selecting a safe placement candidate.
+    description: Place the currently held object next to a registered reference object, internally aligning and selecting
+      a safe placement candidate.
     arguments:
       reference_object_id:
         type: ObjectId
         canonical_only: true
     resources:
       exclusive:
-        - BASE_MOTION
-        - ARM_MOTION
-        - GRIPPER_MOTION
-        - PICO_MOTION
+      - BASE_MOTION
+      - ARM_MOTION
+      - GRIPPER_MOTION
+      - PICO_MOTION
     cancellable: true
     requires_held_object: true
     includes:
-      - reference_confirmation
-      - align_if_needed
-      - distance_adjustment_if_needed
-      - placement_candidate_selection
-      - place
-      - release
-      - post_place
-    internal_motion_steps_max: 12
-    recommended_wait_timeout_s: 70.0
+    - reference_confirmation
+    - align_if_needed
+    - distance_adjustment_if_needed
+    - placement_candidate_selection
+    - place
+    - release
+    - post_place
+    internal_motion_steps_max: 30
+    recommended_wait_timeout_s: 2410.0
     errors:
-      - NO_HELD_OBJECT
-      - OBJECT_NOT_REGISTERED
-      - PERCEPTION_UNAVAILABLE
-      - OBJECT_NOT_FOUND
-      - OBJECT_AMBIGUOUS
-      - OBJECT_LOST
-      - TARGET_NOT_GRASPABLE
-      - ALIGNMENT_TIMEOUT
-      - PLACEMENT_PROFILE_NOT_FOUND
-      - PLACEMENT_POSITION_NOT_FOUND
-      - IK_FAILED
-      - ARM_PATH_UNSAFE
-      - GRIPPER_EXECUTION_FAILED
-      - PLACE_FAILED
-      - RESOURCE_BUSY
-      - RUN_LIMIT_EXCEEDED
-      - ACTION_HARD_TIMEOUT
-      - CANCEL_FAILED
+    - NO_HELD_OBJECT
+    - OBJECT_NOT_REGISTERED
+    - PERCEPTION_UNAVAILABLE
+    - OBJECT_NOT_FOUND
+    - OBJECT_AMBIGUOUS
+    - OBJECT_LOST
+    - TARGET_NOT_GRASPABLE
+    - ALIGNMENT_TIMEOUT
+    - PLACEMENT_PROFILE_NOT_FOUND
+    - PLACEMENT_POSITION_NOT_FOUND
+    - IK_FAILED
+    - ARM_PATH_UNSAFE
+    - GRIPPER_EXECUTION_FAILED
+    - PLACE_FAILED
+    - RESOURCE_BUSY
+    - RUN_LIMIT_EXCEEDED
+    - ACTION_HARD_TIMEOUT
+    - CANCEL_FAILED
     generation_rules:
-      - Do not precede with ALIGN_WITH_OBJECT unless the user explicitly asked to observe alignment as a separate step.
-      - Do not calculate the spatial meaning of 'next to' in generated code.
-      - Do not add automatic recovery after release.
+    - Do not precede with ALIGN_WITH_OBJECT unless the user explicitly asked to observe alignment as a separate step.
+    - Do not calculate the spatial meaning of 'next to' in generated code.
+    - Do not add automatic recovery after release.
+    requires_different_reference_object: true
+    placement_offset_policy: Gateway resolves object_catalog placement_offset_base; generated code does not calculate coordinates.
+    verification: Safe preflight and commanded sequence completion; no physical release sensor is currently available.

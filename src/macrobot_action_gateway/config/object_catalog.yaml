@@ -1,18 +1,22 @@
 objects:
-  BUDS3:
-    runtime_name: Buds3
-    alignment_profile: Buds3
-    pick_profile: Buds3
-    placement_profile: Buds3
+  ERASER:
+    runtime_name: Eraser
+    runtime_profile: Eraser
+    alignment_profile: Eraser
+    pick_profile: Eraser
+    placement_profile: Eraser
+    grasp_keyframe_profile: Eraser_r4
     placement_offset_base:
     - 0.0
     - 0.12
     - 0.0
-  CUP:
-    runtime_name: Cup
-    alignment_profile: Cup
-    pick_profile: Cup
-    placement_profile: Cup
+  RUBBER:
+    runtime_name: Rubber
+    runtime_profile: Rubber
+    alignment_profile: Rubber
+    pick_profile: Rubber
+    placement_profile: Rubber
+    grasp_keyframe_profile: Rubber_r4
     placement_offset_base:
     - 0.0
     - 0.12

@@ -7,7 +7,7 @@ macrobot_stored_object_pick:
     base_frame: base_link
     forward_axis_sign: 1.0
     lateral_axis_sign: 1.0
-    pico_turn_positive_is_right: true
+    pico_turn_positive_is_right: false
     pico_move_positive_is_forward: true
     dry_run_base: false
     stow_before_base_motion: true
@@ -44,8 +44,8 @@ macrobot_stored_object_pick:
     max_alignment_total_turn_deg: 120.0
     max_alignment_total_move_m: 0.6
     alignment_confirmation_count: 2
-    record_timeout_sec: 120.0
-    visible_test_timeout_sec: 60.0
+    record_timeout_sec: 240.0
+    visible_test_timeout_sec: 2400.0
     full_search_timeout_sec: 0.0
     finder_initial_detection_wait_sec: 3.0
     search_post_turn_detection_wait_sec: 3.0
@@ -59,7 +59,7 @@ macrobot_stored_object_pick:
     perception_latency_log_file: ~/MacRobot/data/perception/finder_latency.jsonl
     visible_first_enabled: true
     visible_first_probe_sec: 3.0
-    overall_timeout_sec: 180.0
+    overall_timeout_sec: 2400.0
     odom_request_timeout_sec: 2.0
     cancel_confirm_timeout_sec: 4.0
     distance_handoff_enabled: false
@@ -216,21 +216,21 @@ macrobot_stored_object_pick:
     pose_relocation_max_drive_yaw_deg: 6.0
     pose_relocation_min_drive_radius_m: 0.08
     pose_relocation_drive_speed: 0
-    # macrobot_joint_pose_lattice_v2 BEGIN
-    # Restore the taught camera-relative object point and taught axial direction
-    # with one bounded weighted-A* SE(2) planner. The selected primitive is
-    # followed by a fresh RGB-D reset before replanning.
+    # macrobot_axis_coupled_macro_v3 BEGIN
+    # Recreate the taught camera-relative object point and axial direction as a
+    # single SE(2) target.  Outside the final grasp-axis corridor, only a true
+    # DRIVE_REL arc or an atomic TURN-MOVE-TURN dog-leg may be selected.
     joint_pose_controller_enabled: true
 
-    # Reverse is useful for viewpoint restoration, but the current platform has
-    # no rear depth-clearance sensor. It is therefore disabled until an operator
-    # has physically checked the rear corridor and explicitly changes the ACK.
+    # A local sideways correction may require reverse motion.  The platform has
+    # no rear depth-clearance sensor, so reverse remains disabled until the
+    # operator has physically checked the complete rear swept corridor and ACKs.
     joint_pose_allow_reverse: true
     joint_pose_rear_clearance_ack: false
-    joint_pose_drive_enabled: false
+    joint_pose_drive_enabled: true
     joint_pose_position_only_when_orientation_unreliable: true
 
-    # Low-level bounded action lattice.
+    # Low-level local motion bounds.
     joint_pose_maximum_move_step_m: 0.018
     joint_pose_maximum_reverse_step_m: 0.012
     joint_pose_maximum_turn_step_deg: 8.0
@@ -247,36 +247,69 @@ macrobot_stored_object_pick:
     joint_pose_maximum_predicted_bearing_deg: 48.0
     joint_pose_path_sample_count: 9
 
-    # Weighted-A* lattice resolution and hard search budget.
+    # Desired final-axis coordinates and cost.  Cross-track is measured in the
+    # desired final robot-axis frame, not as image bearing.
+    joint_pose_axis_corridor_tolerance_m: 0.008
+    joint_pose_axis_turn_position_gate_m: 0.014
+    joint_pose_axis_straight_heading_gate_deg: 5.0
+    joint_pose_axis_cross_track_weight: 2.8
+    joint_pose_axis_heading_weight: 1.6
+    joint_pose_axis_along_weight: 1.0
+
+    # One camera-atomic macro: DRIVE_REL or TURN-MOVE-TURN.  There is no camera
+    # callback between the sub-primitives; a fresh RGB-D reset follows the macro.
+    joint_pose_maximum_steering_turn_deg: 16.0
+    joint_pose_maximum_heading_step_deg: 8.0
+    joint_pose_minimum_coupled_steering_deg: 1.0
+    joint_pose_minimum_drive_radius_m: 0.09
+    joint_pose_minimum_drive_yaw_deg: 0.45
+    joint_pose_drive_yaw_levels: 3
+    joint_pose_macro_action_cost: 0.03
+    joint_pose_dogleg_cost_penalty: 0.03
+    joint_pose_minimum_macro_improvement: 0.04
+    joint_pose_maximum_cross_track_regression_m: 0.006
+    joint_pose_maximum_heading_regression_deg: 8.0
+
+    # Axial-orientation fusion.  A zero-net-yaw translation cannot physically
+    # rotate a static object axis in base_link, so large apparent improvements
+    # after retreat are clipped and receive only a very small measurement gain.
+    joint_pose_orientation_translation_measurement_gain: 0.03
+    joint_pose_orientation_stationary_measurement_gain: 0.20
+    joint_pose_orientation_turn_measurement_gain: 0.45
+    joint_pose_orientation_translation_innovation_limit_deg: 1.0
+    joint_pose_orientation_turn_innovation_limit_deg: 12.0
+    joint_pose_orientation_motion_yaw_epsilon_deg: 0.25
+
+    # Bounded candidate budget.  execution_prefix_length now means the maximum
+    # number of sub-primitives inside one atomic macro, not open-loop replans.
     joint_pose_position_resolution_m: 0.004
     joint_pose_orientation_resolution_deg: 2.0
     joint_pose_search_maximum_expansions: 25000
-    # Prevent an infeasible local pose from blocking the ROS executor.
-    joint_pose_search_maximum_wall_time_sec: 0.15
-    joint_pose_search_maximum_depth: 72
-    joint_pose_search_maximum_translation_m: 0.40
-    joint_pose_search_maximum_turn_deg: 220.0
-    joint_pose_heuristic_weight: 3.5
-    joint_pose_execution_prefix_length: 1
+    joint_pose_search_maximum_wall_time_sec: 0.12
+    joint_pose_search_maximum_depth: 3
+    joint_pose_search_maximum_translation_m: 0.06
+    joint_pose_search_maximum_turn_deg: 60.0
+    joint_pose_heuristic_weight: 1.0
+    joint_pose_execution_prefix_length: 3
 
-    # Route preference, reversal hysteresis and measured-cycle suppression.
-    joint_pose_action_cost: 1.0
-    joint_pose_motion_cost_weight: 0.08
+    # Route preference, reversal hysteresis, and measured-cycle suppression.
+    joint_pose_action_cost: 0.0
+    joint_pose_motion_cost_weight: 0.04
     joint_pose_reverse_cost_penalty: 0.20
-    joint_pose_drive_cost_penalty: 0.08
-    joint_pose_action_family_change_penalty: 0.04
-    joint_pose_immediate_reversal_penalty: 1.80
-    joint_pose_same_direction_bonus: 0.08
+    joint_pose_drive_cost_penalty: 0.0
+    joint_pose_action_family_change_penalty: 0.03
+    joint_pose_immediate_reversal_penalty: 0.50
+    joint_pose_same_direction_bonus: 0.02
     joint_pose_recent_cycle_penalty: 4.0
     joint_pose_hard_reject_recent_cycle: true
     joint_pose_cycle_position_radius_m: 0.010
     joint_pose_cycle_orientation_radius_deg: 5.0
     joint_pose_cycle_required_cost_improvement: 0.20
-    joint_pose_minimum_frontier_improvement: 0.08
+    joint_pose_minimum_frontier_improvement: 0.04
 
-    # Logging, camera-reset residual monitoring and controlled hold behaviour.
-    joint_pose_top_candidate_count: 6
-    joint_pose_route_preview_count: 12
+    # Logging, camera-reset model checking, and controlled hold behaviour.
+    joint_pose_top_candidate_count: 8
+    joint_pose_route_preview_count: 8
     joint_pose_history_size: 8
     joint_pose_hold_reobserve_sec: 0.30
     joint_pose_hold_limit: 8
@@ -287,11 +320,12 @@ macrobot_stored_object_pick:
     joint_pose_model_orientation_residual_tolerance_deg: 8.0
     joint_pose_minimum_observed_position_change_m: 0.0015
     joint_pose_minimum_observed_orientation_change_deg: 0.5
-    # macrobot_joint_pose_lattice_v2 END
+    # macrobot_axis_coupled_macro_v3 END
+
 macrobot_visible_pick_test:
   ros__parameters:
     detection_max_age_sec: 8.0
-    default_timeout_sec: 120.0
+    default_timeout_sec: 2400.0
     start_finder: true
     stored_goal_retry_period_sec: 0.75
     stored_goal_ack_timeout_sec: 12.0

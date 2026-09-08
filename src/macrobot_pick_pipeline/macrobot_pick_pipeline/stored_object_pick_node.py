@@ -486,7 +486,7 @@ class StoredObjectPickNode(Node):
             "base_frame": "base_link",
             "forward_axis_sign": 1.0,
             "lateral_axis_sign": 1.0,
-            "pico_turn_positive_is_right": True,
+            "pico_turn_positive_is_right": False,
             "pico_move_positive_is_forward": True,
             "dry_run_base": False,
             "stow_before_base_motion": True,

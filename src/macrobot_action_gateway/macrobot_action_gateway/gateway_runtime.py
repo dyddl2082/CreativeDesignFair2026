@@ -49,7 +49,7 @@ PUBLIC_FUNCTIONS = ASYNC_FUNCTIONS | SYNC_FUNCTIONS
 
 
 class GatewayRuntime:
-    """Spec v0.2 API implementation independent of the ROS transport layer."""
+    """Spec v0.3 API implementation independent of the ROS transport layer."""
 
     def __init__(
         self,
@@ -135,7 +135,7 @@ class GatewayRuntime:
             "robot_state": self.state.debug_snapshot(),
             "bridge": self.bridge.system_health(),
             "real_motion_enabled": bool(self._get("real_motion_enabled", False)),
-            "spec_version": "0.2.0",
+            "spec_version": "0.3.0",
         }
 
     # ------------------------------------------------------------------
@@ -310,7 +310,7 @@ class GatewayRuntime:
     def _get_object_state(self, run: RunRecord, args: Mapping[str, Any]):
         object_id = self._object_id(args.get("object_id"))
         if object_id is None or object_id.name not in self.object_catalog:
-            requested = ObjectId.BUDS3 if object_id is None else object_id
+            requested = next(iter(ObjectId)) if object_id is None else object_id
             from .api_types import ObjectState, ObjectStateResult
             return ObjectStateResult(
                 run_id=run.run_id,

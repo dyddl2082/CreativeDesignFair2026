@@ -20,6 +20,11 @@ def generate_launch_description() -> LaunchDescription:
                 description="Allow actual ROS/Pico motion. Default false for safety.",
             ),
             DeclareLaunchArgument(
+                "pico_turn_positive_is_right",
+                default_value="false",
+                description="Set true only for legacy Pico firmware where positive TURN_DEG is clockwise.",
+            ),
+            DeclareLaunchArgument(
                 "socket_path",
                 default_value="/tmp/macrobot_action_gateway.sock",
             ),
@@ -40,6 +45,9 @@ def generate_launch_description() -> LaunchDescription:
                     {
                         "real_motion_enabled": ParameterValue(
                             LaunchConfiguration("real_motion_enabled"), value_type=bool
+                        ),
+                        "pico_turn_positive_is_right": ParameterValue(
+                            LaunchConfiguration("pico_turn_positive_is_right"), value_type=bool
                         ),
                         "socket_path": LaunchConfiguration("socket_path"),
                         "settings_file": LaunchConfiguration("settings_file"),

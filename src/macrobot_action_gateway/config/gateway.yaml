@@ -1,10 +1,10 @@
 real_motion_enabled: false
 run_limits:
-  max_wall_time_s: 300.0
-  max_internal_motion_steps_per_run: 40
+  max_wall_time_s: 5000.0
+  max_internal_motion_steps_per_run: 80
 control_limits:
   max_wait_seconds_per_call: 60.0
-  max_wait_action_timeout_s: 180.0
+  max_wait_action_timeout_s: 2410.0
   max_wait_resource_timeout_s: 120.0
 control_timeouts:
   cancel_action_s: 4.0
@@ -24,7 +24,7 @@ base_motion:
   turn_tolerance_deg: 1.0
 alignment:
   max_motion_steps_per_call: 20
-  hard_timeout_s: 90.0
+  hard_timeout_s: 2400.0
 arm_limits:
   arm_lift_deg:
   - -57.3
@@ -44,10 +44,10 @@ gripper_timeouts:
 manipulation:
   pick_max_motion_steps_per_call: 30
   place_max_motion_steps_per_call: 30
-  pick_hard_timeout_s: 150.0
-  place_hard_timeout_s: 150.0
-  grasp_verification_policy: commanded_sequence_only
-  placement_verification_policy: not_implemented
+  pick_hard_timeout_s: 2400.0
+  place_hard_timeout_s: 2400.0
+  grasp_verification_policy: safe_preflight_and_command_completion_without_grip_sensor
+  placement_verification_policy: safe_preflight_and_command_completion_without_physical_release_sensor
   default_placement_offset_base:
   - 0.0
   - 0.12
@@ -61,3 +61,10 @@ robot_state:
   gripper_state_max_age_ms: 5000
 dry_run:
   simulated_motion_sec: 0.05
+integration:
+  pick_entry_mode: visible_test_request_id_bridge
+  place_entry_mode: stored_place_camera_authoritative
+  canonical_objects:
+  - ERASER
+  - RUBBER
+  pico_positive_turn_direction: counterclockwise_top_view
