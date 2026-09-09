@@ -1,0 +1,9 @@
+{
+  "schema": "macrobot.ui.task_result/v1",
+  "request_id": "ui-held-clear-1788904603833-217db2",
+  "ok": false,
+  "event": "ui_held_state_clear_failed",
+  "message": "held_object_cleared acknowledgement was not observed",
+  "stored_task_status": null,
+  "error_code": "HELD_RESET_TIMEOUT"
+}

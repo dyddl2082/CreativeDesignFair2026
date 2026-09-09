@@ -1,5 +1,6 @@
 macrobot_stored_object_pick:
   ros__parameters:
+    # PLACE_SIMPLE_ALIGN_TURN_PLAY_V5
     # PLACE_STOP_SPIN_V3
     profile_file: ~/MacRobot/data/stored_objects/runtime_profiles.yaml
     recordings_dir: ~/MacRobot/data/arm_primitives
@@ -422,7 +423,9 @@ macrobot_stored_object_pick:
     place_side_turn_max_abs_deg: 30.0
     place_side_turn_finish_tolerance_deg: 0.05
     # PLACE_REFERENCE_UNIFIED_SEARCH_V1
-    place_reference_keep_finder_on_lost: true
+    place_reference_keep_finder_on_lost: false
+    simple_place_final_turn_deg: 15.0
+    simple_place_final_turn_max_abs_deg: 30.0
 macrobot_visible_pick_test:
   ros__parameters:
     detection_max_age_sec: 8.0

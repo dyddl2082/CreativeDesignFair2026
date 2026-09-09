@@ -123,7 +123,7 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
             "Camera-authoritative task policy ready: one fresh RGB-D reset after each compound relative-pose manoeuvre"
         )
 
-    def _declare_parameters(self) -> None:
+    def _declare_parameters_before_place_simple_v5(self) -> None:
         super()._declare_parameters()
         defaults: Dict[str, Any] = {
             "camera_authoritative_mode": True,
@@ -2628,6 +2628,354 @@ class CameraAuthoritativeTaskNode(ResilientObjectTaskNode):
             physical_left_positive_deg,
             purpose,
         )
+
+    # PLACE_SIMPLE_ALIGN_TURN_PLAY_V5
+    # Final PLACE policy:
+    #   1. find and align the reference object through the exact same maintained
+    #      camera-authoritative path used for a normal object task;
+    #   2. after normal alignment completes, perform one intentional +15 degree
+    #      (configurable) physical-left-positive turn;
+    #   3. do not re-observe, re-center, debounce, or enter a PLACE-only search;
+    #   4. immediately preflight and play the held object's semantic PLACE path.
+    #
+    # These definitions are intentionally last in the class so older additive
+    # PLACE experiments remain inert without risky in-place source deletion.
+    def _declare_parameters(self) -> None:
+        self._declare_parameters_before_place_simple_v5()
+        defaults = {
+            "simple_place_final_turn_deg": 15.0,
+            "simple_place_final_turn_max_abs_deg": 30.0,
+        }
+        for name, value in defaults.items():
+            if not self.has_parameter(name):
+                self.declare_parameter(name, value)
+
+    def _start_place_goal(self, request) -> None:
+        self._simple_place_v5_turn_pending = False
+        self._simple_place_v5_committed = False
+        ResilientObjectTaskNode._start_place_goal(self, request)
+        if self.task_kind != "place" or self.state != "RUNNING":
+            return
+        if self.direct_placement_point is not None:
+            self._publish_status(
+                "place_direct_policy_unchanged",
+                final_turn_applied=False,
+                reason="direct placement bypasses reference alignment",
+            )
+            return
+        self._publish_status(
+                "place_simple_policy_active",
+                reference_acquisition="normal_camera_authoritative_object_path",
+                place_specific_search=False,
+                place_specific_identity_debounce=False,
+                place_specific_reacquire=False,
+                final_turn_deg=float(
+                    self.get_parameter("simple_place_final_turn_deg").value
+                ),
+                correction_after_final_turn=False,
+                next="normal_reference_search_and_alignment",
+        )
+
+    # Restore the normal identity/search/alignment/failure behavior.  This
+    # bypasses v3/v4 PLACE-only debounce and local-reacquisition overrides.
+    def _mark_identity_confirmed(self, source: str) -> None:
+        ResilientObjectTaskNode._mark_identity_confirmed(self, source)
+
+    def _try_search_or_align(self) -> None:
+        ResilientObjectTaskNode._try_search_or_align(self)
+
+    def _try_alignment_step(self) -> None:
+        ResilientObjectTaskNode._try_alignment_step(self)
+
+    def _fail(self, error_code: str, *, reason: str, **details) -> None:
+        ResilientObjectTaskNode._fail(
+            self,
+            error_code,
+            reason=reason,
+            **details,
+        )
+
+    def _restart_full_search(self, reason: str) -> None:
+        ResilientObjectTaskNode._restart_full_search(self, reason)
+
+    def _alignment_complete(self) -> None:
+        if self.task_kind != "place":
+            ResilientObjectTaskNode._alignment_complete(self)
+            return
+        if self._simple_place_v5_committed or self.base_active or self.arm_active:
+            return
+
+        reference_point = self.last_object_point
+        if reference_point is None and self.latest_stable_detection is not None:
+            reference_point = self.latest_stable_detection.point_base
+        if reference_point is None:
+            ResilientObjectTaskNode._fail(
+                self,
+                "OBJECT_LOST",
+                reason=(
+                    "reference object lost at normal alignment completion; "
+                    "PLACE was not started"
+                ),
+            )
+            return
+
+        try:
+            held_runtime = self.profile_store.get(
+                self.held_runtime_profile,
+                self.held_object_name,
+            )
+            held_runtime.validate_for_execution(
+                forward_axis_sign=self.forward_axis_sign,
+                lateral_axis_sign=self.lateral_axis_sign,
+            )
+            placement_point = tuple(
+                float(value)
+                for value in held_runtime.alignment.reference_point_base
+            )
+            if len(placement_point) != 3 or not all(
+                math.isfinite(value) for value in placement_point
+            ):
+                raise ValueError("held taught reference point is invalid")
+        except Exception as exc:
+            ResilientObjectTaskNode._fail(
+                self,
+                "POSITION_STORE_ERROR",
+                reason=(
+                    "held taught reachable point unavailable for PLACE: "
+                    f"{exc}"
+                ),
+            )
+            return
+
+        self._simple_place_v5_committed = True
+        self._cancel_finder("place_reference_normally_aligned_v5")
+        self._clear_active_target()
+        self.search_actions.clear()
+        self.search_observe_until = 0.0
+        self.require_fresh_after_turn = False
+        self.reobserve_not_before = 0.0
+        self.placement_point_base = placement_point
+
+        self.steps["alignment"] = {
+            "iterations": self.alignment_iterations,
+            "errors": (
+                None
+                if self.last_errors is None
+                else self._error_mapping(self.last_errors)
+            ),
+            "reference_point_base": list(reference_point),
+            "policy": "normal_camera_authoritative_alignment",
+        }
+
+        requested = float(
+            self.get_parameter("simple_place_final_turn_deg").value
+        )
+        maximum = abs(
+            float(
+                self.get_parameter(
+                    "simple_place_final_turn_max_abs_deg"
+                ).value
+            )
+        )
+        if not math.isfinite(requested):
+            requested = 15.0
+        if not math.isfinite(maximum) or maximum <= 0.0:
+            maximum = 30.0
+        side_turn = max(-maximum, min(maximum, requested))
+
+        self._publish_status(
+            "place_reference_normally_aligned",
+            reference_object=self.place_reference_object,
+            reference_point_base=list(reference_point),
+            placement_point_base=list(self.placement_point_base),
+            placement_policy=(
+                "normal_reference_alignment_then_single_turn_then_"
+                "held_taught_place"
+            ),
+            final_turn_deg=side_turn,
+            final_turn_chunks=1,
+            correction_after_final_turn=False,
+            legacy_cartesian_offset_used=False,
+        )
+
+        if abs(side_turn) < 1e-6:
+            self._start_place_preflight()
+            return
+
+        self._simple_place_v5_turn_pending = True
+        self._publish_status(
+            "place_final_turn_started",
+            requested_deg=side_turn,
+            chunks=1,
+            direction=("left_ccw" if side_turn > 0.0 else "right_cw"),
+            correction_after_turn=False,
+            next="semantic_place_preflight",
+        )
+        self._send_turn(side_turn, "resilient_place_final_turn_v5")
+
+    def _send_turn(
+        self,
+        physical_left_positive_deg: float,
+        purpose: str,
+    ) -> None:
+        requested = float(physical_left_positive_deg)
+
+        # The final PLACE offset is intentionally one low-precision primitive.
+        # Bypass only the camera controller's 4-degree visual-servo chunking.
+        # ResilientObjectTaskNode._send_turn still delegates to the established
+        # StoredObjectPickNode TURN boundary, preserving the Pico sign contract.
+        if purpose == "resilient_place_final_turn_v5":
+            maximum = abs(
+                float(
+                    self.get_parameter(
+                        "simple_place_final_turn_max_abs_deg"
+                    ).value
+                )
+            )
+            if not math.isfinite(maximum) or maximum <= 0.0:
+                maximum = 30.0
+            bounded = max(-maximum, min(maximum, requested))
+            ResilientObjectTaskNode._send_turn(self, bounded, purpose)
+            return
+
+        # Clean camera-authoritative behavior for every ordinary search and
+        # alignment turn; no v3/v4 PLACE-only turn blocking or local scan.
+        parameter = (
+            "camera_search_turn_chunk_deg"
+            if purpose == "resilient_search_turn"
+            else "camera_max_turn_chunk_deg"
+        )
+        limit = abs(float(self.get_parameter(parameter).value))
+        bounded = max(-limit, min(limit, requested))
+        if abs(bounded - requested) > 1e-9:
+            self._publish_status(
+                "camera_motion_command_clamped",
+                purpose=purpose,
+                motion="rotation",
+                requested=requested,
+                bounded=bounded,
+            )
+        ResilientObjectTaskNode._send_turn(self, bounded, purpose)
+
+    def _after_camera_motion(
+        self,
+        purpose: str,
+        physical_amount: float,
+    ) -> None:
+        if purpose == "resilient_place_final_turn_v5":
+            if not self._simple_place_v5_turn_pending:
+                ResilientObjectTaskNode._fail(
+                    self,
+                    "INTERNAL_ERROR",
+                    reason="PLACE final turn completed without pending state",
+                )
+                return
+
+            self._simple_place_v5_turn_pending = False
+            self.camera_motion_completed_at = time.time()
+
+            # The final 15-degree turn intentionally creates the side offset.
+            # Never feed its frames back into the alignment controller.
+            self.pending_detections.clear()
+            self.filter.clear()
+            self.cached_stable_detection = None
+            self.latest_stable_detection = None
+            self.last_object_point = None
+            self.require_fresh_after_turn = False
+            self.fresh_detection_not_before_wall_sec = 0.0
+            self.reobserve_not_before = 0.0
+
+            self._publish_status(
+                "place_final_turn_completed",
+                completed_deg=float(physical_amount),
+                chunks=1,
+                correction_after_turn=False,
+                perception_after_turn="not_used",
+                next="semantic_place_preflight",
+            )
+            self._start_place_preflight()
+            return
+
+        # Maintained camera-authoritative post-motion behavior for every normal
+        # search/alignment movement.  This is the pre-experiment implementation,
+        # reproduced here so older additive overrides cannot intercept it.
+        self.camera_motion_completed_at = time.time()
+        guard = max(
+            0.0,
+            float(self.get_parameter("camera_motion_frame_guard_sec").value),
+            float(self.get_parameter("post_motion_frame_guard_sec").value),
+        )
+        self.fresh_detection_not_before_wall_sec = (
+            self.camera_motion_completed_at + guard
+        )
+        self.pending_detections.clear()
+        self.filter.clear()
+        self.cached_stable_detection = None
+        self.latest_stable_detection = None
+        self.last_object_point = None
+        self.require_fresh_after_turn = True
+
+        if purpose.startswith("resilient_search"):
+            self.phase = "search"
+            self.search_observe_until = 0.0
+            self._publish_status(
+                "search_motion_completed",
+                purpose=purpose,
+                completed_amount=physical_amount,
+                next="fresh_post_motion_camera_observation",
+                persistent_odometry_used=False,
+            )
+            return
+
+        self.phase = "align_settle"
+        assert self.profile is not None
+        if purpose.startswith("resilient_pose_relocation_"):
+            settle_sec = max(
+                0.0,
+                float(
+                    self.get_parameter(
+                        "pose_relocation_settle_sec"
+                    ).value
+                ),
+            )
+            reobserve_sec = max(
+                0.0,
+                float(
+                    self.get_parameter(
+                        "pose_relocation_reobserve_sec"
+                    ).value
+                ),
+            )
+        elif bool(self.get_parameter("fast_docking_enabled").value):
+            settle_parameter = (
+                "fast_coarse_settle_sec"
+                if self.fast_docking_phase == "coarse"
+                else "fast_final_settle_sec"
+            )
+            settle_sec = max(
+                0.0,
+                float(self.get_parameter(settle_parameter).value),
+            )
+            reobserve_sec = max(
+                0.0,
+                float(self.get_parameter("fast_reobserve_sec").value),
+            )
+        else:
+            settle_sec = self.profile.alignment.settle_sec
+            reobserve_sec = float(
+                self.get_parameter("visual_reobserve_sec").value
+            )
+
+        self.settle_until = time.monotonic() + settle_sec
+        self.reobserve_not_before = self.settle_until + reobserve_sec
+        self._publish_status(
+            "visual_servo_motion_completed",
+            purpose=purpose,
+            completed_amount=physical_amount,
+            next="fresh_post_motion_camera_observation",
+            correction_policy="measure_move_measure_reverse_if_overshot",
+        )
+
 
 
 def main(args=None) -> None:
