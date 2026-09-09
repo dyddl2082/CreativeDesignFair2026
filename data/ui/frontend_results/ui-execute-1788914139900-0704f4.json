@@ -1,0 +1,43 @@
+{
+  "schema": "macrobot.ui.task_result/v1",
+  "request_id": "ui-execute-1788914139900-0704f4",
+  "ok": false,
+  "event": "ui_task_failed",
+  "task_status": "failed",
+  "task_message": "고무의 가시 상태를 확인할 수 없습니다.",
+  "runner_ok": true,
+  "runner_result": {
+    "ok": true,
+    "task_status": "failed",
+    "task_message": "고무의 가시 상태를 확인할 수 없습니다.",
+    "outcome": {
+      "status": {
+        "__enum__": "TaskStatus",
+        "value": "failed"
+      },
+      "message": "고무의 가시 상태를 확인할 수 없습니다.",
+      "data": null,
+      "__type__": "TaskOutcome"
+    },
+    "loop_iterations_used": 1,
+    "close_result": {
+      "run_id": "run-1788914140796-b48c681e",
+      "closed": true,
+      "had_active_actions": false,
+      "active_action_count": 0,
+      "cancel_success": true,
+      "stop_success": null,
+      "stop_error_code": null,
+      "clean_shutdown": true
+    },
+    "run_id": "run-1788914140796-b48c681e",
+    "log_path": "/home/dyddl2082/MacRobot/data/llm_runs/run-1788914140796-b48c681e/run.json"
+  },
+  "mode": "execute",
+  "source_sha256": "c2f5f186ff83b34042f88753570d94be519a33a538e9baa03165a92eb13800cd",
+  "runner_returncode": 0,
+  "code_path": "/home/dyddl2082/MacRobot/data/ui/approved_tasks/ui-execute-1788914139900-0704f4/task.py",
+  "metadata_path": "/home/dyddl2082/MacRobot/data/ui/approved_tasks/ui-execute-1788914139900-0704f4/request.json",
+  "started_at_unix_ms": 1788914140111,
+  "finished_at_unix_ms": 1788914140956
+}

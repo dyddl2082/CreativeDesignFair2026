@@ -1,0 +1,22 @@
+{
+  "request": "UI quick action: robot arm HOME",
+  "status": "",
+  "object_bindings": "",
+  "assumptions": "",
+  "raw_response": "",
+  "validation": [],
+  "validator": "gateway",
+  "conversation": [
+    {
+      "role": "user",
+      "text": "고무 집고 지우개 옆"
+    },
+    {
+      "role": "assistant",
+      "text": "STATUS: CODE\n\nOBJECT_BINDINGS:\n- 고무 -> ObjectId.RUBBER\n- 지우개 -> ObjectId.ERASER\n\nASSUMPTIONS:\n- 없음\n\nCODE:\n\n```python\ndef main() -> TaskOutcome:\n    pick_action = robot.PICK_OBJECT(\n        object_id=ObjectId.RUBBER,\n    )\n    pick_result = robot.WAIT_ACTION(\n        pick_action,\n        timeout_s=2410.0,\n    )\n\n    if pick_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.FAILED,\n            message=pick_result.error_message or \"고무를 집지 못했습니다.\",\n        )\n\n    place_action = robot.PLACE_NEXTTO_OBJECT(\n        reference_object_id=ObjectId.ERASER,\n    )\n    place_result = robot.WAIT_ACTION(\n        place_action,\n        timeout_s=2410.0,\n    )\n\n    if place_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.PARTIALLY_SUCCEEDED,\n            message=place_result.error_message or \"고무는 집었지만 지우개 옆에 놓지 못했습니다.\",\n        )\n\n    return TaskOutcome(\n        status=TaskStatus.SUCCEEDED,\n        message=\"고무를 집어 지우개 옆에 놓았습니다.\",\n    )\n```"
+    }
+  ],
+  "source_sha256": "9fa84a7779a0bc5a4f2f46f7c49675ae197a631ccc4b0bfcc098057094bac93e",
+  "code_path": "/home/dyddl2082/MacRobot/data/ui/generated_tasks/20260909_092919_789429_UI_quick_action_robot_arm_HOME_9fa84a7779.py",
+  "saved_at": "2026-09-09T09:29:19.789599+09:00"
+}

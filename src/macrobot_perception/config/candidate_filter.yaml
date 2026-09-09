@@ -44,6 +44,18 @@ candidate_filter:
     reject_border_candidates: false
     reject_oversize_jpeg: false
 
+    # REFLECTION_REJECTION_V1: reject mirror-like crops before DINO.
+    # Uses depth/plane evidence; RGB brightness is intentionally not gated.
+    enable_reflection_rejection: true
+    reflection_require_plane: true
+    reflection_require_foreground_height: true
+    reflection_require_foreground_mask: true
+    reflection_min_foreground_height_m: 0.008
+    reflection_min_valid_depth_ratio: 0.60
+    reflection_max_depth_std_m: 0.060
+    reflection_min_mask_fill_ratio: 0.03
+    reflection_max_mask_fill_ratio: 0.98
+
     # Background/objectness requirements.
     require_plane_for_objectness: true
     require_foreground_mask: true

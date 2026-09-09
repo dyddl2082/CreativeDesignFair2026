@@ -33,6 +33,11 @@ from .filter_core import (
     evaluate_candidate,
     load_reference_profile,
 )
+from .reflection_gate import (
+    ReflectionEvidence,
+    ReflectionGateConfig,
+    reflection_reject_reason,
+)
 
 
 class CandidateFilterNode(Node):
@@ -212,9 +217,47 @@ class CandidateFilterNode(Node):
             "debug_hz": 2.0,
             "debug_jpeg_quality": 78,
             "status_log_period_sec": 5.0,
+            # REFLECTION_REJECTION_V1: pre-DINO reflection gate
+            "enable_reflection_rejection": True,
+            "reflection_require_plane": True,
+            "reflection_require_foreground_height": True,
+            "reflection_require_foreground_mask": True,
+            "reflection_min_foreground_height_m": 0.008,
+            "reflection_min_valid_depth_ratio": 0.60,
+            "reflection_max_depth_std_m": 0.060,
+            "reflection_min_mask_fill_ratio": 0.03,
+            "reflection_max_mask_fill_ratio": 0.98,
         }
         for name, value in defaults.items():
             self.declare_parameter(name, value)
+
+    def _reflection_gate_config(self) -> ReflectionGateConfig:
+        value = lambda name: self.get_parameter(name).value
+        return ReflectionGateConfig(
+            enabled=bool(value("enable_reflection_rejection")),
+            require_plane=bool(value("reflection_require_plane")),
+            require_foreground_height=bool(
+                value("reflection_require_foreground_height")
+            ),
+            require_foreground_mask=bool(
+                value("reflection_require_foreground_mask")
+            ),
+            min_foreground_height_m=float(
+                value("reflection_min_foreground_height_m")
+            ),
+            min_valid_depth_ratio=float(
+                value("reflection_min_valid_depth_ratio")
+            ),
+            max_depth_std_m=float(
+                value("reflection_max_depth_std_m")
+            ),
+            min_mask_fill_ratio=float(
+                value("reflection_min_mask_fill_ratio")
+            ),
+            max_mask_fill_ratio=float(
+                value("reflection_max_mask_fill_ratio")
+            ),
+        )
 
     def _filter_config(self) -> FilterConfig:
         value = lambda name: self.get_parameter(name).value
@@ -389,6 +432,67 @@ class CandidateFilterNode(Node):
         start = time.perf_counter()
         now_monotonic = time.monotonic()
         self._received += 1
+
+        # REFLECTION_REJECTION_V1: reject non-physical/unstable crops before DINO.
+        reflection_config = self._reflection_gate_config()
+        try:
+            reflection_config.validate()
+        except ValueError as error:
+            reason = "reflection_gate_config_invalid"
+            self._rejected += 1
+            self._reject_reasons[reason] += 1
+            result = self._build_failure_result(
+                message,
+                "reflection_gate",
+                reason,
+            )
+            self._result_publisher.publish(result)
+            self._last_result_summary = f"reject {reason}: {error}"
+            self.get_logger().error(
+                f"Reflection gate configuration is invalid: {error}"
+            )
+            self._publish_status_if_due(now_monotonic, start)
+            return
+
+        reflection_reason = reflection_reject_reason(
+            ReflectionEvidence(
+                plane_found=bool(getattr(message, "plane_found", False)),
+                foreground_height_valid=bool(
+                    getattr(message.candidate, "foreground_height_valid", False)
+                ),
+                foreground_height_m=float(
+                    getattr(message.candidate, "foreground_height_m", 0.0)
+                ),
+                valid_depth_ratio=float(
+                    getattr(message.candidate, "valid_depth_ratio", 0.0)
+                ),
+                depth_std_m=float(
+                    getattr(message.candidate, "depth_std_m", float("inf"))
+                ),
+                foreground_mask_available=bool(
+                    getattr(message, "foreground_mask_available", False)
+                ),
+                mask_fill_ratio=float(
+                    getattr(message, "mask_fill_ratio", 0.0)
+                ),
+            ),
+            reflection_config,
+        )
+        if reflection_reason is not None:
+            self._rejected += 1
+            self._reject_reasons[reflection_reason] += 1
+            result = self._build_failure_result(
+                message,
+                "reflection_gate",
+                reflection_reason,
+            )
+            self._result_publisher.publish(result)
+            self._last_result_summary = (
+                f"reject id={message.candidate.id} "
+                f"reason={reflection_reason} before_dino=true"
+            )
+            self._publish_status_if_due(now_monotonic, start)
+            return
         try:
             config = self._filter_config()
             config.validate()
