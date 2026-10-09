@@ -1,0 +1,43 @@
+{
+  "schema": "macrobot.ui.task_result/v1",
+  "request_id": "ui-execute-1789018177806-222233",
+  "ok": true,
+  "event": "ui_task_completed",
+  "task_status": "succeeded",
+  "task_message": "고무 파지 동작을 완료했습니다.",
+  "runner_ok": true,
+  "runner_result": {
+    "ok": true,
+    "task_status": "succeeded",
+    "task_message": "고무 파지 동작을 완료했습니다.",
+    "outcome": {
+      "status": {
+        "__enum__": "TaskStatus",
+        "value": "succeeded"
+      },
+      "message": "고무 파지 동작을 완료했습니다.",
+      "data": null,
+      "__type__": "TaskOutcome"
+    },
+    "loop_iterations_used": 0,
+    "close_result": {
+      "run_id": "run-1789018178728-4a54d946",
+      "closed": true,
+      "had_active_actions": false,
+      "active_action_count": 0,
+      "cancel_success": true,
+      "stop_success": null,
+      "stop_error_code": null,
+      "clean_shutdown": true
+    },
+    "run_id": "run-1789018178728-4a54d946",
+    "log_path": "/home/dyddl2082/MacRobot/data/llm_runs/run-1789018178728-4a54d946/run.json"
+  },
+  "mode": "execute",
+  "source_sha256": "ea157c53eaf040790d0bea7e81dca2adddde0709c3440a9a7e1a8783b8eb9b6d",
+  "runner_returncode": 0,
+  "code_path": "/home/dyddl2082/MacRobot/data/ui/approved_tasks/ui-execute-1789018177806-222233/task.py",
+  "metadata_path": "/home/dyddl2082/MacRobot/data/ui/approved_tasks/ui-execute-1789018177806-222233/request.json",
+  "started_at_unix_ms": 1789018177965,
+  "finished_at_unix_ms": 1789018221134
+}

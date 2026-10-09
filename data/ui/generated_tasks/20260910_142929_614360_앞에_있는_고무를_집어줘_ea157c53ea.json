@@ -1,0 +1,22 @@
+{
+  "request": "앞에 있는 고무를 집어줘.",
+  "status": "CODE",
+  "object_bindings": "- 앞에 있는 고무 -> ObjectId.RUBBER",
+  "assumptions": "- 없음",
+  "raw_response": "STATUS: CODE\n\nOBJECT_BINDINGS:\n- 앞에 있는 고무 -> ObjectId.RUBBER\n\nASSUMPTIONS:\n- 없음\n\nCODE:\n\n```python\ndef main() -> TaskOutcome:\n    pick_action = robot.PICK_OBJECT(\n        object_id=ObjectId.RUBBER,\n    )\n    pick_result = robot.WAIT_ACTION(\n        pick_action,\n        timeout_s=2410.0,\n    )\n\n    if pick_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.FAILED,\n            message=pick_result.error_message or \"고무를 집지 못했습니다.\",\n        )\n\n    return TaskOutcome(\n        status=TaskStatus.SUCCEEDED,\n        message=\"고무 파지 동작을 완료했습니다.\",\n    )\n```",
+  "validation": [],
+  "validator": "gateway",
+  "conversation": [
+    {
+      "role": "user",
+      "text": "앞에 있는 고무를 집어줘."
+    },
+    {
+      "role": "assistant",
+      "text": "STATUS: CODE\n\nOBJECT_BINDINGS:\n- 앞에 있는 고무 -> ObjectId.RUBBER\n\nASSUMPTIONS:\n- 없음\n\nCODE:\n\n```python\ndef main() -> TaskOutcome:\n    pick_action = robot.PICK_OBJECT(\n        object_id=ObjectId.RUBBER,\n    )\n    pick_result = robot.WAIT_ACTION(\n        pick_action,\n        timeout_s=2410.0,\n    )\n\n    if pick_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.FAILED,\n            message=pick_result.error_message or \"고무를 집지 못했습니다.\",\n        )\n\n    return TaskOutcome(\n        status=TaskStatus.SUCCEEDED,\n        message=\"고무 파지 동작을 완료했습니다.\",\n    )\n```"
+    }
+  ],
+  "source_sha256": "ea157c53eaf040790d0bea7e81dca2adddde0709c3440a9a7e1a8783b8eb9b6d",
+  "code_path": "/home/dyddl2082/MacRobot/data/ui/generated_tasks/20260910_142929_614360_앞에_있는_고무를_집어줘_ea157c53ea.py",
+  "saved_at": "2026-09-10T14:29:29.616041+09:00"
+}

@@ -1,0 +1,54 @@
+{
+  "request": "앞으로 10cm 가",
+  "status": "CODE",
+  "object_bindings": "- 없음",
+  "assumptions": "- 없음",
+  "raw_response": "STATUS: CODE\n\nOBJECT_BINDINGS:\n- 없음\n\nASSUMPTIONS:\n- 없음\n\nCODE:\n\n```python\ndef main() -> TaskOutcome:\n    move_action = robot.MOVE_BASE(\n        distance_m=0.10,\n    )\n    move_result = robot.WAIT_ACTION(\n        move_action,\n        timeout_s=20.0,\n    )\n\n    if move_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.FAILED,\n            message=move_result.error_message or \"앞으로 10cm 이동하지 못했습니다.\",\n        )\n\n    return TaskOutcome(\n        status=TaskStatus.SUCCEEDED,\n        message=\"앞으로 10cm 이동했습니다.\",\n    )\n```",
+  "validation": [],
+  "validator": "gateway",
+  "conversation": [
+    {
+      "role": "user",
+      "text": "고무를 집어서 지우개 옆에 놓아"
+    },
+    {
+      "role": "assistant",
+      "text": "STATUS: CODE\n\nOBJECT_BINDINGS:\n- 고무 -> ObjectId.RUBBER\n- 지우개 -> ObjectId.ERASER\n\nASSUMPTIONS:\n- 없음\n\nCODE:\n\n```python\ndef main() -> TaskOutcome:\n    pick_action = robot.PICK_OBJECT(\n        object_id=ObjectId.RUBBER,\n    )\n    pick_result = robot.WAIT_ACTION(\n        pick_action,\n        timeout_s=2410.0,\n    )\n\n    if pick_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.FAILED,\n            message=pick_result.error_message or \"고무를 집지 못했습니다.\",\n        )\n\n    place_action = robot.PLACE_NEXTTO_OBJECT(\n        reference_object_id=ObjectId.ERASER,\n    )\n    place_result = robot.WAIT_ACTION(\n        place_action,\n        timeout_s=2410.0,\n    )\n\n    if place_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.PARTIALLY_SUCCEEDED,\n            message=place_result.error_message or \"고무를 집었지만 지우개 옆에 놓지 못했습니다.\",\n        )\n\n    return TaskOutcome(\n        status=TaskStatus.SUCCEEDED,\n        message=\"고무를 집어서 지우개 옆에 놓았습니다.\",\n    )\n```"
+    },
+    {
+      "role": "user",
+      "text": "주변에서 고무를 찾고 지우개 옆에 둬"
+    },
+    {
+      "role": "assistant",
+      "text": "STATUS: CODE\n\nOBJECT_BINDINGS:\n- 고무 -> ObjectId.RUBBER\n- 지우개 -> ObjectId.ERASER\n\nASSUMPTIONS:\n- “고무를 찾고”는 `PICK_OBJECT`에 포함된 물체 확인 및 필요한 내부 정렬로 수행합니다.\n\nCODE:\n\n```python\ndef main() -> TaskOutcome:\n    pick_action = robot.PICK_OBJECT(\n        object_id=ObjectId.RUBBER,\n    )\n    pick_result = robot.WAIT_ACTION(\n        pick_action,\n        timeout_s=2410.0,\n    )\n\n    if pick_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.FAILED,\n            message=pick_result.error_message or \"주변에서 고무를 찾아 집지 못했습니다.\",\n        )\n\n    place_action = robot.PLACE_NEXTTO_OBJECT(\n        reference_object_id=ObjectId.ERASER,\n    )\n    place_result = robot.WAIT_ACTION(\n        place_action,\n        timeout_s=2410.0,\n    )\n\n    if place_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.PARTIALLY_SUCCEEDED,\n            message=place_result.error_message or \"고무를 집었지만 지우개 옆에 놓지 못했습니다.\",\n        )\n\n    return TaskOutcome(\n        status=TaskStatus.SUCCEEDED,\n        message=\"고무를 찾아 집은 뒤 지우개 옆에 놓았습니다.\",\n    )\n```"
+    },
+    {
+      "role": "user",
+      "text": "앞으로 10cm 가"
+    },
+    {
+      "role": "assistant",
+      "text": "STATUS: CODE\n\nOBJECT_BINDINGS:\n- 없음\n\nASSUMPTIONS:\n- 없음\n\nCODE:\n\n```python\ndef main() -> TaskOutcome:\n    move_action = robot.MOVE_BASE(\n        distance_m=0.10,\n    )\n    move_result = robot.WAIT_ACTION(\n        move_action,\n        timeout_s=20.0,\n    )\n\n    if move_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.FAILED,\n            message=move_result.error_message or \"앞으로 10cm 이동하지 못했습니다.\",\n        )\n\n    return TaskOutcome(\n        status=TaskStatus.SUCCEEDED,\n        message=\"앞으로 10cm 이동했습니다.\",\n    )\n```"
+    },
+    {
+      "role": "user",
+      "text": "고무를 집고 오른쪽으로 90도 돌아"
+    },
+    {
+      "role": "assistant",
+      "text": "STATUS: CODE\n\nOBJECT_BINDINGS:\n- 고무 -> ObjectId.RUBBER\n\nASSUMPTIONS:\n- 없음\n\nCODE:\n\n```python\ndef main() -> TaskOutcome:\n    pick_action = robot.PICK_OBJECT(\n        object_id=ObjectId.RUBBER,\n    )\n    pick_result = robot.WAIT_ACTION(\n        pick_action,\n        timeout_s=2410.0,\n    )\n\n    if pick_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.FAILED,\n            message=pick_result.error_message or \"고무를 집지 못했습니다.\",\n        )\n\n    turn_action = robot.TURN_BASE(\n        angle_deg=-90.0,\n    )\n    turn_result = robot.WAIT_ACTION(\n        turn_action,\n        timeout_s=20.0,\n    )\n\n    if turn_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.PARTIALLY_SUCCEEDED,\n            message=turn_result.error_message or \"고무는 집었지만 오른쪽으로 90도 회전하지 못했습니다.\",\n        )\n\n    return TaskOutcome(\n        status=TaskStatus.SUCCEEDED,\n        message=\"고무를 집고 오른쪽으로 90도 회전했습니다.\",\n    )\n```"
+    },
+    {
+      "role": "user",
+      "text": "앞으로 10cm 가"
+    },
+    {
+      "role": "assistant",
+      "text": "STATUS: CODE\n\nOBJECT_BINDINGS:\n- 없음\n\nASSUMPTIONS:\n- 없음\n\nCODE:\n\n```python\ndef main() -> TaskOutcome:\n    move_action = robot.MOVE_BASE(\n        distance_m=0.10,\n    )\n    move_result = robot.WAIT_ACTION(\n        move_action,\n        timeout_s=20.0,\n    )\n\n    if move_result.state != ActionState.SUCCEEDED:\n        return TaskOutcome(\n            status=TaskStatus.FAILED,\n            message=move_result.error_message or \"앞으로 10cm 이동하지 못했습니다.\",\n        )\n\n    return TaskOutcome(\n        status=TaskStatus.SUCCEEDED,\n        message=\"앞으로 10cm 이동했습니다.\",\n    )\n```"
+    }
+  ],
+  "source_sha256": "93872d3a00b6ec847a29240f75f2314e517ac1fe505c47356cb587e0230569e2",
+  "code_path": "/home/dyddl2082/MacRobot/data/ui/generated_tasks/20260909_144649_958638_앞으로_10cm_가_93872d3a00.py",
+  "saved_at": "2026-09-09T14:46:49.958981+09:00"
+}
